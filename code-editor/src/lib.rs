@@ -68,6 +68,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let lines = editor_lines(tree.source(), tree.spans());
     let line_count = lines.len();
     let theme_asset = props.theme.asset();
+    let theme_key = props.theme.name();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
     let (input_value, input_version) = synced_input_value(&input_sync, &props.value);
     let contenteditable = if props.read_only {
@@ -78,8 +79,8 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let readonly = props.read_only.then_some("true");
 
     rsx! {
+        document::Stylesheet { key: "{theme_key}", href: theme_asset }
         document::Stylesheet { href: CODE_EDITOR_CSS }
-        document::Stylesheet { href: theme_asset }
         div {
             class,
             if props.line_numbers {

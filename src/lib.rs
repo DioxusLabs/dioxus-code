@@ -407,12 +407,13 @@ pub fn Code(props: CodeProps) -> Element {
     let segments = code_segments(&source, &spans);
     let class = format!("dxc {}", props.theme.class());
     let theme_asset = props.theme.asset();
+    let theme_key = props.theme.name();
     let language = language.as_deref().unwrap_or("text");
     let error = error.as_deref();
 
     rsx! {
+        document::Stylesheet { key: "{theme_key}", href: theme_asset }
         document::Stylesheet { href: STYLE }
-        document::Stylesheet { href: theme_asset }
         pre {
             class,
             "data-language": language,
