@@ -17,7 +17,8 @@ jobs:
     uses: ealmloff/dioxus-ci/.github/workflows/pr-preview-build.yml@main
     with:
       working-directory: demo
+      ssg: true
       no-default-features: true
-      features: web
+      features: fullstack
       debug-symbols: false
       dx-cli-version: 0.7.7

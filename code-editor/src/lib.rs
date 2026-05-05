@@ -79,7 +79,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let readonly = props.read_only.then_some("true");
 
     rsx! {
-        document::Stylesheet { key: "{theme_key}", href: theme_asset }
+        {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
         document::Stylesheet { href: CODE_EDITOR_CSS }
         div {
             class,

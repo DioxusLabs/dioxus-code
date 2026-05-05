@@ -18,3 +18,5 @@ dioxus-code-editor = { workspace = true }
 default = ["desktop"]
 desktop = ["dioxus/desktop"]
 web = ["dioxus/web"]
+fullstack = ["dioxus/fullstack", "dioxus/cli-config"]
+server = ["dioxus/server", "dioxus/fullstack", "dioxus/cli-config"]

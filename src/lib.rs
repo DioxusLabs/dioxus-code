@@ -412,7 +412,7 @@ pub fn Code(props: CodeProps) -> Element {
     let error = error.as_deref();
 
     rsx! {
-        document::Stylesheet { key: "{theme_key}", href: theme_asset }
+        {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
         document::Stylesheet { href: STYLE }
         pre {
             class,

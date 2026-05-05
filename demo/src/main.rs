@@ -48,6 +48,7 @@ rsx! {
 }
 "#;
 
+#[cfg(not(feature = "server"))]
 const SYSTEM_THEME_SCRIPT: &str = r#"
 const media = window.matchMedia("(prefers-color-scheme: dark)");
 const send = () => dioxus.send(media.matches);
@@ -94,6 +95,7 @@ enum ThemeMode {
 }
 
 impl ThemeMode {
+    #[cfg(not(feature = "server"))]
     fn from_is_dark(is_dark: bool) -> Self {
         if is_dark {
             ThemeMode::Dark
@@ -117,8 +119,50 @@ impl ThemeMode {
     }
 }
 
+#[cfg(not(feature = "server"))]
 fn main() {
     dioxus::launch(App);
+}
+
+#[cfg(feature = "server")]
+fn main() {
+    use dioxus::server::axum::{Json, Router, routing::post};
+    use dioxus::server::{DioxusRouterExt, IncrementalRendererConfig, ServeConfig};
+
+    dioxus::server::serve(|| async {
+        let cfg = ServeConfig::builder()
+            .incremental(
+                IncrementalRendererConfig::new()
+                    .static_dir(
+                        std::env::current_exe()
+                            .unwrap()
+                            .parent()
+                            .unwrap()
+                            .join("public"),
+                    )
+                    .clear_cache(false),
+            )
+            .enable_out_of_order_streaming();
+
+        let router = Router::new()
+            .route(
+                "/api/static_routes",
+                post(|| async { Json(vec![base_route()]) }),
+            )
+            .serve_dioxus_application(cfg, App);
+
+        Ok(router)
+    })
+}
+
+#[cfg(feature = "server")]
+fn base_route() -> String {
+    let base_path = dioxus::cli_config::base_path().unwrap_or_default();
+
+    match base_path.trim_matches('/') {
+        "" => "/".to_string(),
+        base_path => format!("/{base_path}/"),
+    }
 }
 
 #[component]
@@ -126,15 +170,19 @@ fn App() -> Element {
     let source = use_signal(|| STARTER.to_string());
     let active_theme = use_signal(|| 0usize);
     let scheme = use_signal(|| Scheme::System);
-    let mut system_theme = use_signal(|| ThemeMode::Light);
+    let system_theme = use_signal(|| ThemeMode::Light);
 
-    use_future(move || async move {
-        let mut eval = document::eval(SYSTEM_THEME_SCRIPT);
+    #[cfg(not(feature = "server"))]
+    {
+        let mut system_theme_for_script = system_theme;
+        use_future(move || async move {
+            let mut eval = document::eval(SYSTEM_THEME_SCRIPT);
 
-        while let Ok(is_dark) = eval.recv::<bool>().await {
-            system_theme.set(ThemeMode::from_is_dark(is_dark));
-        }
-    });
+            while let Ok(is_dark) = eval.recv::<bool>().await {
+                system_theme_for_script.set(ThemeMode::from_is_dark(is_dark));
+            }
+        });
+    }
 
     let theme_mode = scheme().resolved(system_theme());
     let themes = theme_mode.demo_themes();
