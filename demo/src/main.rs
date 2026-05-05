@@ -147,7 +147,7 @@ fn main() {
         let router = Router::new()
             .route(
                 "/api/static_routes",
-                post(|| async { Json(vec![base_route()]) }),
+                post(|| async { Json(static_routes()) }),
             )
             .serve_dioxus_application(cfg, App);
 
@@ -156,17 +156,28 @@ fn main() {
 }
 
 #[cfg(feature = "server")]
-fn base_route() -> String {
-    let base_path = dioxus::cli_config::base_path().unwrap_or_default();
-
-    match base_path.trim_matches('/') {
-        "" => "/".to_string(),
-        base_path => format!("/{base_path}/"),
-    }
+fn static_routes() -> Vec<String> {
+    Route::static_routes()
+        .iter()
+        .map(ToString::to_string)
+        .collect()
 }
 
 #[component]
 fn App() -> Element {
+    rsx! {
+        Router::<Route> {}
+    }
+}
+
+#[derive(Routable, Clone, PartialEq)]
+enum Route {
+    #[route("/")]
+    Home {},
+}
+
+#[component]
+fn Home() -> Element {
     let source = use_signal(|| STARTER.to_string());
     let active_theme = use_signal(|| 0usize);
     let scheme = use_signal(|| Scheme::System);

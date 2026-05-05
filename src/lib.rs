@@ -1,3 +1,6 @@
+#![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
+
 #[cfg(feature = "runtime")]
 use arborium::advanced::Span;
 #[cfg(feature = "runtime")]
@@ -11,6 +14,11 @@ const STYLE: Asset = asset!("/assets/dioxus-code.css");
 #[cfg(feature = "macro")]
 pub use dioxus_code_macro::code;
 
+/// A syntax-highlighting theme.
+///
+/// Themes are exposed as associated constants on `Theme` (for example
+/// [`Theme::TOKYO_NIGHT`]) and ship as scoped CSS so multiple themes can
+/// coexist on the same page without leaking styles.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Theme {
     name: &'static str,
@@ -19,14 +27,17 @@ pub struct Theme {
 }
 
 impl Theme {
+    /// The theme's canonical slug, e.g. `"tokyo-night"`.
     pub const fn name(self) -> &'static str {
         self.name
     }
 
+    /// The CSS class applied to the rendered code container, e.g. `"dxc-tokyo-night"`.
     pub const fn class(self) -> &'static str {
         self.class
     }
 
+    /// The Dioxus [`Asset`] for the theme's stylesheet.
     pub const fn asset(self) -> Asset {
         self.asset
     }
@@ -40,6 +51,11 @@ impl Default for Theme {
 
 include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
 
+/// A parsed source string with its highlighted spans.
+///
+/// Produced by [`SourceCode::into_tree`] (runtime parsing) or by the
+/// [`code!`] macro (compile-time parsing). Pass it to [`Code`] for rendering,
+/// or inspect [`source`](Self::source) and [`spans`](Self::spans) directly.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeTree {
     source: String,
@@ -49,6 +65,9 @@ pub struct CodeTree {
 }
 
 impl CodeTree {
+    /// Build a tree from `'static` parts produced by the [`code!`] macro.
+    ///
+    /// You normally don't call this directly — the macro emits a call to it.
     pub fn from_static_parts(
         source: &'static str,
         language: &'static str,
@@ -62,6 +81,9 @@ impl CodeTree {
         }
     }
 
+    /// Build a tree with no highlighting and an error message describing why.
+    ///
+    /// Used as a fallback when language detection or parsing fails.
     pub fn plaintext(source: impl Into<String>, error: impl Into<String>) -> Self {
         Self {
             source: source.into(),
@@ -71,34 +93,49 @@ impl CodeTree {
         }
     }
 
+    /// The raw source text.
     pub fn source(&self) -> &str {
         &self.source
     }
 
+    /// The detected or explicitly set language slug, if any.
     pub fn language(&self) -> Option<&str> {
         self.language.as_deref()
     }
 
+    /// An error message, set when highlighting failed and the tree fell back to plaintext.
     pub fn error(&self) -> Option<&str> {
         self.error.as_deref()
     }
 
+    /// The highlight spans covering the source.
     pub fn spans(&self) -> &[HighlightSpan] {
         &self.spans
     }
 }
 
+/// A highlight span emitted by the [`code!`] macro at compile time.
+///
+/// Mirrors [`HighlightSpan`] but with a `'static` tag so it can live in a
+/// `const` array baked into the binary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StaticSpan {
+    /// Byte offset (inclusive) of the span's start in the source.
     pub start: u32,
+    /// Byte offset (exclusive) of the span's end in the source.
     pub end: u32,
+    /// Highlight tag class suffix (for example `"k"` for keywords).
     pub tag: &'static str,
 }
 
+/// A highlight span attached to a region of source text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HighlightSpan {
+    /// Byte offset (inclusive) of the span's start in the source.
     pub start: u32,
+    /// Byte offset (exclusive) of the span's end in the source.
     pub end: u32,
+    /// Highlight tag class suffix (for example `"k"` for keywords).
     pub tag: &'static str,
 }
 
@@ -180,6 +217,11 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<HighlightSpan> 
     coalesced
 }
 
+/// Source text to highlight at runtime.
+///
+/// Available with the `runtime` feature. Build one with [`SourceCode::new`],
+/// optionally annotate it with a language or filename, then convert it via
+/// [`IntoTree::into_tree`] (or pass it directly to [`Code`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
@@ -188,6 +230,7 @@ pub struct SourceCode {
 }
 
 impl SourceCode {
+    /// Wrap a raw source string with no language hint.
     pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),
@@ -196,11 +239,13 @@ impl SourceCode {
         }
     }
 
+    /// Set the language slug explicitly (for example `"rust"`).
     pub fn with_language(mut self, language: impl Into<String>) -> Self {
         self.language = Some(language.into());
         self
     }
 
+    /// Set a filename used to infer the language when none is set explicitly.
     pub fn with_name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
@@ -243,7 +288,13 @@ impl SourceCode {
     }
 }
 
+/// Conversion into a [`CodeTree`] suitable for rendering.
+///
+/// Implemented for [`CodeTree`] (identity), [`SourceCode`] (highlights at
+/// runtime), and — with the `runtime` feature — `&str` and `String`
+/// (auto-detect the language and highlight).
 pub trait IntoTree {
+    /// Consume `self` and return its [`CodeTree`] representation.
     fn into_tree(self) -> CodeTree;
 }
 
@@ -299,6 +350,11 @@ impl From<String> for CodeSource {
     }
 }
 
+/// Pre-parsed source ready to hand to the [`Code`] component.
+///
+/// Anything implementing [`IntoTree`] — including [`CodeTree`], [`SourceCode`],
+/// and (with the `runtime` feature) string types — converts into this via the
+/// `#[props(into)]` field on [`CodeProps::src`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeSource(CodeTree);
 

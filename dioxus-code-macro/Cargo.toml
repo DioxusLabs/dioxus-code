@@ -5,8 +5,10 @@ edition.workspace = true
 license.workspace = true
 description = "Compile-time syntax highlighting macro for dioxus-code."
 repository.workspace = true
+homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
+readme = "../README.md"
 
 [lib]
 proc-macro = true

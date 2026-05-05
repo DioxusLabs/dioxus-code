@@ -1,3 +1,6 @@
+#![doc = include_str!("../../README.md")]
+#![warn(missing_docs)]
+
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,6 +12,13 @@ use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::{Expr, Ident, LitStr, Token, parse_macro_input};
 
+/// Compile-time syntax highlighting.
+///
+/// Reads a source file relative to the consumer's `CARGO_MANIFEST_DIR`, parses
+/// it with [`arborium`], and expands to the resulting span tree. Pass the path
+/// as a string literal, `concat!(...)`, or `env!(...)`. Optionally name the
+/// language explicitly with `code!("/path", "rust")`; otherwise it is inferred
+/// from the file extension.
 #[proc_macro]
 pub fn code(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as CodeInput);

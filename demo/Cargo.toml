@@ -10,7 +10,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
-dioxus = { version = "0.7.0" }
+dioxus = { version = "0.7.0", features = ["router"] }
 dioxus-code = { workspace = true, features = ["runtime", "lang-python", "lang-toml"] }
 dioxus-code-editor = { workspace = true }
 
@@ -18,5 +18,5 @@ dioxus-code-editor = { workspace = true }
 default = ["desktop"]
 desktop = ["dioxus/desktop"]
 web = ["dioxus/web"]
-fullstack = ["dioxus/fullstack", "dioxus/cli-config"]
-server = ["dioxus/server", "dioxus/fullstack", "dioxus/cli-config"]
+fullstack = ["dioxus/fullstack"]
+server = ["dioxus/server", "dioxus/fullstack"]

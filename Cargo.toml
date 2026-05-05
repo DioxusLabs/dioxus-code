@@ -16,6 +16,7 @@ version = "0.0.1"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/ealmloff/dioxus-code"
+homepage = "https://dioxuslabs.github.io/dioxus-code/"
 keywords = ["dioxus", "code", "highlighting", "editor"]
 categories = ["gui", "web-programming"]
 
@@ -30,8 +31,10 @@ edition.workspace = true
 license.workspace = true
 description = "Syntax-highlighted code blocks for Dioxus."
 repository.workspace = true
+homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
+readme = "README.md"
 
 [features]
 default = ["macro"]

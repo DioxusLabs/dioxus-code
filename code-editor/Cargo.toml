@@ -5,8 +5,10 @@ edition.workspace = true
 license.workspace = true
 description = "Syntax-highlighted code editor component for Dioxus."
 repository.workspace = true
+homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
+readme = "../README.md"
 
 [dependencies]
 dioxus = { version = "0.7.0", default-features = false, features = ["lib"] }

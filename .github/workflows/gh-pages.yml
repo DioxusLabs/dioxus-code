@@ -23,4 +23,4 @@ jobs:
       no-default-features: true
       features: fullstack
       debug-symbols: false
-      dx-cli-version: 0.7.7
+      dx-cli-version: 0.7.6

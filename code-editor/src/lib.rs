@@ -1,3 +1,6 @@
+#![doc = include_str!("../../README.md")]
+#![warn(missing_docs)]
+
 use dioxus::prelude::*;
 use dioxus_code::{CodeSpan, HighlightSpan, IntoTree, SourceCode, Theme};
 use std::{cell::RefCell, rc::Rc};

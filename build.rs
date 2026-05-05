@@ -31,13 +31,14 @@ fn main() {
         fs::write(asset_dir.join(&css_file), css).unwrap();
 
         generated.push_str(&format!(
-            "    pub const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
+            "    /// Stylesheet asset for the `{name}` theme.\n    pub const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
             const_name = theme.const_name,
             css_file = css_file,
+            name = name,
         ));
 
         generated.push_str(&format!(
-            "    pub const {const_name}: Self = Self {{ name: \"{name}\", class: \"{class}\", asset: Self::{const_name}_CSS }};\n",
+            "    /// The `{name}` syntax theme.\n    pub const {const_name}: Self = Self {{ name: \"{name}\", class: \"{class}\", asset: Self::{const_name}_CSS }};\n",
             const_name = theme.const_name,
             name = name,
             class = class,
