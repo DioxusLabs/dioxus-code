@@ -132,7 +132,7 @@ impl ThemeMode {
         }
     }
 
-    fn demo_themes(self) -> &'static [DemoTheme] {
+    fn demo_themes(self) -> &'static [Theme] {
         match self {
             ThemeMode::Light => light_demo_themes(),
             ThemeMode::Dark => dark_demo_themes(),
@@ -240,7 +240,7 @@ fn Home() -> Element {
         style { {APP_CSS} }
         main { class: "site-shell",
             Header { scheme }
-            Hero { source: source(), theme: themes[active_theme_index].theme }
+            Hero { source: source(), theme: themes[active_theme_index] }
             FeatureRow {}
             SizeCharts {}
             Playground { source, active_theme, theme_mode }
@@ -364,6 +364,84 @@ fn ThemeToggle(mut scheme: Signal<Scheme>) -> Element {
 }
 
 #[component]
+fn CopyCommandButton(command: &'static str) -> Element {
+    let mut copied = use_signal(|| false);
+
+    let on_click = move |_| {
+        let escaped = command.replace('\\', "\\\\").replace('"', "\\\"");
+        let script = format!(
+            r#"
+            try {{ await navigator.clipboard.writeText("{escaped}"); }} catch (e) {{}}
+            dioxus.send(true);
+            await new Promise(r => setTimeout(r, 1600));
+            dioxus.send(false);
+            "#
+        );
+        spawn(async move {
+            let mut eval = document::eval(&script);
+            while let Ok(state) = eval.recv::<bool>().await {
+                copied.set(state);
+            }
+        });
+    };
+
+    rsx! {
+        button {
+            r#type: "button",
+            class: "term-copy",
+            "data-copied": copied().then_some("true"),
+            "aria-label": if copied() { "Copied" } else { "Copy command" },
+            title: if copied() { "Copied" } else { "Copy command" },
+            onclick: on_click,
+            if copied() {
+                IconCheck {}
+                span { class: "term-copy-label", "Copied" }
+            } else {
+                IconCopy {}
+                span { class: "term-copy-label", "Copy" }
+            }
+        }
+    }
+}
+
+#[component]
+fn IconCopy() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.7",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            rect { x: "9", y: "9", width: "12", height: "12", rx: "2.5" }
+            path { d: "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" }
+        }
+    }
+}
+
+#[component]
+fn IconCheck() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M5 12.5l4.5 4.5L19 7" }
+        }
+    }
+}
+
+#[component]
 fn IconSun() -> Element {
     rsx! {
         svg {
@@ -442,6 +520,7 @@ fn Hero(source: String, theme: Theme) -> Element {
                             span { class: "term-dot y" }
                             span { class: "term-dot g" }
                             span { class: "hero-terminal-title", "~/my-app" }
+                            CopyCommandButton { command: "cargo add dioxus-code" }
                         }
                         div { class: "hero-terminal-body",
                             p { class: "term-line",
@@ -460,11 +539,25 @@ fn Hero(source: String, theme: Theme) -> Element {
                         }
                     }
                     div { class: "hero-actions",
-                        a { class: "button", "data-style": "primary", href: "#docs",
-                            "Read the docs →"
+                        a { class: "hero-cta hero-cta-primary", href: "#docs",
+                            span { "Read the docs" }
+                            svg {
+                                class: "hero-cta-arrow",
+                                width: "14",
+                                height: "14",
+                                view_box: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                stroke_width: "2",
+                                stroke_linecap: "round",
+                                stroke_linejoin: "round",
+                                "aria-hidden": "true",
+                                path { d: "M5 12h14M13 5l7 7-7 7" }
+                            }
                         }
-                        a { class: "button", "data-style": "outline", href: "#playground",
-                            "See it live"
+                        a { class: "hero-cta hero-cta-ghost", href: "#playground",
+                            span { "See it live" }
+                            span { class: "hero-cta-meta", "playground" }
                         }
                     }
                 }
@@ -634,8 +727,7 @@ fn Playground(
 ) -> Element {
     let themes = theme_mode.demo_themes();
     let active_idx = active_theme().min(themes.len() - 1);
-    let theme = themes[active_idx].theme;
-    let active_swatch = themes[active_idx].accent;
+    let theme = themes[active_idx];
     rsx! {
         section { id: "playground", class: "section",
             div { class: "section-head",
@@ -653,8 +745,28 @@ fn Playground(
                         span { class: "editor-meta",
                             span { "rust · " {format!("{} chars", source().chars().count())} }
                             span { class: "editor-meta-divider" }
-                            span { class: "editor-swatch", style: "background:{active_swatch};" }
-                            "{theme.name()}"
+                            Select::<usize> {
+                                value: Some(use_memo(move || Some(active_idx)).into()),
+                                on_value_change: move |v: Option<usize>| {
+                                    if let Some(idx) = v {
+                                        active_theme.set(idx);
+                                    }
+                                },
+                                SelectTrigger {
+                                    SelectValue { placeholder: "Choose a theme" }
+                                }
+                                SelectList {
+                                    for (i, swatch) in themes.iter().enumerate() {
+                                        SelectOption::<usize> {
+                                            value: i,
+                                            text_value: swatch.name().to_string(),
+                                            index: i,
+                                            span { "{swatch.name()}" }
+                                            SelectItemIndicator {}
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     CodeEditor {
@@ -666,39 +778,6 @@ fn Playground(
                         placeholder: "Type Rust code...",
                         class: "playground-code-editor",
                         oninput: move |value| source.set(value),
-                    }
-                }
-                Card { class: "card-themepicker",
-                    div { class: "card-bar",
-                        span { "active theme" }
-                        span { {format!("{} of {}", active_idx + 1, themes.len())} }
-                    }
-                    div { class: "theme-strip",
-                        Select::<usize> {
-                            value: Some(use_memo(move || Some(active_idx)).into()),
-                            on_value_change: move |v: Option<usize>| {
-                                if let Some(idx) = v {
-                                    active_theme.set(idx);
-                                }
-                            },
-                            SelectTrigger {
-                                SelectValue { placeholder: "Choose a theme" }
-                            }
-                            SelectList {
-                                for (i, swatch) in themes.iter().enumerate() {
-                                    SelectOption::<usize> {
-                                        value: i,
-                                        text_value: swatch.theme.name().to_string(),
-                                        index: i,
-                                        div { class: "theme-option-label",
-                                            span { class: "theme-pill-swatch", style: "background:{swatch.accent};" }
-                                            span { "{swatch.theme.name()}" }
-                                        }
-                                        SelectItemIndicator {}
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -934,155 +1013,53 @@ fn SiteFooter() -> Element {
     }
 }
 
-#[derive(Clone, Copy)]
-struct DemoTheme {
-    theme: Theme,
-    accent: &'static str,
-}
-
-fn light_demo_themes() -> &'static [DemoTheme] {
+fn light_demo_themes() -> &'static [Theme] {
     &[
-        DemoTheme {
-            theme: Theme::ALABASTER,
-            accent: "#aa3731",
-        },
-        DemoTheme {
-            theme: Theme::AYU_LIGHT,
-            accent: "#f07171",
-        },
-        DemoTheme {
-            theme: Theme::CATPPUCCIN_LATTE,
-            accent: "#1e66f5",
-        },
-        DemoTheme {
-            theme: Theme::DAYFOX,
-            accent: "#2848a9",
-        },
-        DemoTheme {
-            theme: Theme::GITHUB_LIGHT,
-            accent: "#0969da",
-        },
-        DemoTheme {
-            theme: Theme::GRUVBOX_LIGHT,
-            accent: "#076678",
-        },
-        DemoTheme {
-            theme: Theme::LIGHT_OWL,
-            accent: "#403f53",
-        },
-        DemoTheme {
-            theme: Theme::LUCIUS_LIGHT,
-            accent: "#005f87",
-        },
-        DemoTheme {
-            theme: Theme::MELANGE_LIGHT,
-            accent: "#c47f2c",
-        },
-        DemoTheme {
-            theme: Theme::RUSTDOC_LIGHT,
-            accent: "#7c3aed",
-        },
-        DemoTheme {
-            theme: Theme::SOLARIZED_LIGHT,
-            accent: "#268bd2",
-        },
+        Theme::ALABASTER,
+        Theme::AYU_LIGHT,
+        Theme::CATPPUCCIN_LATTE,
+        Theme::DAYFOX,
+        Theme::GITHUB_LIGHT,
+        Theme::GRUVBOX_LIGHT,
+        Theme::LIGHT_OWL,
+        Theme::LUCIUS_LIGHT,
+        Theme::MELANGE_LIGHT,
+        Theme::RUSTDOC_LIGHT,
+        Theme::SOLARIZED_LIGHT,
     ]
 }
 
-fn dark_demo_themes() -> &'static [DemoTheme] {
+fn dark_demo_themes() -> &'static [Theme] {
     &[
-        DemoTheme {
-            theme: Theme::AYU_DARK,
-            accent: "#ff8f40",
-        },
-        DemoTheme {
-            theme: Theme::CATPPUCCIN_FRAPPE,
-            accent: "#8caaee",
-        },
-        DemoTheme {
-            theme: Theme::CATPPUCCIN_MACCHIATO,
-            accent: "#8aadf4",
-        },
-        DemoTheme {
-            theme: Theme::CATPPUCCIN_MOCHA,
-            accent: "#89b4fa",
-        },
-        DemoTheme {
-            theme: Theme::COBALT2,
-            accent: "#ffc600",
-        },
-        DemoTheme {
-            theme: Theme::DESERT256,
-            accent: "#ffd700",
-        },
-        DemoTheme {
-            theme: Theme::DRACULA,
-            accent: "#bd93f9",
-        },
-        DemoTheme {
-            theme: Theme::EF_MELISSA_DARK,
-            accent: "#ef9fe4",
-        },
-        DemoTheme {
-            theme: Theme::GITHUB_DARK,
-            accent: "#58a6ff",
-        },
-        DemoTheme {
-            theme: Theme::GRUVBOX_DARK,
-            accent: "#83a598",
-        },
-        DemoTheme {
-            theme: Theme::KANAGAWA_DRAGON,
-            accent: "#c5c9c5",
-        },
-        DemoTheme {
-            theme: Theme::MELANGE_DARK,
-            accent: "#e49b5d",
-        },
-        DemoTheme {
-            theme: Theme::MONOKAI,
-            accent: "#66d9ef",
-        },
-        DemoTheme {
-            theme: Theme::NORD,
-            accent: "#88c0d0",
-        },
-        DemoTheme {
-            theme: Theme::ONE_DARK,
-            accent: "#61afef",
-        },
-        DemoTheme {
-            theme: Theme::ROSE_PINE_MOON,
-            accent: "#c4a7e7",
-        },
-        DemoTheme {
-            theme: Theme::RUSTDOC_AYU,
-            accent: "#ffb454",
-        },
-        DemoTheme {
-            theme: Theme::RUSTDOC_DARK,
-            accent: "#2bab63",
-        },
-        DemoTheme {
-            theme: Theme::SOLARIZED_DARK,
-            accent: "#268bd2",
-        },
-        DemoTheme {
-            theme: Theme::TOKYO_NIGHT,
-            accent: "#7aa2f7",
-        },
-        DemoTheme {
-            theme: Theme::ZENBURN,
-            accent: "#efef8f",
-        },
+        Theme::AYU_DARK,
+        Theme::CATPPUCCIN_FRAPPE,
+        Theme::CATPPUCCIN_MACCHIATO,
+        Theme::CATPPUCCIN_MOCHA,
+        Theme::COBALT2,
+        Theme::DESERT256,
+        Theme::DRACULA,
+        Theme::EF_MELISSA_DARK,
+        Theme::GITHUB_DARK,
+        Theme::GRUVBOX_DARK,
+        Theme::KANAGAWA_DRAGON,
+        Theme::MELANGE_DARK,
+        Theme::MONOKAI,
+        Theme::NORD,
+        Theme::ONE_DARK,
+        Theme::ROSE_PINE_MOON,
+        Theme::RUSTDOC_AYU,
+        Theme::RUSTDOC_DARK,
+        Theme::SOLARIZED_DARK,
+        Theme::TOKYO_NIGHT,
+        Theme::ZENBURN,
     ]
 }
 
 const APP_CSS: &str = r#"
 :root {
-  --bg: var(--primary-color-1);
-  --bg-tint: var(--primary-color-3);
-  --card: var(--primary-color-2);
+  --bg: var(--primary-color);
+  --bg-tint: var(--light, var(--primary-color-3)) var(--dark, var(--primary-color-1));
+  --card: var(--light, var(--primary-color-2)) var(--dark, var(--primary-color-3));
   --line: var(--primary-color-6);
   --line-strong: var(--primary-color-7);
   --ink: var(--secondary-color-1);
@@ -1090,22 +1067,22 @@ const APP_CSS: &str = r#"
   --ink-mute: var(--secondary-color-5);
   --accent: var(--focused-border-color);
   --accent-soft: rgb(43 127 255 / 14%);
-  --surface-soft: var(--primary-color-3);
-  --topbar-bg: var(--primary-color-1);
-  --feature-bg-footer: var(--primary-color-3);
+  --surface-soft: var(--light, var(--primary-color-3)) var(--dark, var(--primary-color-4));
+  --topbar-bg: var(--light, var(--primary-color-2)) var(--dark, var(--primary-color-3));
+  --feature-bg-footer: var(--light, var(--primary-color-3)) var(--dark, var(--primary-color-4));
   --feature-text: var(--secondary-color-1);
   --feature-soft: var(--secondary-color-4);
   --feature-mute: var(--secondary-color-5);
   --feature-line: var(--primary-color-6);
-  --code-bg: var(--primary-color-2);
-  --editor-bg: var(--primary-color-2);
+  --code-bg: var(--light, var(--primary-color-2)) var(--dark, var(--primary-color-3));
+  --editor-bg: var(--light, var(--primary-color-2)) var(--dark, var(--primary-color-3));
   --editor-fg: var(--secondary-color-4);
-  --editor-gutter-bg: var(--primary-color-3);
+  --editor-gutter-bg: var(--light, var(--primary-color-3)) var(--dark, var(--primary-color-4));
   --editor-gutter-fg: var(--secondary-color-5);
   --editor-gutter-line: var(--primary-color-6);
   --editor-selection: rgb(43 127 255 / 24%);
-  --shadow-card: 0 1px 3px rgb(0 0 0 / 6%);
-  --shadow-elev: 0 8px 24px -10px rgb(0 0 0 / 16%);
+  --shadow-card: var(--light, 0 1px 3px rgb(0 0 0 / 6%)) var(--dark, none);
+  --shadow-elev: var(--light, 0 8px 24px -10px rgb(0 0 0 / 16%)) var(--dark, none);
   --radius-card: 22px;
   --radius-inner: 12px;
   --max-width: 1340px;
@@ -1210,6 +1187,7 @@ a {
 }
 
 .section-title {
+  color: var(--ink);
   font-family: Inter, sans-serif;
   font-size: clamp(28px, 3.6vw, 44px);
   font-weight: 600;
@@ -1315,13 +1293,80 @@ a {
 }
 
 .hero-actions {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
-.hero-actions a {
+.hero-cta {
+  align-items: center;
+  border-radius: 12px;
   display: inline-flex;
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  height: 42px;
+  letter-spacing: -0.005em;
+  padding: 0 16px 0 18px;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  white-space: nowrap;
+}
+
+.hero-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.hero-cta-primary {
+  background: var(--ink);
+  box-shadow: var(--light, 0 6px 18px -10px rgb(0 0 0 / 35%)) var(--dark, 0 1px 0 0 rgb(255 255 255 / 6%) inset);
+  color: var(--bg);
+}
+
+.hero-cta-primary:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.hero-cta-primary:hover .hero-cta-arrow {
+  transform: translateX(3px);
+}
+
+.hero-cta-arrow {
+  transition: transform 0.18s ease;
+}
+
+.hero-cta-ghost {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  padding: 0 6px 0 16px;
+}
+
+.hero-cta-ghost:hover {
+  background: var(--bg-tint);
+  border-color: var(--ink);
+}
+
+.hero-cta-meta {
+  background: var(--bg-tint);
+  border-radius: 8px;
+  color: var(--ink-mute);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.hero-cta-ghost:hover .hero-cta-meta {
+  background: var(--card);
+  color: var(--ink-soft);
 }
 
 .hero-stage {
@@ -1369,8 +1414,8 @@ a {
 }
 
 .hero-terminal-block {
-  background: #0c0c0c;
-  border: 1px solid var(--line);
+  background: var(--light, #0c0c0c) var(--dark, #161b22);
+  border: 1px solid var(--light, transparent) var(--dark, var(--primary-color-6));
   border-radius: var(--radius-card);
   margin: 4px 0 26px;
   max-width: 540px;
@@ -1379,8 +1424,8 @@ a {
 
 .hero-terminal-bar {
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgb(255 255 255 / 4%);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
   display: flex;
   gap: 8px;
   min-height: 36px;
@@ -1429,6 +1474,58 @@ a {
 
 .term-success {
   color: #34d399;
+}
+
+.hero-terminal-bar {
+  justify-content: flex-start;
+}
+
+.hero-terminal-title {
+  flex: 1;
+}
+
+.term-copy {
+  align-items: center;
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  color: rgba(243, 234, 219, 0.78);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 6px;
+  height: 26px;
+  letter-spacing: 0.04em;
+  margin-right: -4px;
+  padding: 0 10px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.term-copy:hover {
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 255 255 / 16%);
+  color: #f3eadb;
+}
+
+.term-copy:focus-visible {
+  border-color: #a5b4fc;
+  outline: none;
+}
+
+.term-copy[data-copied="true"] {
+  background: rgb(52 211 153 / 14%);
+  border-color: rgb(52 211 153 / 36%);
+  color: #34d399;
+}
+
+.term-copy svg {
+  flex-shrink: 0;
+}
+
+.term-copy-label {
+  line-height: 1;
 }
 
 /* ============ Feature row ============ */
@@ -1568,25 +1665,22 @@ a {
   display: grid;
   gap: 14px;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(480px, 1fr) auto;
   margin: 0 auto;
   max-width: var(--max-width);
   width: 100%;
 }
 
 .card-editor {
-  grid-row: 1;
   overflow: hidden;
   padding: 0;
   gap: 0;
 }
 
-.card-themepicker {
-  grid-column: 1;
-  grid-row: 2;
-  overflow: hidden;
-  padding: 0;
-  gap: 0;
+.card-editor .select-list {
+  max-height: 280px;
+  overflow-y: auto;
+  right: 0;
+  left: auto;
 }
 
 .playground-code-editor {
@@ -1628,33 +1722,6 @@ a {
   width: 1px;
 }
 
-.editor-swatch {
-  border-radius: 50%;
-  height: 10px;
-  width: 10px;
-}
-
-.theme-strip {
-  padding: 18px;
-}
-
-.theme-strip .select-list {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.theme-pill-swatch {
-  border-radius: 50%;
-  height: 12px;
-  width: 12px;
-}
-
-.theme-option-label {
-  align-items: center;
-  display: inline-flex;
-  gap: 8px;
-}
-
 /* ============ Demos ============ */
 
 .demos-card {
@@ -1688,6 +1755,7 @@ a {
 }
 
 .demo-pane-title {
+  color: var(--ink);
   font-family: Inter, sans-serif;
   font-size: clamp(22px, 2vw, 30px);
   font-weight: 600;
