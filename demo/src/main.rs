@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_code::{Code, RuntimeCode, Theme, code};
+use dioxus_code_editor::CodeEditor;
 
 const STARTER: &str = r#"use dioxus::prelude::*;
 
@@ -47,6 +48,23 @@ rsx! {
 }
 "#;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Scheme {
+    System,
+    Light,
+    Dark,
+}
+
+impl Scheme {
+    fn class(self) -> &'static str {
+        match self {
+            Scheme::System => "site-shell theme-system",
+            Scheme::Light => "site-shell theme-light",
+            Scheme::Dark => "site-shell theme-dark",
+        }
+    }
+}
+
 fn main() {
     dioxus::launch(App);
 }
@@ -55,12 +73,14 @@ fn main() {
 fn App() -> Element {
     let source = use_signal(|| STARTER.to_string());
     let active_theme = use_signal(|| 0usize);
+    let scheme = use_signal(|| Scheme::System);
 
     rsx! {
         style { {APP_CSS} }
-        main { class: "site-shell",
-            Header {}
+        main { class: scheme().class(),
+            Header { scheme }
             Hero { source: source(), theme: demo_themes()[active_theme()].theme }
+            Highlights {}
             Playground { source, active_theme }
             Demos {}
             Docs {}
@@ -70,7 +90,7 @@ fn App() -> Element {
 }
 
 #[component]
-fn Header() -> Element {
+fn Header(scheme: Signal<Scheme>) -> Element {
     rsx! {
         header { class: "topbar",
             a { class: "brand", href: "#top", "aria-label": "Homepage",
@@ -81,6 +101,7 @@ fn Header() -> Element {
                 a { href: "#playground", "Playground" }
                 a { href: "#demos", "Demos" }
                 a { href: "#docs", "Docs" }
+                ThemeToggle { scheme }
                 a { class: "topbar-cta", href: "https://crates.io/crates/dioxus-code", "crates.io ↗" }
             }
         }
@@ -88,39 +109,155 @@ fn Header() -> Element {
 }
 
 #[component]
+fn ThemeToggle(mut scheme: Signal<Scheme>) -> Element {
+    rsx! {
+        div { class: "theme-toggle", role: "group", "aria-label": "Color scheme",
+            button {
+                class: if scheme() == Scheme::System { "theme-seg active" } else { "theme-seg" },
+                title: "System",
+                "aria-label": "Use system color scheme",
+                onclick: move |_| scheme.set(Scheme::System),
+                IconMonitor {}
+            }
+            button {
+                class: if scheme() == Scheme::Light { "theme-seg active" } else { "theme-seg" },
+                title: "Light",
+                "aria-label": "Light color scheme",
+                onclick: move |_| scheme.set(Scheme::Light),
+                IconSun {}
+            }
+            button {
+                class: if scheme() == Scheme::Dark { "theme-seg active" } else { "theme-seg" },
+                title: "Dark",
+                "aria-label": "Dark color scheme",
+                onclick: move |_| scheme.set(Scheme::Dark),
+                IconMoon {}
+            }
+        }
+    }
+}
+
+#[component]
+fn IconSun() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.7",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            circle { cx: "12", cy: "12", r: "4" }
+            path { d: "M12 3v1.5M12 19.5V21M4.22 4.22l1.06 1.06M18.72 18.72l1.06 1.06M3 12h1.5M19.5 12H21M4.22 19.78l1.06-1.06M18.72 5.28l1.06-1.06" }
+        }
+    }
+}
+
+#[component]
+fn IconMoon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.7",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M21 12.6A9 9 0 1 1 11.4 3a7 7 0 0 0 9.6 9.6z" }
+        }
+    }
+}
+
+#[component]
+fn IconMonitor() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.7",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            rect { x: "3", y: "4.5", width: "18", height: "12", rx: "2" }
+            path { d: "M8.5 20h7M12 16.5V20" }
+        }
+    }
+}
+
+#[component]
 fn Hero(source: String, theme: Theme) -> Element {
     rsx! {
-        section { id: "top", class: "section hero",
-            div { class: "hero-grid",
-                div { class: "card card-pitch",
-                    span { class: "card-eyebrow card-eyebrow-light", "dioxus-code · v0.1" }
-                    h1 { class: "pitch-title",
-                        "The code block, redesigned for Dioxus apps."
+        section { id: "top", class: "hero hero-terminal",
+            div { class: "hero-terminal-grid",
+                div { class: "hero-terminal-copy",
+                    span { class: "hero-eyebrow", "// v0.1.0 · ready to ship" }
+                    h1 { class: "hero-h1",
+                        "Highlight code in Dioxus, with one "
+                        em { "cargo add" }
+                        "."
                     }
-                    p { class: "pitch-lede",
-                        "Drop-in component, two source modes, themes you'd actually choose."
+                    p { class: "hero-lede",
+                        "A drop-in component with two source modes — compile-time macro and runtime detection. No JS, no flash of unstyled code."
                     }
-                    div { class: "pitch-actions",
-                        a { class: "cta primary", href: "#playground", "Try it →" }
-                        a { class: "cta", href: "#docs", "Documentation" }
+                    div { class: "hero-terminal-block",
+                        div { class: "hero-terminal-bar",
+                            span { class: "term-dot r" }
+                            span { class: "term-dot y" }
+                            span { class: "term-dot g" }
+                            span { class: "hero-terminal-title", "~/my-app" }
+                        }
+                        div { class: "hero-terminal-body",
+                            p { class: "term-line",
+                                span { class: "term-prompt", "$" }
+                                span { "cargo add dioxus-code" }
+                            }
+                            p { class: "term-line term-output",
+                                "    Updating crates.io index"
+                            }
+                            p { class: "term-line term-output",
+                                "    Adding dioxus-code v0.1 to dependencies"
+                            }
+                            p { class: "term-line term-success",
+                                "    Done."
+                            }
+                        }
                     }
-                    div { class: "pitch-meta",
-                        span { class: "pitch-meta-dot" }
-                        span { "Built on Arborium · works with any Tree-sitter grammar" }
+                    div { class: "hero-actions",
+                        a { class: "hero-cta primary", href: "#docs", "Read the docs →" }
+                        a { class: "hero-cta", href: "#playground", "See it live" }
                     }
                 }
-                div { class: "card card-code",
+                div { class: "hero-stage hero-stage-split",
                     div { class: "card-bar",
-                        span { "live preview" }
+                        span { "src/counter.rs" }
                         span { "{theme.name()}" }
                     }
                     div { class: "card-code-body",
-                        Code {
-                            src: RuntimeCode::new(source).with_language("rust"),
-                            theme,
-                        }
+                        Code { src: RuntimeCode::new(source).with_language("rust"), theme }
                     }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn Highlights() -> Element {
+    rsx! {
+        section { class: "section",
+            div { class: "section-head",
+                div {
+                    span { class: "section-eyebrow", "// What's in the box" }
+                    h2 { class: "section-title", "A code component, fully assembled." }
+                }
+                p { class: "section-sub",
+                    "Two source modes, thirty-two themes, zero runtime cost when you choose the macro."
+                }
+            }
+            div { class: "highlights-grid",
                 div { class: "card card-install",
                     span { class: "card-eyebrow", "Install" }
                     code { class: "shell-cmd", "cargo add dioxus-code" }
@@ -175,38 +312,32 @@ fn Playground(mut source: Signal<String>, mut active_theme: Signal<usize>) -> El
             div { class: "section-head",
                 div {
                     span { class: "section-eyebrow", "// Live playground" }
-                    h2 { class: "section-title", "Edit on the left. Render on the right." }
+                    h2 { class: "section-title", "Edit highlighted code inline." }
                 }
                 p { class: "section-sub",
-                    "Type Rust, swap themes, and ship the same component to your users."
+                    "Type Rust in the contenteditable editor, swap themes, and keep the rendered output in one surface."
                 }
             }
             div { class: "playground-grid",
                 div { class: "card card-editor",
                     div { class: "card-bar",
                         span { "source.rs" }
-                        span { "rust · " {format!("{} chars", source().chars().count())} }
-                    }
-                    textarea {
-                        class: "code-input",
-                        spellcheck: false,
-                        value: "{source}",
-                        oninput: move |event| source.set(event.value()),
-                    }
-                }
-                div { class: "card card-preview",
-                    div { class: "card-bar",
-                        span { "preview" }
-                        span { class: "preview-meta",
-                            span { class: "preview-swatch", style: "background:{active_swatch};" }
+                        span { class: "editor-meta",
+                            span { "rust · " {format!("{} chars", source().chars().count())} }
+                            span { class: "editor-meta-divider" }
+                            span { class: "editor-swatch", style: "background:{active_swatch};" }
                             "{theme.name()}"
                         }
                     }
-                    div { class: "card-code-body",
-                        Code {
-                            src: RuntimeCode::new(source()).with_language("rust"),
-                            theme,
-                        }
+                    CodeEditor {
+                        value: source(),
+                        language: "rust",
+                        name: "source.rs",
+                        theme,
+                        aria_label: "Rust source editor",
+                        placeholder: "Type Rust code...",
+                        class: "playground-code-editor",
+                        oninput: move |value| source.set(value),
                     }
                 }
                 div { class: "card card-themepicker",
@@ -462,8 +593,8 @@ fn demo_themes() -> &'static [DemoTheme] {
 const APP_CSS: &str = r#"
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400;500;600;700&display=swap');
 
-:root {
-  color-scheme: light;
+:root,
+.theme-light {
   --bg: #fafaf6;
   --bg-tint: #f4f3ed;
   --card: #ffffff;
@@ -473,13 +604,103 @@ const APP_CSS: &str = r#"
   --ink-soft: rgba(28, 25, 23, 0.65);
   --ink-mute: rgba(28, 25, 23, 0.5);
   --accent: #6366f1;
-  --paper: #fafaf6;
-  --paper-soft: rgba(250, 250, 246, 0.7);
+  --accent-soft: rgba(99, 102, 241, 0.1);
+  --surface-soft: rgba(28, 25, 23, 0.06);
+  --topbar-bg: rgba(250, 250, 246, 0.78);
+  --feature-bg: linear-gradient(135deg, #0a0a0a 0%, #1c1917 100%);
+  --feature-mesh-1: radial-gradient(ellipse at 80% 0%, rgba(99, 102, 241, 0.18), transparent 55%);
+  --feature-mesh-2: radial-gradient(ellipse at 0% 100%, rgba(244, 114, 182, 0.1), transparent 55%);
+  --feature-bg-footer: linear-gradient(140deg, #0a0a0a 0%, #1c1917 100%);
+  --feature-mesh-footer: radial-gradient(ellipse at 90% 0%, rgba(99, 102, 241, 0.18), transparent 60%);
+  --feature-text: #fafaf6;
+  --feature-soft: rgba(250, 250, 246, 0.7);
+  --feature-mute: rgba(250, 250, 246, 0.5);
+  --feature-line: rgba(250, 250, 246, 0.12);
+  --feature-cta-bg: #fafaf6;
+  --feature-cta-fg: #0a0a0a;
+  --feature-cta-ghost-bg: rgba(250, 250, 246, 0.08);
+  --feature-cta-ghost-line: rgba(250, 250, 246, 0.18);
+  --feature-cta-ghost-fg: rgba(250, 250, 246, 0.92);
+  --editor-bg: #0c0c0c;
+  --editor-fg: #f3eadb;
   --shadow-card: 0 1px 3px rgba(28, 25, 23, 0.04);
   --shadow-elev: 0 8px 24px -10px rgba(28, 25, 23, 0.16);
   --radius-card: 22px;
   --radius-inner: 12px;
   --max-width: 1340px;
+  color-scheme: light;
+}
+
+:root:has(.theme-dark),
+html:has(.theme-dark) {
+  --bg: #0c0a08;
+  --bg-tint: #1a1612;
+  --card: #1a1612;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --ink: #f5f3ee;
+  --ink-soft: rgba(245, 243, 238, 0.7);
+  --ink-mute: rgba(245, 243, 238, 0.5);
+  --accent: #a5b4fc;
+  --accent-soft: rgba(165, 180, 252, 0.14);
+  --surface-soft: rgba(255, 255, 255, 0.06);
+  --topbar-bg: rgba(12, 10, 8, 0.78);
+  --feature-bg: #1a1612;
+  --feature-mesh-1: none;
+  --feature-mesh-2: none;
+  --feature-bg-footer: #1a1612;
+  --feature-mesh-footer: none;
+  --feature-text: #f5f3ee;
+  --feature-soft: rgba(245, 243, 238, 0.72);
+  --feature-mute: rgba(245, 243, 238, 0.48);
+  --feature-line: rgba(255, 255, 255, 0.08);
+  --feature-cta-bg: #f5f3ee;
+  --feature-cta-fg: #0a0a0a;
+  --feature-cta-ghost-bg: rgba(245, 243, 238, 0.06);
+  --feature-cta-ghost-line: rgba(245, 243, 238, 0.16);
+  --feature-cta-ghost-fg: rgba(245, 243, 238, 0.92);
+  --editor-bg: #050505;
+  --editor-fg: #f3eadb;
+  --shadow-card: none;
+  --shadow-elev: none;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:has(.theme-system),
+  html:has(.theme-system) {
+    --bg: #0c0a08;
+    --bg-tint: #1a1612;
+    --card: #1a1612;
+    --line: rgba(255, 255, 255, 0.07);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --ink: #f5f3ee;
+    --ink-soft: rgba(245, 243, 238, 0.7);
+    --ink-mute: rgba(245, 243, 238, 0.5);
+    --accent: #a5b4fc;
+    --accent-soft: rgba(165, 180, 252, 0.14);
+    --surface-soft: rgba(255, 255, 255, 0.06);
+    --topbar-bg: rgba(12, 10, 8, 0.78);
+    --feature-bg: #1a1612;
+    --feature-mesh-1: none;
+    --feature-mesh-2: none;
+    --feature-bg-footer: #1a1612;
+    --feature-mesh-footer: none;
+    --feature-text: #f5f3ee;
+    --feature-soft: rgba(245, 243, 238, 0.72);
+    --feature-mute: rgba(245, 243, 238, 0.48);
+    --feature-line: rgba(255, 255, 255, 0.08);
+    --feature-cta-bg: #f5f3ee;
+    --feature-cta-fg: #0a0a0a;
+    --feature-cta-ghost-bg: rgba(245, 243, 238, 0.06);
+    --feature-cta-ghost-line: rgba(245, 243, 238, 0.16);
+    --feature-cta-ghost-fg: rgba(245, 243, 238, 0.92);
+    --editor-bg: #050505;
+    --editor-fg: #f3eadb;
+    --shadow-card: none;
+    --shadow-elev: none;
+    color-scheme: dark;
+  }
 }
 
 html {
@@ -523,7 +744,7 @@ button {
 
 .topbar {
   align-items: center;
-  background: rgba(250, 250, 246, 0.78);
+  background: var(--topbar-bg);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--line);
@@ -554,9 +775,9 @@ button {
 
 .brand-mark {
   align-items: center;
-  background: #0a0a0a;
+  background: var(--ink);
   border-radius: 8px;
-  color: #fff;
+  color: var(--bg);
   display: inline-flex;
   font-family: 'Geist Mono', monospace;
   font-size: 11px;
@@ -577,19 +798,66 @@ button {
 }
 
 .topbar nav a:hover {
-  background: rgba(28, 25, 23, 0.05);
+  background: var(--accent-soft);
   color: var(--ink);
 }
 
 .topbar-cta {
-  background: var(--ink);
-  color: var(--paper) !important;
+  background: var(--ink) !important;
+  color: var(--bg) !important;
   margin-left: 6px;
 }
 
 .topbar-cta:hover {
-  background: #0a0a0a !important;
-  color: #fff !important;
+  filter: brightness(1.08);
+}
+
+/* Theme toggle */
+
+.theme-toggle {
+  align-items: center;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 2px;
+  margin: 0 4px 0 8px;
+  padding: 3px;
+}
+
+.theme-seg {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  display: inline-flex;
+  height: 26px;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+  width: 28px;
+}
+
+.theme-seg:hover {
+  color: var(--ink);
+}
+
+.theme-seg.active {
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+}
+
+.theme-dark .theme-seg.active,
+.theme-system .theme-seg.active {
+  box-shadow: none;
+}
+
+.theme-seg svg {
+  height: 14px;
+  width: 14px;
 }
 
 /* ============ Section shell ============ */
@@ -661,7 +929,7 @@ button {
 }
 
 .card-eyebrow-light {
-  color: rgba(250, 250, 246, 0.55);
+  color: var(--feature-mute);
 }
 
 .card-bar {
@@ -712,113 +980,261 @@ button {
 }
 
 .cta.primary {
-  background: var(--paper);
-  color: #0a0a0a;
+  background: var(--feature-cta-bg);
+  color: var(--feature-cta-fg);
 }
 
 .cta.primary:hover {
-  background: #fff;
+  filter: brightness(1.04);
   transform: translateY(-1px);
 }
 
 .cta:not(.primary) {
-  background: rgba(250, 250, 246, 0.08);
-  border: 1px solid rgba(250, 250, 246, 0.18);
-  color: rgba(250, 250, 246, 0.92);
+  background: var(--feature-cta-ghost-bg);
+  border: 1px solid var(--feature-cta-ghost-line);
+  color: var(--feature-cta-ghost-fg);
 }
 
 .cta:not(.primary):hover {
-  background: rgba(250, 250, 246, 0.16);
+  background: var(--feature-cta-ghost-line);
 }
 
-/* ============ Hero ============ */
+/* ============ Hero (shared primitives) ============ */
 
 .hero {
-  padding-top: 16px;
+  margin: 0 auto;
+  max-width: var(--max-width);
+  padding: 32px 24px 56px;
+  width: 100%;
 }
 
-.hero-grid {
+.hero-eyebrow {
+  color: var(--accent);
+  display: block;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-bottom: 16px;
+}
+
+.hero-h1 {
+  color: var(--ink);
+  font-family: 'Geist', sans-serif;
+  font-size: clamp(40px, 5.6vw, 80px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  margin: 0 0 22px;
+  max-width: 18ch;
+  text-wrap: balance;
+}
+
+.hero-h1 em {
+  color: var(--accent);
+  font-family: 'Geist Mono', monospace;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.hero-lede {
+  color: var(--ink-soft);
+  font-family: 'Geist', sans-serif;
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 0 0 28px;
+  max-width: 56ch;
+  text-wrap: pretty;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-cta {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 22px;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+
+.hero-cta.primary {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.hero-cta.primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.hero-cta:not(.primary) {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.hero-cta:not(.primary):hover {
+  background: var(--surface-soft);
+}
+
+.hero-stage {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.hero-stage .card-code-body .dxc {
+  background: transparent;
+  border: 0;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 0;
+  min-height: 380px;
+  padding: 18px 20px;
+}
+
+.hero-stage-split {
+  align-self: stretch;
+}
+
+.hero-stage-split .card-code-body .dxc {
+  min-height: 460px;
+}
+
+/* Hero: Terminal install */
+
+.hero-terminal-grid {
+  align-items: center;
+  display: grid;
+  gap: 56px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  padding: 32px 0;
+}
+
+.hero-terminal-copy {
+  align-content: center;
+  display: grid;
+}
+
+.hero-terminal-block {
+  background: #0c0c0c;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  margin: 4px 0 26px;
+  max-width: 540px;
+  overflow: hidden;
+}
+
+.hero-terminal-bar {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.term-dot {
+  border-radius: 50%;
+  height: 11px;
+  width: 11px;
+}
+
+.term-dot.r { background: #ff5f57; }
+.term-dot.y { background: #febc2e; }
+.term-dot.g { background: #28c840; }
+
+.hero-terminal-title {
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.hero-terminal-body {
+  color: #f3eadb;
+  font-family: 'Geist Mono', monospace;
+  font-size: 13px;
+  line-height: 1.85;
+  padding: 18px 20px;
+}
+
+.term-line {
+  margin: 0;
+  white-space: pre;
+}
+
+.term-prompt {
+  color: #a5b4fc;
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+.term-output {
+  color: rgba(243, 234, 219, 0.55);
+}
+
+.term-success {
+  color: #34d399;
+}
+
+/* ============ Highlights bento ============ */
+
+.highlights-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: minmax(220px, 1fr) minmax(220px, 1fr) minmax(160px, auto) minmax(160px, auto);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-rows: auto auto;
   margin: 0 auto;
   max-width: var(--max-width);
   width: 100%;
 }
 
-.card-pitch {
-  align-content: center;
-  background:
-    radial-gradient(ellipse at 80% 0%, rgba(99, 102, 241, 0.18), transparent 55%),
-    radial-gradient(ellipse at 0% 100%, rgba(244, 114, 182, 0.1), transparent 55%),
-    linear-gradient(135deg, #0a0a0a 0%, #1c1917 100%);
-  border: 0;
-  color: var(--paper);
-  grid-column: 1 / span 2;
-  grid-row: 1 / span 2;
-  padding: 44px;
-}
-
-.pitch-title {
-  color: var(--paper);
-  font-family: 'Geist', sans-serif;
-  font-size: clamp(36px, 4.6vw, 64px);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1;
-  margin: 22px 0 20px;
-  max-width: 14ch;
-}
-
-.pitch-lede {
-  color: rgba(250, 250, 246, 0.7);
-  font-family: 'Geist', sans-serif;
-  font-size: 17px;
-  line-height: 1.5;
-  margin: 0 0 28px;
-  max-width: 50ch;
-}
-
-.pitch-actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 32px;
-}
-
-.pitch-meta {
-  align-items: center;
-  color: rgba(250, 250, 246, 0.5);
-  display: flex;
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  gap: 8px;
-}
-
-.pitch-meta-dot {
-  background: #34d399;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.7);
-  height: 7px;
-  width: 7px;
-}
-
-.card-code {
-  grid-column: 3;
-  grid-row: 1 / span 2;
-  grid-template-rows: auto 1fr;
-  overflow: hidden;
-  padding: 0;
-}
-
-.card-install {
+.highlights-grid .card-install {
+  align-content: start;
   grid-column: 1;
+  grid-row: 1;
+  padding: 24px;
+}
+
+.highlights-grid .card-modes {
+  align-content: start;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 28px;
+}
+
+.highlights-grid .card-zero {
+  align-content: start;
+  grid-column: 1;
+  grid-row: 2;
+  padding: 24px;
+}
+
+.highlights-grid .card-themes {
+  align-content: start;
+  grid-column: 1 / span 2;
   grid-row: 3;
   padding: 24px;
-  align-content: start;
 }
 
-.card-install .card-eyebrow {
+.card-install .card-eyebrow,
+.card-modes .card-eyebrow,
+.card-zero .card-eyebrow,
+.card-themes .card-eyebrow {
   margin-bottom: 14px;
 }
 
@@ -835,17 +1251,6 @@ button {
   padding: 12px 14px;
 }
 
-.card-modes {
-  grid-column: 2 / span 2;
-  grid-row: 3;
-  padding: 24px;
-  align-content: start;
-}
-
-.card-modes .card-eyebrow {
-  margin-bottom: 14px;
-}
-
 .modes-row {
   display: grid;
   gap: 14px;
@@ -857,7 +1262,7 @@ button {
   border-radius: var(--radius-inner);
   display: grid;
   gap: 6px;
-  padding: 16px;
+  padding: 18px;
 }
 
 .mode-name {
@@ -876,7 +1281,7 @@ button {
 
 .mode-tag {
   align-self: start;
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--accent-soft);
   border-radius: 999px;
   color: var(--accent);
   font-family: 'Geist Mono', monospace;
@@ -887,17 +1292,6 @@ button {
   padding: 4px 10px;
 }
 
-.card-zero {
-  grid-column: 1;
-  grid-row: 4;
-  padding: 24px;
-  align-content: start;
-}
-
-.card-zero .card-eyebrow {
-  margin-bottom: 14px;
-}
-
 .stat-num {
   color: var(--ink);
   font-family: 'Geist', sans-serif;
@@ -906,17 +1300,6 @@ button {
   letter-spacing: -0.045em;
   line-height: 1;
   margin: 0 0 14px;
-}
-
-.card-themes {
-  grid-column: 2 / span 2;
-  grid-row: 4;
-  padding: 24px;
-  align-content: start;
-}
-
-.card-themes .card-eyebrow {
-  margin-bottom: 16px;
 }
 
 .swatches {
@@ -951,15 +1334,14 @@ button {
 .playground-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  grid-template-rows: minmax(420px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(480px, 1fr) auto;
   margin: 0 auto;
   max-width: var(--max-width);
   width: 100%;
 }
 
-.card-editor,
-.card-preview {
+.card-editor {
   grid-row: 1;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
@@ -967,40 +1349,53 @@ button {
 }
 
 .card-themepicker {
-  grid-column: 1 / span 2;
+  grid-column: 1;
   grid-row: 2;
   grid-template-rows: auto auto;
   overflow: hidden;
   padding: 0;
 }
 
-.code-input {
-  background: #0c0c0c;
-  border: 0;
-  color: #f3eadb;
+.playground-code-editor {
+  --dxc-editor-caret: var(--editor-fg);
+  --dxc-editor-focus-ring: inset 0 0 0 2px var(--accent);
+  --dxc-editor-gutter-line-padding: 0 14px 0 18px;
+  --dxc-editor-gutter-padding: 20px 0;
+  --dxc-editor-gutter-width: 4ch;
+  --dxc-editor-padding: 20px 22px 20px 0;
+  --dxc-editor-selection: rgba(122, 162, 247, 0.34);
+  background: var(--editor-bg);
+  color: var(--editor-fg);
   font: 14px/1.65 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  min-height: 420px;
-  outline: none;
-  padding: 20px;
-  resize: vertical;
-  tab-size: 4;
+  min-height: 480px;
+  width: 100%;
 }
 
-.code-input:focus {
-  box-shadow: inset 0 0 0 2px var(--accent);
+.playground-code-editor .dxc-editor-gutter {
+  background: rgba(255, 255, 255, 0.03);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(243, 234, 219, 0.38);
 }
 
-.card-preview .card-code-body {
-  min-height: 420px;
+.playground-code-editor .dxc-editor-highlight,
+.playground-code-editor .dxc-editor-input {
+  overflow-x: auto;
 }
 
-.preview-meta {
+.editor-meta {
   align-items: center;
   display: inline-flex;
   gap: 8px;
 }
 
-.preview-swatch {
+.editor-meta-divider {
+  background: var(--line-strong);
+  display: inline-flex;
+  height: 12px;
+  width: 1px;
+}
+
+.editor-swatch {
   border-radius: 50%;
   height: 10px;
   width: 10px;
@@ -1037,7 +1432,7 @@ button {
 .theme-pill.active {
   background: var(--ink);
   border-color: var(--ink);
-  color: var(--paper);
+  color: var(--bg);
 }
 
 .theme-pill-swatch {
@@ -1083,7 +1478,7 @@ button {
 }
 
 .demo-feature-tag {
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--accent-soft);
   border-radius: 999px;
   color: var(--accent);
   font-family: 'Geist Mono', monospace;
@@ -1160,7 +1555,7 @@ button {
 .doc-num {
   background: var(--ink);
   border-radius: 8px;
-  color: var(--paper);
+  color: var(--bg);
   font-family: 'Geist Mono', monospace;
   font-size: 12px;
   font-weight: 600;
@@ -1210,10 +1605,11 @@ button {
 
 .card-footer {
   background:
-    radial-gradient(ellipse at 90% 0%, rgba(99, 102, 241, 0.18), transparent 60%),
-    linear-gradient(140deg, #0a0a0a 0%, #1c1917 100%);
-  border: 0;
-  color: var(--paper);
+    var(--feature-mesh-footer),
+    var(--feature-bg-footer);
+  border: 1px solid var(--feature-line);
+  box-shadow: var(--shadow-card);
+  color: var(--feature-text);
   margin: 0 auto;
   max-width: var(--max-width);
   padding: 40px 40px 28px;
@@ -1232,8 +1628,13 @@ button {
   gap: 12px;
 }
 
+.card-footer .brand-mark {
+  background: var(--feature-text);
+  color: #1c1917;
+}
+
 .footer-brand-name {
-  color: var(--paper);
+  color: var(--feature-text);
   font-family: 'Geist', sans-serif;
   font-size: 17px;
   font-weight: 600;
@@ -1241,7 +1642,7 @@ button {
 }
 
 .footer-tag {
-  color: rgba(250, 250, 246, 0.6);
+  color: var(--feature-soft);
   font-family: 'Geist', sans-serif;
   font-size: 14px;
   line-height: 1.55;
@@ -1256,12 +1657,12 @@ button {
 }
 
 .footer-col .card-eyebrow {
-  color: rgba(250, 250, 246, 0.5);
+  color: var(--feature-mute);
   margin-bottom: 4px;
 }
 
 .footer-col a {
-  color: rgba(250, 250, 246, 0.85);
+  color: var(--feature-soft);
   font-family: 'Geist', sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -1269,22 +1670,22 @@ button {
 }
 
 .footer-col a:hover {
-  color: var(--paper);
+  color: var(--feature-text);
 }
 
 .footer-meta {
-  color: rgba(250, 250, 246, 0.55);
+  color: var(--feature-mute);
   font-family: 'Geist Mono', monospace;
   font-size: 12px;
 }
 
 .footer-rule {
-  border-top: 1px solid rgba(250, 250, 246, 0.12);
+  border-top: 1px solid var(--feature-line);
   margin: 32px 0 20px;
 }
 
 .footer-fineprint {
-  color: rgba(250, 250, 246, 0.45);
+  color: var(--feature-mute);
   font-family: 'Geist Mono', monospace;
   font-size: 12px;
   margin: 0;
@@ -1293,48 +1694,29 @@ button {
 /* ============ Responsive ============ */
 
 @media (max-width: 1100px) {
-  .hero-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto;
+  .hero-terminal-grid {
+    gap: 36px;
+    grid-template-columns: 1fr;
   }
 
-  .card-pitch {
-    grid-column: 1 / span 2;
-    grid-row: auto;
+  .highlights-grid {
+    grid-template-columns: 1fr;
   }
 
-  .card-code {
-    grid-column: 1 / span 2;
-    grid-row: auto;
-  }
-
-  .card-install {
+  .highlights-grid .card-install,
+  .highlights-grid .card-modes,
+  .highlights-grid .card-zero,
+  .highlights-grid .card-themes {
     grid-column: 1;
-    grid-row: auto;
-  }
-
-  .card-modes {
-    grid-column: 2;
-    grid-row: auto;
-  }
-
-  .card-zero {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .card-themes {
-    grid-column: 2;
     grid-row: auto;
   }
 
   .playground-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
   }
 
-  .card-editor,
-  .card-preview {
+  .card-editor {
     grid-row: auto;
   }
 
@@ -1384,21 +1766,8 @@ button {
     text-align: left;
   }
 
-  .hero-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card-pitch,
-  .card-code,
-  .card-install,
-  .card-modes,
-  .card-zero,
-  .card-themes {
-    grid-column: 1;
-  }
-
-  .card-pitch {
-    padding: 32px 24px;
+  .hero {
+    padding: 24px 14px 40px;
   }
 
   .modes-row {

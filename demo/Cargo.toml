@@ -6,7 +6,8 @@ license.workspace = true
 
 [dependencies]
 dioxus = { version = "0.7.0" }
-dioxus-code = { path = "..", features = ["runtime"] }
+dioxus-code = { workspace = true, features = ["runtime", "lang-python", "lang-toml"] }
+dioxus-code-editor = { workspace = true }
 
 [features]
 default = ["desktop"]

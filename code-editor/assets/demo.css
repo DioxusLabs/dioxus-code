@@ -1,0 +1,46 @@
+html,
+body,
+#main {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: #10131a;
+  color: #d9e1ee;
+  font-family: Avenir Next, Gill Sans, Trebuchet MS, sans-serif;
+}
+
+.shell {
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.toolbar {
+  align-items: end;
+  display: flex;
+  justify-content: space-between;
+}
+
+h1 {
+  font-size: 22px;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.toolbar span {
+  border: 1px solid rgba(217, 225, 238, 0.28);
+  color: #94a3b8;
+  font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.dxc-editor {
+  --dxc-editor-caret: #e8eef7;
+  --dxc-editor-focus-ring: 0 0 0 3px rgba(122, 162, 247, 0.22);
+}

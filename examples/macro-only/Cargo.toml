@@ -6,7 +6,7 @@ license.workspace = true
 
 [dependencies]
 dioxus = { version = "0.7.0" }
-dioxus-code = { path = "../.." }
+dioxus-code = { workspace = true }
 
 [features]
 default = ["desktop"]

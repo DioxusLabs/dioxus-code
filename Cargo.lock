@@ -2274,19 +2274,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus-code-content-editable"
-version = "0.1.0"
-dependencies = [
- "dioxus",
- "dioxus-code",
-]
-
-[[package]]
 name = "dioxus-code-demo"
 version = "0.1.0"
 dependencies = [
  "dioxus",
  "dioxus-code",
+ "dioxus-code-editor",
 ]
 
 [[package]]
@@ -2294,6 +2287,14 @@ name = "dioxus-code-dioxus-hello"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+]
+
+[[package]]
+name = "dioxus-code-editor"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "dioxus-code",
 ]
 
 [[package]]
