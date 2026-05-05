@@ -118,4 +118,4 @@ dx serve --example dioxus-code-live-input  # textarea bound to runtime highlight
 
 ## License
 
-[MIT](LICENSE).
+MIT. See the repository `LICENSE` file.

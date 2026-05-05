@@ -54,7 +54,7 @@ include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
 /// A parsed source string with its highlighted spans.
 ///
 /// Produced by [`SourceCode::into_tree`] (runtime parsing) or by the
-/// [`code!`] macro (compile-time parsing). Pass it to [`Code`] for rendering,
+/// [`code!`] macro (compile-time parsing). Pass it to [`Code()`] for rendering,
 /// or inspect [`source`](Self::source) and [`spans`](Self::spans) directly.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodeTree {
@@ -221,7 +221,7 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<HighlightSpan> 
 ///
 /// Available with the `runtime` feature. Build one with [`SourceCode::new`],
 /// optionally annotate it with a language or filename, then convert it via
-/// [`IntoTree::into_tree`] (or pass it directly to [`Code`]).
+/// [`IntoTree::into_tree`] (or pass it directly to [`Code()`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
@@ -350,7 +350,7 @@ impl From<String> for CodeSource {
     }
 }
 
-/// Pre-parsed source ready to hand to the [`Code`] component.
+/// Pre-parsed source ready to hand to the [`Code()`] component.
 ///
 /// Anything implementing [`IntoTree`] — including [`CodeTree`], [`SourceCode`],
 /// and (with the `runtime` feature) string types — converts into this via the
@@ -438,7 +438,7 @@ pub struct CodeSpanProps {
 
 /// Render a single highlighted token as `<span class="a-{tag}">{text}</span>`.
 ///
-/// Used internally by [`Code`] but exposed so callers can build their own
+/// Used internally by [`Code()`] but exposed so callers can build their own
 /// layouts on top of [`HighlightSpan`].
 #[component]
 pub fn CodeSpan(props: CodeSpanProps) -> Element {
@@ -451,7 +451,7 @@ pub fn CodeSpan(props: CodeSpanProps) -> Element {
     }
 }
 
-/// Props for [`Code`].
+/// Props for [`Code()`].
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeProps {
     /// Source to render. Accepts anything implementing [`IntoTree`].
