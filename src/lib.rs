@@ -451,14 +451,22 @@ pub fn CodeSpan(props: CodeSpanProps) -> Element {
     }
 }
 
+/// Props for [`Code`].
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeProps {
+    /// Source to render. Accepts anything implementing [`IntoTree`].
     #[props(into)]
     pub src: CodeSource,
+    /// Syntax theme. Defaults to [`Theme::RUSTDOC_AYU`].
     #[props(default)]
     pub theme: Theme,
 }
 
+/// Render syntax-highlighted source code.
+///
+/// Pair the [`code!`] macro for compile-time parsing, or [`SourceCode`] for
+/// runtime parsing (with the `runtime` feature). The component injects its
+/// own stylesheet plus the selected theme's stylesheet.
 #[component]
 pub fn Code(props: CodeProps) -> Element {
     let CodeTree {

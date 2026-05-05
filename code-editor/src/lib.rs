@@ -8,6 +8,7 @@ use std::{cell::RefCell, rc::Rc};
 /// Base stylesheet injected by [`CodeEditor`].
 pub const CODE_EDITOR_CSS: Asset = asset!("/assets/dioxus-code-editor.css");
 
+/// Props for [`CodeEditor`].
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeEditorProps {
     /// The current editor contents.
