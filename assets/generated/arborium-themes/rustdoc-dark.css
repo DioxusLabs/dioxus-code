@@ -1,0 +1,72 @@
+.dxc-rustdoc-dark {
+  background: #353535;
+  --bg: #353535;
+  --surface: #454545;
+  color: #dddddd;
+  --fg: #dddddd;
+  --accent: #2bab63;
+  --muted: #8d8d8b;
+}
+.dxc-rustdoc-dark a-at { color: #ee6868; }
+.dxc-rustdoc-dark a-co { color: #ee6868; }
+.dxc-rustdoc-dark a-cb { color: #ee6868; }
+.dxc-rustdoc-dark a-fb { color: #769acb; }
+.dxc-rustdoc-dark a-f { color: #2bab63; }
+.dxc-rustdoc-dark a-fm { color: #2bab63; }
+.dxc-rustdoc-dark a-k { color: #ab8ac1; }
+.dxc-rustdoc-dark a-kc { color: #ab8ac1; }
+.dxc-rustdoc-dark a-ko { color: #ab8ac1; }
+.dxc-rustdoc-dark a-kd { color: #ab8ac1; }
+.dxc-rustdoc-dark a-ke { color: #ab8ac1; }
+.dxc-rustdoc-dark a-kf { color: #ab8ac1; }
+.dxc-rustdoc-dark a-ki { color: #ab8ac1; }
+.dxc-rustdoc-dark a-kp { color: #ab8ac1; }
+.dxc-rustdoc-dark a-kr { color: #ab8ac1; }
+.dxc-rustdoc-dark a-kt { color: #ab8ac1; }
+.dxc-rustdoc-dark a-ky { color: #ab8ac1; }
+.dxc-rustdoc-dark a-o { color: #ab8ac1; }
+.dxc-rustdoc-dark a-pr { color: #769acb; }
+.dxc-rustdoc-dark a-p { color: #dddddd; }
+.dxc-rustdoc-dark a-pb { color: #dddddd; }
+.dxc-rustdoc-dark a-pd { color: #dddddd; }
+.dxc-rustdoc-dark a-ps { color: #ff9011; }
+.dxc-rustdoc-dark a-s { color: #83a300; }
+.dxc-rustdoc-dark a-ss { color: #83a300; }
+.dxc-rustdoc-dark a-tg { color: #3e999f; }
+.dxc-rustdoc-dark a-td { color: #3e999f; }
+.dxc-rustdoc-dark a-te { color: #3e999f; }
+.dxc-rustdoc-dark a-t { color: #2dbfb8; }
+.dxc-rustdoc-dark a-tb { color: #769acb; }
+.dxc-rustdoc-dark a-tq { color: #2dbfb8; }
+.dxc-rustdoc-dark a-v { color: #dddddd; }
+.dxc-rustdoc-dark a-vb { color: #ee6868; }
+.dxc-rustdoc-dark a-vp { color: #dddddd; }
+.dxc-rustdoc-dark a-c { color: #8d8d8b; }
+.dxc-rustdoc-dark a-cd { color: #8d8d8b; }
+.dxc-rustdoc-dark a-m { color: #3e999f; }
+.dxc-rustdoc-dark a-l { color: #d97f26; }
+.dxc-rustdoc-dark a-n { color: #83a300; }
+.dxc-rustdoc-dark a-tl { color: #dddddd; }
+.dxc-rustdoc-dark a-em { font-style: italic; }
+.dxc-rustdoc-dark a-st { font-weight: bold; }
+.dxc-rustdoc-dark a-tu { color: #769acb; text-decoration: underline; }
+.dxc-rustdoc-dark a-tr { color: #2dbfb8; }
+.dxc-rustdoc-dark a-se { color: #d97f26; }
+.dxc-rustdoc-dark a-tt { color: #2dbfb8; font-weight: bold; }
+.dxc-rustdoc-dark a-tx { text-decoration: line-through; }
+.dxc-rustdoc-dark a-sp { color: #dddddd; }
+.dxc-rustdoc-dark a-in { color: #ab8ac1; }
+.dxc-rustdoc-dark a-sc { color: #ab8ac1; }
+.dxc-rustdoc-dark a-rp { color: #ab8ac1; }
+.dxc-rustdoc-dark a-cn { color: #ab8ac1; }
+.dxc-rustdoc-dark a-ex { color: #ab8ac1; }
+.dxc-rustdoc-dark a-pp { color: #ab8ac1; }
+.dxc-rustdoc-dark a-ch { color: #83a300; }
+.dxc-rustdoc-dark a-cs { color: #83a300; }
+.dxc-rustdoc-dark a-vm { color: #dddddd; }
+.dxc-rustdoc-dark a-fd { color: #2bab63; }
+.dxc-rustdoc-dark a-tf { color: #2dbfb8; }
+.dxc-rustdoc-dark a-fc { color: #2bab63; }
+.dxc-rustdoc-dark a-km { color: #ab8ac1; }
+.dxc-rustdoc-dark a-dr { color: #ab8ac1; }
+.dxc-rustdoc-dark a-rx { color: #83a300; }

@@ -1,0 +1,72 @@
+.dxc-dracula {
+  background: #282a36;
+  --bg: #282a36;
+  --surface: #393b46;
+  color: #f8f8f2;
+  --fg: #f8f8f2;
+  --accent: #50fa7b;
+  --muted: #6272a4;
+}
+.dxc-dracula a-at { color: #50fa7b; }
+.dxc-dracula a-co { color: #bd93f9; }
+.dxc-dracula a-cb { color: #bd93f9; }
+.dxc-dracula a-fb { color: #8be9fd; }
+.dxc-dracula a-f { color: #50fa7b; }
+.dxc-dracula a-fm { color: #50fa7b; }
+.dxc-dracula a-k { color: #ff79c6; }
+.dxc-dracula a-kc { color: #ff79c6; }
+.dxc-dracula a-ko { color: #ff79c6; }
+.dxc-dracula a-kd { color: #ff79c6; }
+.dxc-dracula a-ke { color: #ff79c6; }
+.dxc-dracula a-kf { color: #ff79c6; }
+.dxc-dracula a-ki { color: #ff79c6; }
+.dxc-dracula a-kp { color: #ff79c6; }
+.dxc-dracula a-kr { color: #ff79c6; }
+.dxc-dracula a-kt { color: #ff79c6; }
+.dxc-dracula a-ky { color: #ff79c6; }
+.dxc-dracula a-o { color: #ff79c6; }
+.dxc-dracula a-pr { color: #8be9fd; }
+.dxc-dracula a-p { color: #f8f8f2; }
+.dxc-dracula a-pb { color: #f8f8f2; }
+.dxc-dracula a-pd { color: #f8f8f2; }
+.dxc-dracula a-ps { color: #ff79c6; }
+.dxc-dracula a-s { color: #f1fa8c; }
+.dxc-dracula a-ss { color: #ff5555; }
+.dxc-dracula a-tg { color: #ff79c6; }
+.dxc-dracula a-td { color: #ff79c6; }
+.dxc-dracula a-te { color: #ff79c6; }
+.dxc-dracula a-t { color: #8be9fd; }
+.dxc-dracula a-tb { color: #8be9fd; }
+.dxc-dracula a-tq { color: #8be9fd; }
+.dxc-dracula a-v { color: #f8f8f2; }
+.dxc-dracula a-vb { color: #bd93f9; }
+.dxc-dracula a-vp { color: #ffb86c; }
+.dxc-dracula a-c { color: #6272a4; }
+.dxc-dracula a-cd { color: #6272a4; }
+.dxc-dracula a-m { color: #50fa7b; }
+.dxc-dracula a-l { color: #8be9fd; }
+.dxc-dracula a-n { color: #bd93f9; }
+.dxc-dracula a-tl { color: #f8f8f2; }
+.dxc-dracula a-em { font-style: italic; }
+.dxc-dracula a-st { font-weight: bold; }
+.dxc-dracula a-tu { color: #8be9fd; text-decoration: underline; }
+.dxc-dracula a-tr { color: #8be9fd; }
+.dxc-dracula a-se { color: #ff79c6; }
+.dxc-dracula a-tt { color: #bd93f9; font-weight: bold; }
+.dxc-dracula a-tx { text-decoration: line-through; }
+.dxc-dracula a-sp { color: #f8f8f2; }
+.dxc-dracula a-in { color: #ff79c6; }
+.dxc-dracula a-sc { color: #ff79c6; }
+.dxc-dracula a-rp { color: #ff79c6; }
+.dxc-dracula a-cn { color: #ff79c6; }
+.dxc-dracula a-ex { color: #ff79c6; }
+.dxc-dracula a-pp { color: #ff79c6; }
+.dxc-dracula a-ch { color: #f1fa8c; }
+.dxc-dracula a-cs { color: #f1fa8c; }
+.dxc-dracula a-vm { color: #f8f8f2; }
+.dxc-dracula a-fd { color: #50fa7b; }
+.dxc-dracula a-tf { color: #8be9fd; }
+.dxc-dracula a-fc { color: #50fa7b; }
+.dxc-dracula a-km { color: #ff79c6; }
+.dxc-dracula a-dr { color: #ff79c6; }
+.dxc-dracula a-rx { color: #f1fa8c; }

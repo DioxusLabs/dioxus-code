@@ -1,0 +1,10 @@
+.dxc {
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin: 0;
+  overflow: auto;
+  padding: 1rem;
+  tab-size: 4;
+}

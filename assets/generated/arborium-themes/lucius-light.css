@@ -1,0 +1,72 @@
+.dxc-lucius-light {
+  background: #eeeeee;
+  --bg: #eeeeee;
+  --surface: #e2e2e2;
+  color: #444444;
+  --fg: #444444;
+  --accent: #008700;
+  --muted: #808080;
+}
+.dxc-lucius-light a-at { color: #008787; }
+.dxc-lucius-light a-co { color: #af5f00; }
+.dxc-lucius-light a-cb { color: #af5f00; }
+.dxc-lucius-light a-fb { color: #008700; }
+.dxc-lucius-light a-f { color: #008700; }
+.dxc-lucius-light a-fm { color: #008700; }
+.dxc-lucius-light a-k { color: #005faf; }
+.dxc-lucius-light a-kc { color: #005faf; }
+.dxc-lucius-light a-ko { color: #005faf; }
+.dxc-lucius-light a-kd { color: #005faf; }
+.dxc-lucius-light a-ke { color: #005faf; }
+.dxc-lucius-light a-kf { color: #005faf; }
+.dxc-lucius-light a-ki { color: #005faf; }
+.dxc-lucius-light a-kp { color: #005faf; }
+.dxc-lucius-light a-kr { color: #005faf; }
+.dxc-lucius-light a-kt { color: #005faf; }
+.dxc-lucius-light a-ky { color: #005faf; }
+.dxc-lucius-light a-o { color: #005faf; }
+.dxc-lucius-light a-pr { color: #008700; }
+.dxc-lucius-light a-p { color: #444444; }
+.dxc-lucius-light a-pb { color: #444444; }
+.dxc-lucius-light a-pd { color: #444444; }
+.dxc-lucius-light a-ps { color: #870087; }
+.dxc-lucius-light a-s { color: #af5f00; }
+.dxc-lucius-light a-ss { color: #870087; }
+.dxc-lucius-light a-tg { color: #005faf; }
+.dxc-lucius-light a-td { color: #005faf; }
+.dxc-lucius-light a-te { color: #005faf; }
+.dxc-lucius-light a-t { color: #005f87; }
+.dxc-lucius-light a-tb { color: #005f87; }
+.dxc-lucius-light a-tq { color: #005f87; }
+.dxc-lucius-light a-v { color: #444444; }
+.dxc-lucius-light a-vb { color: #870087; }
+.dxc-lucius-light a-vp { color: #444444; }
+.dxc-lucius-light a-c { color: #808080; font-style: italic; }
+.dxc-lucius-light a-cd { color: #808080; font-style: italic; }
+.dxc-lucius-light a-m { color: #008787; }
+.dxc-lucius-light a-l { color: #008787; }
+.dxc-lucius-light a-n { color: #af5f00; }
+.dxc-lucius-light a-tl { color: #444444; }
+.dxc-lucius-light a-em { font-style: italic; }
+.dxc-lucius-light a-st { font-weight: bold; }
+.dxc-lucius-light a-tu { color: #005faf; text-decoration: underline; }
+.dxc-lucius-light a-tr { color: #005faf; }
+.dxc-lucius-light a-se { color: #008787; }
+.dxc-lucius-light a-tt { color: #005faf; font-weight: bold; }
+.dxc-lucius-light a-tx { text-decoration: line-through; }
+.dxc-lucius-light a-sp { color: #444444; }
+.dxc-lucius-light a-in { color: #005faf; }
+.dxc-lucius-light a-sc { color: #005faf; }
+.dxc-lucius-light a-rp { color: #005faf; }
+.dxc-lucius-light a-cn { color: #005faf; }
+.dxc-lucius-light a-ex { color: #005faf; }
+.dxc-lucius-light a-pp { color: #005faf; }
+.dxc-lucius-light a-ch { color: #af5f00; }
+.dxc-lucius-light a-cs { color: #af5f00; }
+.dxc-lucius-light a-vm { color: #444444; }
+.dxc-lucius-light a-fd { color: #008700; }
+.dxc-lucius-light a-tf { color: #005f87; }
+.dxc-lucius-light a-fc { color: #008700; }
+.dxc-lucius-light a-km { color: #005faf; }
+.dxc-lucius-light a-dr { color: #005faf; }
+.dxc-lucius-light a-rx { color: #af5f00; }

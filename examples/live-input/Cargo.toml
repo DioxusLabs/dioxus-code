@@ -1,0 +1,13 @@
+[package]
+name = "dioxus-code-live-input"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+dioxus = { version = "0.7.0" }
+dioxus-code = { path = "../..", features = ["runtime"] }
+
+[features]
+default = ["desktop"]
+desktop = ["dioxus/desktop"]

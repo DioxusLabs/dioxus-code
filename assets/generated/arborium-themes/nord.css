@@ -1,0 +1,72 @@
+.dxc-nord {
+  background: #2e3440;
+  --bg: #2e3440;
+  --surface: #3f444f;
+  color: #eceff4;
+  --fg: #eceff4;
+  --accent: #88c0d0;
+  --muted: #616e88;
+}
+.dxc-nord a-at { color: #8fbcbb; }
+.dxc-nord a-co { color: #b48ead; }
+.dxc-nord a-cb { color: #b48ead; }
+.dxc-nord a-fb { color: #88c0d0; }
+.dxc-nord a-f { color: #88c0d0; }
+.dxc-nord a-fm { color: #88c0d0; }
+.dxc-nord a-k { color: #81a1c1; }
+.dxc-nord a-kc { color: #81a1c1; }
+.dxc-nord a-ko { color: #81a1c1; }
+.dxc-nord a-kd { color: #81a1c1; }
+.dxc-nord a-ke { color: #81a1c1; }
+.dxc-nord a-kf { color: #81a1c1; }
+.dxc-nord a-ki { color: #81a1c1; }
+.dxc-nord a-kp { color: #81a1c1; }
+.dxc-nord a-kr { color: #81a1c1; }
+.dxc-nord a-kt { color: #81a1c1; }
+.dxc-nord a-ky { color: #81a1c1; }
+.dxc-nord a-o { color: #81a1c1; }
+.dxc-nord a-pr { color: #88c0d0; }
+.dxc-nord a-p { color: #eceff4; }
+.dxc-nord a-pb { color: #eceff4; }
+.dxc-nord a-pd { color: #eceff4; }
+.dxc-nord a-ps { color: #d08770; }
+.dxc-nord a-s { color: #a3be8c; }
+.dxc-nord a-ss { color: #bf616a; }
+.dxc-nord a-tg { color: #81a1c1; }
+.dxc-nord a-td { color: #81a1c1; }
+.dxc-nord a-te { color: #81a1c1; }
+.dxc-nord a-t { color: #8fbcbb; }
+.dxc-nord a-tb { color: #8fbcbb; }
+.dxc-nord a-tq { color: #8fbcbb; }
+.dxc-nord a-v { color: #eceff4; }
+.dxc-nord a-vb { color: #bf616a; }
+.dxc-nord a-vp { color: #d08770; }
+.dxc-nord a-c { color: #616e88; }
+.dxc-nord a-cd { color: #616e88; }
+.dxc-nord a-m { color: #5e81ac; }
+.dxc-nord a-l { color: #d08770; }
+.dxc-nord a-n { color: #b48ead; }
+.dxc-nord a-tl { color: #eceff4; }
+.dxc-nord a-em { font-style: italic; }
+.dxc-nord a-st { font-weight: bold; }
+.dxc-nord a-tu { color: #88c0d0; text-decoration: underline; }
+.dxc-nord a-tr { color: #88c0d0; }
+.dxc-nord a-se { color: #ebcb8b; }
+.dxc-nord a-tt { color: #81a1c1; font-weight: bold; }
+.dxc-nord a-tx { text-decoration: line-through; }
+.dxc-nord a-sp { color: #eceff4; }
+.dxc-nord a-in { color: #81a1c1; }
+.dxc-nord a-sc { color: #81a1c1; }
+.dxc-nord a-rp { color: #81a1c1; }
+.dxc-nord a-cn { color: #81a1c1; }
+.dxc-nord a-ex { color: #81a1c1; }
+.dxc-nord a-pp { color: #81a1c1; }
+.dxc-nord a-ch { color: #a3be8c; }
+.dxc-nord a-cs { color: #a3be8c; }
+.dxc-nord a-vm { color: #eceff4; }
+.dxc-nord a-fd { color: #88c0d0; }
+.dxc-nord a-tf { color: #8fbcbb; }
+.dxc-nord a-fc { color: #88c0d0; }
+.dxc-nord a-km { color: #81a1c1; }
+.dxc-nord a-dr { color: #81a1c1; }
+.dxc-nord a-rx { color: #a3be8c; }
