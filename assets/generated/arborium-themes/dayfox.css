@@ -1,72 +1,74 @@
 .dxc-dayfox {
-  background: #f6f2ee;
-  --bg: #f6f2ee;
-  --surface: #eae6e2;
-  color: #3d2b5a;
-  --fg: #3d2b5a;
-  --accent: #2848a9;
-  --muted: #837a72;
+  --dxc-light-background: #f6f2ee;
+  --dxc-light-var-bg: #f6f2ee;
+  --dxc-light-var-surface: #eae6e2;
+  --dxc-light-color: #3d2b5a;
+  --dxc-light-var-fg: #3d2b5a;
+  --dxc-light-var-accent: #2848a9;
+  --dxc-light-var-muted: #837a72;
+  --dxc-light-a-at-color: #955f61;
+  --dxc-light-a-c-color: #837a72;
+  --dxc-light-a-cb-color: #287980;
+  --dxc-light-a-cd-color: #837a72;
+  --dxc-light-a-ch-color: #396847;
+  --dxc-light-a-cn-color: #6e33ce;
+  --dxc-light-a-co-color: #287980;
+  --dxc-light-a-cs-color: #396847;
+  --dxc-light-a-dr-color: #6e33ce;
+  --dxc-light-a-em-font-style: italic;
+  --dxc-light-a-ex-color: #6e33ce;
+  --dxc-light-a-f-color: #2848a9;
+  --dxc-light-a-fb-color: #287980;
+  --dxc-light-a-fc-color: #2848a9;
+  --dxc-light-a-fd-color: #2848a9;
+  --dxc-light-a-fm-color: #2848a9;
+  --dxc-light-a-in-color: #6e33ce;
+  --dxc-light-a-k-color: #6e33ce;
+  --dxc-light-a-kc-color: #6e33ce;
+  --dxc-light-a-kd-color: #6e33ce;
+  --dxc-light-a-ke-color: #6e33ce;
+  --dxc-light-a-kf-color: #6e33ce;
+  --dxc-light-a-ki-color: #6e33ce;
+  --dxc-light-a-km-color: #6e33ce;
+  --dxc-light-a-ko-color: #6e33ce;
+  --dxc-light-a-kp-color: #6e33ce;
+  --dxc-light-a-kr-color: #6e33ce;
+  --dxc-light-a-kt-color: #6e33ce;
+  --dxc-light-a-ky-color: #6e33ce;
+  --dxc-light-a-l-color: #a440b5;
+  --dxc-light-a-m-color: #287980;
+  --dxc-light-a-n-color: #955f61;
+  --dxc-light-a-o-color: #3d2b5a;
+  --dxc-light-a-p-color: #824d5b;
+  --dxc-light-a-pb-color: #824d5b;
+  --dxc-light-a-pd-color: #824d5b;
+  --dxc-light-a-pp-color: #6e33ce;
+  --dxc-light-a-pr-color: #287980;
+  --dxc-light-a-ps-color: #a440b5;
+  --dxc-light-a-rp-color: #6e33ce;
+  --dxc-light-a-rx-color: #396847;
+  --dxc-light-a-s-color: #396847;
+  --dxc-light-a-sc-color: #6e33ce;
+  --dxc-light-a-se-color: #a440b5;
+  --dxc-light-a-sp-color: #3d2b5a;
+  --dxc-light-a-ss-color: #955f61;
+  --dxc-light-a-st-font-weight: bold;
+  --dxc-light-a-t-color: #ac5402;
+  --dxc-light-a-tb-color: #ac5402;
+  --dxc-light-a-td-color: #6e33ce;
+  --dxc-light-a-te-color: #6e33ce;
+  --dxc-light-a-tf-color: #ac5402;
+  --dxc-light-a-tg-color: #6e33ce;
+  --dxc-light-a-tl-color: #3d2b5a;
+  --dxc-light-a-tq-color: #ac5402;
+  --dxc-light-a-tr-color: #287980;
+  --dxc-light-a-tt-color: #2848a9;
+  --dxc-light-a-tt-font-weight: bold;
+  --dxc-light-a-tu-color: #2848a9;
+  --dxc-light-a-tu-text-decoration: underline;
+  --dxc-light-a-tx-text-decoration: line-through;
+  --dxc-light-a-v-color: #3d2b5a;
+  --dxc-light-a-vb-color: #a5222f;
+  --dxc-light-a-vm-color: #3d2b5a;
+  --dxc-light-a-vp-color: #643f61;
 }
-.dxc-dayfox .a-at { color: #955f61; }
-.dxc-dayfox .a-co { color: #287980; }
-.dxc-dayfox .a-cb { color: #287980; }
-.dxc-dayfox .a-fb { color: #287980; }
-.dxc-dayfox .a-f { color: #2848a9; }
-.dxc-dayfox .a-fm { color: #2848a9; }
-.dxc-dayfox .a-k { color: #6e33ce; }
-.dxc-dayfox .a-kc { color: #6e33ce; }
-.dxc-dayfox .a-ko { color: #6e33ce; }
-.dxc-dayfox .a-kd { color: #6e33ce; }
-.dxc-dayfox .a-ke { color: #6e33ce; }
-.dxc-dayfox .a-kf { color: #6e33ce; }
-.dxc-dayfox .a-ki { color: #6e33ce; }
-.dxc-dayfox .a-kp { color: #6e33ce; }
-.dxc-dayfox .a-kr { color: #6e33ce; }
-.dxc-dayfox .a-kt { color: #6e33ce; }
-.dxc-dayfox .a-ky { color: #6e33ce; }
-.dxc-dayfox .a-o { color: #3d2b5a; }
-.dxc-dayfox .a-pr { color: #287980; }
-.dxc-dayfox .a-p { color: #824d5b; }
-.dxc-dayfox .a-pb { color: #824d5b; }
-.dxc-dayfox .a-pd { color: #824d5b; }
-.dxc-dayfox .a-ps { color: #a440b5; }
-.dxc-dayfox .a-s { color: #396847; }
-.dxc-dayfox .a-ss { color: #955f61; }
-.dxc-dayfox .a-tg { color: #6e33ce; }
-.dxc-dayfox .a-td { color: #6e33ce; }
-.dxc-dayfox .a-te { color: #6e33ce; }
-.dxc-dayfox .a-t { color: #ac5402; }
-.dxc-dayfox .a-tb { color: #ac5402; }
-.dxc-dayfox .a-tq { color: #ac5402; }
-.dxc-dayfox .a-v { color: #3d2b5a; }
-.dxc-dayfox .a-vb { color: #a5222f; }
-.dxc-dayfox .a-vp { color: #643f61; }
-.dxc-dayfox .a-c { color: #837a72; }
-.dxc-dayfox .a-cd { color: #837a72; }
-.dxc-dayfox .a-m { color: #287980; }
-.dxc-dayfox .a-l { color: #a440b5; }
-.dxc-dayfox .a-n { color: #955f61; }
-.dxc-dayfox .a-tl { color: #3d2b5a; }
-.dxc-dayfox .a-em { font-style: italic; }
-.dxc-dayfox .a-st { font-weight: bold; }
-.dxc-dayfox .a-tu { color: #2848a9; text-decoration: underline; }
-.dxc-dayfox .a-tr { color: #287980; }
-.dxc-dayfox .a-se { color: #a440b5; }
-.dxc-dayfox .a-tt { color: #2848a9; font-weight: bold; }
-.dxc-dayfox .a-tx { text-decoration: line-through; }
-.dxc-dayfox .a-sp { color: #3d2b5a; }
-.dxc-dayfox .a-in { color: #6e33ce; }
-.dxc-dayfox .a-sc { color: #6e33ce; }
-.dxc-dayfox .a-rp { color: #6e33ce; }
-.dxc-dayfox .a-cn { color: #6e33ce; }
-.dxc-dayfox .a-ex { color: #6e33ce; }
-.dxc-dayfox .a-pp { color: #6e33ce; }
-.dxc-dayfox .a-ch { color: #396847; }
-.dxc-dayfox .a-cs { color: #396847; }
-.dxc-dayfox .a-vm { color: #3d2b5a; }
-.dxc-dayfox .a-fd { color: #2848a9; }
-.dxc-dayfox .a-tf { color: #ac5402; }
-.dxc-dayfox .a-fc { color: #2848a9; }
-.dxc-dayfox .a-km { color: #6e33ce; }
-.dxc-dayfox .a-dr { color: #6e33ce; }
-.dxc-dayfox .a-rx { color: #396847; }

@@ -2,7 +2,7 @@
 #![warn(missing_docs)]
 
 use dioxus::prelude::*;
-use dioxus_code::{CodeSpan, HighlightSpan, IntoTree, SourceCode, Theme};
+use dioxus_code::{CodeSpan, CodeTheme, HighlightSpan, IntoTree, SourceCode, Theme};
 use std::{cell::RefCell, rc::Rc};
 
 /// Base stylesheet injected by [`CodeEditor`].
@@ -20,9 +20,9 @@ pub struct CodeEditorProps {
     /// Optional file name used for language detection when `language` is empty.
     #[props(into, default)]
     pub name: String,
-    /// Syntax theme shared with `dioxus-code`.
-    #[props(default)]
-    pub theme: Theme,
+    /// Syntax theme selection shared with `dioxus-code`.
+    #[props(default, into)]
+    pub theme: CodeTheme,
     /// Show a gutter with one-based line numbers.
     #[props(default = true)]
     pub line_numbers: bool,
@@ -71,8 +71,6 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let tree = source_code.into_tree();
     let lines = editor_lines(tree.source(), tree.spans());
     let line_count = lines.len();
-    let theme_asset = props.theme.asset();
-    let theme_key = props.theme.name();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
     let (input_value, input_version) = synced_input_value(&input_sync, &props.value);
     let contenteditable = if props.read_only {
@@ -83,7 +81,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let readonly = props.read_only.then_some("true");
 
     rsx! {
-        {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
+        EditorThemeStyles { theme: props.theme }
         document::Stylesheet { href: CODE_EDITOR_CSS }
         div {
             class,
@@ -133,6 +131,35 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     }
 }
 
+#[component]
+fn EditorThemeStyles(theme: CodeTheme) -> Element {
+    let shared_theme_css = Theme::THEME_CSS;
+
+    match theme {
+        CodeTheme::Fixed(theme) => {
+            let theme_asset = theme.asset();
+            let theme_key = theme.name();
+
+            rsx! {
+                document::Stylesheet { href: shared_theme_css }
+                {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
+            }
+        }
+        CodeTheme::System { light, dark } => {
+            let light_asset = light.system_light_asset();
+            let dark_asset = dark.system_dark_asset();
+            let light_key = format!("{}-system-light", light.name());
+            let dark_key = format!("{}-system-dark", dark.name());
+
+            rsx! {
+                document::Stylesheet { href: shared_theme_css }
+                {rsx!{document::Stylesheet { key: "{light_key}", href: light_asset }}}
+                {rsx!{document::Stylesheet { key: "{dark_key}", href: dark_asset }}}
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 struct InputSyncState {
     rendered_value: String,
@@ -152,8 +179,8 @@ fn synced_input_value(input_sync: &Rc<RefCell<InputSyncState>>, value: &str) -> 
     (state.rendered_value.clone(), state.version)
 }
 
-fn editor_class(theme: Theme, line_numbers: bool, extra_class: &str) -> String {
-    let mut class = format!("dxc-editor {}", theme.class());
+fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &str) -> String {
+    let mut class = format!("dxc-editor {}", theme.into().classes());
     if !line_numbers {
         class.push_str(" dxc-editor-no-gutter");
     }
@@ -272,6 +299,18 @@ mod tests {
         assert_eq!(
             editor_class(Theme::TOKYO_NIGHT, false, ""),
             "dxc-editor dxc-tokyo-night dxc-editor-no-gutter",
+        );
+    }
+
+    #[test]
+    fn editor_class_can_use_system_theme() {
+        assert_eq!(
+            editor_class(
+                CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT),
+                true,
+                "",
+            ),
+            "dxc-editor dxc-system dxc-system-light-github-light dxc-system-dark-tokyo-night",
         );
     }
 

@@ -6,7 +6,6 @@ pub enum BadgeVariant {
     #[default]
     Primary,
     Secondary,
-    Destructive,
     Outline,
 }
 
@@ -15,7 +14,6 @@ impl BadgeVariant {
         match self {
             BadgeVariant::Primary => "primary",
             BadgeVariant::Secondary => "secondary",
-            BadgeVariant::Destructive => "destructive",
             BadgeVariant::Outline => "outline",
         }
     }

@@ -1,72 +1,74 @@
 .dxc-gruvbox-light {
-  background: #fbf1c7;
-  --bg: #fbf1c7;
-  --surface: #eee5bd;
-  color: #3c3836;
-  --fg: #3c3836;
-  --accent: #427b58;
-  --muted: #928374;
+  --dxc-light-background: #fbf1c7;
+  --dxc-light-var-bg: #fbf1c7;
+  --dxc-light-var-surface: #eee5bd;
+  --dxc-light-color: #3c3836;
+  --dxc-light-var-fg: #3c3836;
+  --dxc-light-var-accent: #427b58;
+  --dxc-light-var-muted: #928374;
+  --dxc-light-a-at-color: #b57614;
+  --dxc-light-a-c-color: #928374;
+  --dxc-light-a-cb-color: #8f3f71;
+  --dxc-light-a-cd-color: #928374;
+  --dxc-light-a-ch-color: #79740e;
+  --dxc-light-a-cn-color: #9d0006;
+  --dxc-light-a-co-color: #8f3f71;
+  --dxc-light-a-cs-color: #79740e;
+  --dxc-light-a-dr-color: #9d0006;
+  --dxc-light-a-em-font-style: italic;
+  --dxc-light-a-ex-color: #9d0006;
+  --dxc-light-a-f-color: #427b58;
+  --dxc-light-a-fb-color: #427b58;
+  --dxc-light-a-fc-color: #427b58;
+  --dxc-light-a-fd-color: #427b58;
+  --dxc-light-a-fm-color: #427b58;
+  --dxc-light-a-in-color: #9d0006;
+  --dxc-light-a-k-color: #9d0006;
+  --dxc-light-a-kc-color: #9d0006;
+  --dxc-light-a-kd-color: #9d0006;
+  --dxc-light-a-ke-color: #9d0006;
+  --dxc-light-a-kf-color: #9d0006;
+  --dxc-light-a-ki-color: #9d0006;
+  --dxc-light-a-km-color: #9d0006;
+  --dxc-light-a-ko-color: #9d0006;
+  --dxc-light-a-kp-color: #9d0006;
+  --dxc-light-a-kr-color: #9d0006;
+  --dxc-light-a-kt-color: #9d0006;
+  --dxc-light-a-ky-color: #9d0006;
+  --dxc-light-a-l-color: #9d0006;
+  --dxc-light-a-m-color: #427b58;
+  --dxc-light-a-n-color: #8f3f71;
+  --dxc-light-a-o-color: #3c3836;
+  --dxc-light-a-p-color: #3c3836;
+  --dxc-light-a-pb-color: #3c3836;
+  --dxc-light-a-pd-color: #3c3836;
+  --dxc-light-a-pp-color: #9d0006;
+  --dxc-light-a-pr-color: #076678;
+  --dxc-light-a-ps-color: #af3a03;
+  --dxc-light-a-rp-color: #9d0006;
+  --dxc-light-a-rx-color: #79740e;
+  --dxc-light-a-s-color: #79740e;
+  --dxc-light-a-sc-color: #9d0006;
+  --dxc-light-a-se-color: #af3a03;
+  --dxc-light-a-sp-color: #3c3836;
+  --dxc-light-a-ss-color: #af3a03;
+  --dxc-light-a-st-font-weight: bold;
+  --dxc-light-a-t-color: #b57614;
+  --dxc-light-a-tb-color: #b57614;
+  --dxc-light-a-td-color: #9d0006;
+  --dxc-light-a-te-color: #9d0006;
+  --dxc-light-a-tf-color: #b57614;
+  --dxc-light-a-tg-color: #9d0006;
+  --dxc-light-a-tl-color: #3c3836;
+  --dxc-light-a-tq-color: #b57614;
+  --dxc-light-a-tr-color: #427b58;
+  --dxc-light-a-tt-color: #79740e;
+  --dxc-light-a-tt-font-weight: bold;
+  --dxc-light-a-tu-color: #076678;
+  --dxc-light-a-tu-text-decoration: underline;
+  --dxc-light-a-tx-text-decoration: line-through;
+  --dxc-light-a-v-color: #3c3836;
+  --dxc-light-a-vb-color: #af3a03;
+  --dxc-light-a-vm-color: #3c3836;
+  --dxc-light-a-vp-color: #076678;
 }
-.dxc-gruvbox-light .a-at { color: #b57614; }
-.dxc-gruvbox-light .a-co { color: #8f3f71; }
-.dxc-gruvbox-light .a-cb { color: #8f3f71; }
-.dxc-gruvbox-light .a-fb { color: #427b58; }
-.dxc-gruvbox-light .a-f { color: #427b58; }
-.dxc-gruvbox-light .a-fm { color: #427b58; }
-.dxc-gruvbox-light .a-k { color: #9d0006; }
-.dxc-gruvbox-light .a-kc { color: #9d0006; }
-.dxc-gruvbox-light .a-ko { color: #9d0006; }
-.dxc-gruvbox-light .a-kd { color: #9d0006; }
-.dxc-gruvbox-light .a-ke { color: #9d0006; }
-.dxc-gruvbox-light .a-kf { color: #9d0006; }
-.dxc-gruvbox-light .a-ki { color: #9d0006; }
-.dxc-gruvbox-light .a-kp { color: #9d0006; }
-.dxc-gruvbox-light .a-kr { color: #9d0006; }
-.dxc-gruvbox-light .a-kt { color: #9d0006; }
-.dxc-gruvbox-light .a-ky { color: #9d0006; }
-.dxc-gruvbox-light .a-o { color: #3c3836; }
-.dxc-gruvbox-light .a-pr { color: #076678; }
-.dxc-gruvbox-light .a-p { color: #3c3836; }
-.dxc-gruvbox-light .a-pb { color: #3c3836; }
-.dxc-gruvbox-light .a-pd { color: #3c3836; }
-.dxc-gruvbox-light .a-ps { color: #af3a03; }
-.dxc-gruvbox-light .a-s { color: #79740e; }
-.dxc-gruvbox-light .a-ss { color: #af3a03; }
-.dxc-gruvbox-light .a-tg { color: #9d0006; }
-.dxc-gruvbox-light .a-td { color: #9d0006; }
-.dxc-gruvbox-light .a-te { color: #9d0006; }
-.dxc-gruvbox-light .a-t { color: #b57614; }
-.dxc-gruvbox-light .a-tb { color: #b57614; }
-.dxc-gruvbox-light .a-tq { color: #b57614; }
-.dxc-gruvbox-light .a-v { color: #3c3836; }
-.dxc-gruvbox-light .a-vb { color: #af3a03; }
-.dxc-gruvbox-light .a-vp { color: #076678; }
-.dxc-gruvbox-light .a-c { color: #928374; }
-.dxc-gruvbox-light .a-cd { color: #928374; }
-.dxc-gruvbox-light .a-m { color: #427b58; }
-.dxc-gruvbox-light .a-l { color: #9d0006; }
-.dxc-gruvbox-light .a-n { color: #8f3f71; }
-.dxc-gruvbox-light .a-tl { color: #3c3836; }
-.dxc-gruvbox-light .a-em { font-style: italic; }
-.dxc-gruvbox-light .a-st { font-weight: bold; }
-.dxc-gruvbox-light .a-tu { color: #076678; text-decoration: underline; }
-.dxc-gruvbox-light .a-tr { color: #427b58; }
-.dxc-gruvbox-light .a-se { color: #af3a03; }
-.dxc-gruvbox-light .a-tt { color: #79740e; font-weight: bold; }
-.dxc-gruvbox-light .a-tx { text-decoration: line-through; }
-.dxc-gruvbox-light .a-sp { color: #3c3836; }
-.dxc-gruvbox-light .a-in { color: #9d0006; }
-.dxc-gruvbox-light .a-sc { color: #9d0006; }
-.dxc-gruvbox-light .a-rp { color: #9d0006; }
-.dxc-gruvbox-light .a-cn { color: #9d0006; }
-.dxc-gruvbox-light .a-ex { color: #9d0006; }
-.dxc-gruvbox-light .a-pp { color: #9d0006; }
-.dxc-gruvbox-light .a-ch { color: #79740e; }
-.dxc-gruvbox-light .a-cs { color: #79740e; }
-.dxc-gruvbox-light .a-vm { color: #3c3836; }
-.dxc-gruvbox-light .a-fd { color: #427b58; }
-.dxc-gruvbox-light .a-tf { color: #b57614; }
-.dxc-gruvbox-light .a-fc { color: #427b58; }
-.dxc-gruvbox-light .a-km { color: #9d0006; }
-.dxc-gruvbox-light .a-dr { color: #9d0006; }
-.dxc-gruvbox-light .a-rx { color: #79740e; }

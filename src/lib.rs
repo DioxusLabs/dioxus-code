@@ -9,7 +9,11 @@ use dioxus::prelude::*;
 #[cfg(feature = "runtime")]
 use std::collections::HashMap;
 
-const STYLE: Asset = asset!("/assets/dioxus-code.css");
+/// Base stylesheet for [`Code()`].
+///
+/// This contains layout styles only; syntax colors live in the generated theme
+/// assets and the shared generated theme rule asset.
+pub const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 
 #[cfg(feature = "macro")]
 pub use dioxus_code_macro::code;
@@ -23,7 +27,11 @@ pub use dioxus_code_macro::code;
 pub struct Theme {
     name: &'static str,
     class: &'static str,
+    system_light_class: &'static str,
+    system_dark_class: &'static str,
     asset: Asset,
+    system_light_asset: Asset,
+    system_dark_asset: Asset,
 }
 
 impl Theme {
@@ -37,15 +45,88 @@ impl Theme {
         self.class
     }
 
+    /// The CSS class that supplies this theme's variables to the light slot in
+    /// a [`CodeTheme::System`] pair.
+    pub const fn system_light_class(self) -> &'static str {
+        self.system_light_class
+    }
+
+    /// The CSS class that supplies this theme's variables to the dark slot in
+    /// a [`CodeTheme::System`] pair.
+    pub const fn system_dark_class(self) -> &'static str {
+        self.system_dark_class
+    }
+
     /// The Dioxus [`Asset`] for the theme's stylesheet.
     pub const fn asset(self) -> Asset {
         self.asset
+    }
+
+    /// The Dioxus [`Asset`] for this theme's system light variables.
+    pub const fn system_light_asset(self) -> Asset {
+        self.system_light_asset
+    }
+
+    /// The Dioxus [`Asset`] for this theme's system dark variables.
+    pub const fn system_dark_asset(self) -> Asset {
+        self.system_dark_asset
     }
 }
 
 impl Default for Theme {
     fn default() -> Self {
         Self::RUSTDOC_AYU
+    }
+}
+
+/// Syntax theme selection for [`Code()`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CodeTheme {
+    /// Always render with one concrete theme.
+    Fixed(Theme),
+    /// Render with `light` when `(prefers-color-scheme: light)` matches and
+    /// `dark` when `(prefers-color-scheme: dark)` matches.
+    System {
+        /// Theme used for light color scheme media queries.
+        light: Theme,
+        /// Theme used for dark color scheme media queries.
+        dark: Theme,
+    },
+}
+
+impl CodeTheme {
+    /// Create a fixed theme selection.
+    pub const fn fixed(theme: Theme) -> Self {
+        Self::Fixed(theme)
+    }
+
+    /// Create a CSS-only system theme pair.
+    pub const fn system(light: Theme, dark: Theme) -> Self {
+        Self::System { light, dark }
+    }
+
+    /// CSS classes to apply to the rendered code container.
+    pub fn classes(self) -> String {
+        match self {
+            Self::Fixed(theme) => theme.class().to_string(),
+            Self::System { light, dark } => format!(
+                "dxc-system {} {}",
+                light.system_light_class(),
+                dark.system_dark_class()
+            ),
+        }
+    }
+}
+
+impl Default for CodeTheme {
+    fn default() -> Self {
+        Self::Fixed(Theme::default())
+    }
+}
+
+impl From<Theme> for CodeTheme {
+    fn from(theme: Theme) -> Self {
+        Self::Fixed(theme)
     }
 }
 
@@ -458,8 +539,8 @@ pub struct CodeProps {
     #[props(into)]
     pub src: CodeSource,
     /// Syntax theme. Defaults to [`Theme::RUSTDOC_AYU`].
-    #[props(default)]
-    pub theme: Theme,
+    #[props(default, into)]
+    pub theme: CodeTheme,
 }
 
 /// Render syntax-highlighted source code.
@@ -476,15 +557,13 @@ pub fn Code(props: CodeProps) -> Element {
         error,
     } = props.src.0;
     let segments = code_segments(&source, &spans);
-    let class = format!("dxc {}", props.theme.class());
-    let theme_asset = props.theme.asset();
-    let theme_key = props.theme.name();
+    let class = format!("dxc {}", props.theme.classes());
     let language = language.as_deref().unwrap_or("text");
     let error = error.as_deref();
 
     rsx! {
-        {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
-        document::Stylesheet { href: STYLE }
+        ThemeStyles { theme: props.theme }
+        document::Stylesheet { href: CODE_CSS }
         pre {
             class,
             "data-language": language,
@@ -507,9 +586,46 @@ pub fn Code(props: CodeProps) -> Element {
     }
 }
 
+#[component]
+fn ThemeStyles(theme: CodeTheme) -> Element {
+    let shared_theme_css = Theme::THEME_CSS;
+
+    match theme {
+        CodeTheme::Fixed(theme) => {
+            let theme_asset = theme.asset();
+            let theme_key = theme.name();
+
+            rsx! {
+                document::Stylesheet { href: shared_theme_css }
+                {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
+            }
+        }
+        CodeTheme::System { light, dark } => {
+            let light_asset = light.system_light_asset();
+            let dark_asset = dark.system_dark_asset();
+            let light_key = format!("{}-system-light", light.name());
+            let dark_key = format!("{}-system-dark", dark.name());
+
+            rsx! {
+                document::Stylesheet { href: shared_theme_css }
+                {rsx!{document::Stylesheet { key: "{light_key}", href: light_asset }}}
+                {rsx!{document::Stylesheet { key: "{dark_key}", href: dark_asset }}}
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn system_theme_classes_include_scoped_slots() {
+        assert_eq!(
+            CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT).classes(),
+            "dxc-system dxc-system-light-github-light dxc-system-dark-tokyo-night",
+        );
+    }
 
     #[test]
     fn plaintext_is_escaped() {

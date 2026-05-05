@@ -18,6 +18,6 @@ dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version 
 [features]
 default = ["desktop"]
 desktop = ["dioxus/desktop"]
-web = ["dioxus/web"]
+web = ["dioxus/web", "dioxus-primitives/web"]
 fullstack = ["dioxus/fullstack"]
 server = ["dioxus/server", "dioxus/fullstack"]

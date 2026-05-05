@@ -1,4 +1,6 @@
+use std::collections::BTreeMap;
 use std::env;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::PathBuf;
 
@@ -9,44 +11,92 @@ struct ThemeDef {
     theme: arborium::theme::Theme,
 }
 
+struct ParsedTheme {
+    const_name: &'static str,
+    name: String,
+    css_file: String,
+    system_light_css_file: String,
+    system_dark_css_file: String,
+    class: String,
+    system_light_class: String,
+    system_dark_class: String,
+    rules: ThemeRules,
+}
+
+#[derive(Default)]
+struct ThemeRules {
+    base: Vec<Declaration>,
+    tags: BTreeMap<String, Vec<Declaration>>,
+}
+
+#[derive(Clone)]
+struct Declaration {
+    property: String,
+    value: String,
+}
+
+#[derive(Default)]
+struct SharedRules {
+    base: Vec<String>,
+    tags: BTreeMap<String, Vec<String>>,
+}
+
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let asset_dir = manifest_dir.join("assets/generated/arborium-themes");
-    if !asset_dir.exists() {
-        fs::create_dir_all(&asset_dir).unwrap();
-    }
+    fs::create_dir_all(&asset_dir).unwrap();
 
-    let themes = themes();
+    let themes: Vec<_> = themes().into_iter().map(parse_theme).collect();
+    let mut shared_rules = SharedRules::default();
     let mut generated = String::from(
         r#"impl Theme {
+    /// Shared stylesheet for syntax token rules and CSS-only system theme selection.
+    pub const THEME_CSS: Asset = asset!("/assets/generated/arborium-themes/dioxus-code-theme.css");
 "#,
     );
 
-    for theme in themes {
-        let name = slug(&theme.theme.name);
-        let css_file = format!("{name}.css");
-        let class = format!("dxc-{name}");
-        let selector = format!(".{class}");
-        let css_path = asset_dir.join(&css_file);
-        if !css_path.exists() {
-            let css = flatten_theme_css(&selector, &theme.theme.to_css(&selector));
-            fs::write(css_path, css).unwrap();
-        }
+    for theme in &themes {
+        shared_rules.insert(&theme.rules);
+        fs::write(asset_dir.join(&theme.css_file), fixed_theme_css(theme)).unwrap();
+        fs::write(
+            asset_dir.join(&theme.system_light_css_file),
+            system_slot_css(&theme.system_light_class, "light", &theme.rules),
+        )
+        .unwrap();
+        fs::write(
+            asset_dir.join(&theme.system_dark_css_file),
+            system_slot_css(&theme.system_dark_class, "dark", &theme.rules),
+        )
+        .unwrap();
 
         generated.push_str(&format!(
             "    /// Stylesheet asset for the `{name}` theme.\n    pub const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
             const_name = theme.const_name,
-            css_file = css_file,
-            name = name,
+            css_file = theme.css_file,
+            name = theme.name,
+        ));
+        generated.push_str(&format!(
+            "    /// Stylesheet asset for the `{name}` theme's system light variables.\n    pub const {const_name}_SYSTEM_LIGHT_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
+            const_name = theme.const_name,
+            css_file = theme.system_light_css_file,
+            name = theme.name,
+        ));
+        generated.push_str(&format!(
+            "    /// Stylesheet asset for the `{name}` theme's system dark variables.\n    pub const {const_name}_SYSTEM_DARK_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
+            const_name = theme.const_name,
+            css_file = theme.system_dark_css_file,
+            name = theme.name,
         ));
 
         generated.push_str(&format!(
-            "    /// The `{name}` syntax theme.\n    pub const {const_name}: Self = Self {{ name: \"{name}\", class: \"{class}\", asset: Self::{const_name}_CSS }};\n",
+            "    /// The `{name}` syntax theme.\n    pub const {const_name}: Self = Self {{ name: \"{name}\", class: \"{class}\", system_light_class: \"{system_light_class}\", system_dark_class: \"{system_dark_class}\", asset: Self::{const_name}_CSS, system_light_asset: Self::{const_name}_SYSTEM_LIGHT_CSS, system_dark_asset: Self::{const_name}_SYSTEM_DARK_CSS }};\n",
             const_name = theme.const_name,
-            name = name,
-            class = class,
+            name = theme.name,
+            class = theme.class,
+            system_light_class = theme.system_light_class,
+            system_dark_class = theme.system_dark_class,
         ));
     }
 
@@ -55,13 +105,42 @@ fn main() {
 "#,
     );
 
+    fs::write(
+        asset_dir.join("dioxus-code-theme.css"),
+        shared_theme_css(&shared_rules),
+    )
+    .unwrap();
+
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     fs::write(out_dir.join("theme_assets.rs"), generated).unwrap();
 }
 
-fn flatten_theme_css(selector: &str, css: &str) -> String {
-    let mut base = Vec::new();
-    let mut nested = Vec::new();
+fn parse_theme(theme: ThemeDef) -> ParsedTheme {
+    let name = slug(&theme.theme.name);
+    let css_file = format!("{name}.css");
+    let system_light_css_file = format!("{name}-system-light.css");
+    let system_dark_css_file = format!("{name}-system-dark.css");
+    let class = format!("dxc-{name}");
+    let system_light_class = format!("dxc-system-light-{name}");
+    let system_dark_class = format!("dxc-system-dark-{name}");
+    let selector = format!(".{class}");
+    let rules = parse_theme_rules(&theme.theme.to_css(&selector));
+
+    ParsedTheme {
+        const_name: theme.const_name,
+        name,
+        css_file,
+        system_light_css_file,
+        system_dark_css_file,
+        class,
+        system_light_class,
+        system_dark_class,
+        rules,
+    }
+}
+
+fn parse_theme_rules(css: &str) -> ThemeRules {
+    let mut rules = ThemeRules::default();
 
     for line in css.lines().skip(1) {
         let trimmed = line.trim();
@@ -70,28 +149,161 @@ fn flatten_theme_css(selector: &str, css: &str) -> String {
         }
 
         if trimmed.starts_with("a-") {
-            let (tag, rest) = trimmed.split_once(' ').unwrap();
-            nested.push(format!("{selector} .{tag} {rest}"));
+            let (tag, body) = trimmed.split_once('{').unwrap();
+            let body = body.trim().trim_end_matches('}').trim();
+            rules
+                .tags
+                .entry(tag.trim().to_string())
+                .or_default()
+                .extend(parse_declarations(body));
         } else {
-            base.push(format!("  {trimmed}"));
+            rules.base.extend(parse_declarations(trimmed));
         }
     }
 
-    let mut flattened = String::new();
-    flattened.push_str(selector);
-    flattened.push_str(" {\n");
-    for line in base {
-        flattened.push_str(&line);
-        flattened.push('\n');
-    }
-    flattened.push_str("}\n");
+    rules
+}
 
-    for line in nested {
-        flattened.push_str(&line);
-        flattened.push('\n');
+fn parse_declarations(input: &str) -> Vec<Declaration> {
+    input
+        .split(';')
+        .filter_map(|declaration| {
+            let declaration = declaration.trim();
+            if declaration.is_empty() {
+                return None;
+            }
+
+            let (property, value) = declaration.split_once(':')?;
+            Some(Declaration {
+                property: property.trim().to_string(),
+                value: value.trim().to_string(),
+            })
+        })
+        .collect()
+}
+
+fn fixed_theme_css(theme: &ParsedTheme) -> String {
+    let mut css = String::new();
+
+    writeln!(css, ".{} {{", theme.class).unwrap();
+    write_slot_variables(&mut css, "light", &theme.rules);
+    css.push_str("}\n");
+
+    css
+}
+
+fn system_slot_css(selector: &str, slot: &str, rules: &ThemeRules) -> String {
+    let mut css = String::new();
+
+    writeln!(css, ".{selector} {{").unwrap();
+    write_slot_variables(&mut css, slot, rules);
+    css.push_str("}\n");
+
+    css
+}
+
+fn write_slot_variables(css: &mut String, slot: &str, rules: &ThemeRules) {
+    for declaration in &rules.base {
+        let variable = base_variable_suffix(&declaration.property);
+        writeln!(css, "  --dxc-{slot}-{variable}: {};", declaration.value).unwrap();
     }
 
-    flattened
+    for (tag, declarations) in &rules.tags {
+        for declaration in declarations {
+            let variable = tag_variable_suffix(tag, &declaration.property);
+            writeln!(css, "  --dxc-{slot}-{variable}: {};", declaration.value).unwrap();
+        }
+    }
+}
+
+impl SharedRules {
+    fn insert(&mut self, rules: &ThemeRules) {
+        for declaration in &rules.base {
+            insert_unique(&mut self.base, &declaration.property);
+        }
+
+        for (tag, declarations) in &rules.tags {
+            let properties = self.tags.entry(tag.clone()).or_default();
+            for declaration in declarations {
+                insert_unique(properties, &declaration.property);
+            }
+        }
+    }
+}
+
+fn insert_unique(values: &mut Vec<String>, value: &str) {
+    if !values.iter().any(|existing| existing == value) {
+        values.push(value.to_string());
+    }
+}
+
+fn shared_theme_css(rules: &SharedRules) -> String {
+    let mut css = String::from(
+        r#".dxc-system {
+  --dxc-light-on: initial;
+  --dxc-dark-on: ;
+}
+
+@media (prefers-color-scheme: dark) {
+  .dxc-system {
+    --dxc-light-on: ;
+    --dxc-dark-on: initial;
+  }
+}
+
+"#,
+    );
+
+    css.push_str(".dxc,\n.dxc-editor {\n");
+    for property in &rules.base {
+        let variable = base_variable_suffix(property);
+        writeln!(css, "  {property}: {};", active_value(&variable)).unwrap();
+    }
+    css.push_str("}\n");
+
+    for (tag, properties) in &rules.tags {
+        writeln!(css, ".dxc .{tag},\n.dxc-editor .{tag} {{").unwrap();
+        for property in properties {
+            let variable = tag_variable_suffix(tag, property);
+            writeln!(css, "  {property}: {};", active_value(&variable)).unwrap();
+        }
+        css.push_str("}\n");
+    }
+
+    css
+}
+
+fn active_value(variable: &str) -> String {
+    format!(
+        "var(--dxc-light-on, var(--dxc-light-{variable},)) var(--dxc-dark-on, var(--dxc-dark-{variable},))"
+    )
+}
+
+fn base_variable_suffix(property: &str) -> String {
+    if let Some(custom_property) = property.strip_prefix("--") {
+        format!("var-{}", css_identifier(custom_property))
+    } else {
+        css_identifier(property)
+    }
+}
+
+fn tag_variable_suffix(tag: &str, property: &str) -> String {
+    format!("{}-{}", css_identifier(tag), base_variable_suffix(property))
+}
+
+fn css_identifier(input: &str) -> String {
+    let mut output = String::new();
+
+    for ch in input.chars() {
+        match ch {
+            'a'..='z' | '0'..='9' => output.push(ch),
+            'A'..='Z' => output.push(ch.to_ascii_lowercase()),
+            '-' | '_' if !output.ends_with('-') => output.push('-'),
+            _ => {}
+        }
+    }
+
+    output.trim_matches('-').to_string()
 }
 
 fn themes() -> Vec<ThemeDef> {
