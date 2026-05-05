@@ -64,7 +64,8 @@ fn flatten_theme_css(selector: &str, css: &str) -> String {
         }
 
         if trimmed.starts_with("a-") {
-            nested.push(format!("{selector} {trimmed}"));
+            let (tag, rest) = trimmed.split_once(' ').unwrap();
+            nested.push(format!("{selector} .{tag} {rest}"));
         } else {
             base.push(format!("  {trimmed}"));
         }
@@ -135,11 +136,7 @@ fn slug(name: &str) -> String {
         match ch {
             'a'..='z' | '0'..='9' => slug.push(ch),
             'A'..='Z' => slug.push(ch.to_ascii_lowercase()),
-            ' ' | '_' | '-' => {
-                if !slug.ends_with('-') {
-                    slug.push('-');
-                }
-            }
+            ' ' | '_' | '-' if !slug.ends_with('-') => slug.push('-'),
             'é' | 'É' => slug.push('e'),
             _ => {}
         }

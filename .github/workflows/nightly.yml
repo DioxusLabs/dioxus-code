@@ -1,0 +1,60 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "21 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nightly:
+    name: Nightly Toolchain
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libxdo-dev
+          version: 1.0
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-gnu,wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          cache-on-failure: "true"
+      - name: Check
+        run: cargo check --workspace --all-features
+      - name: Test
+        run: cargo test --workspace
+      - name: Clippy
+        run: cargo clippy --workspace --examples --tests --all-features --all-targets -- -D warnings
+
+  web-demo:
+    name: Nightly Web Demo Build
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libxdo-dev
+          version: 1.0
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-unknown-linux-gnu,wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          cache-on-failure: "true"
+          cache-directories: "target/dx"
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Install Dioxus CLI
+        run: cargo binstall dioxus-cli -y --force --version 0.7.7
+      - name: Build web demo
+        run: cd demo && dx build --web --release --no-default-features --features web --debug-symbols false --base-path "${{ github.event.repository.name }}"

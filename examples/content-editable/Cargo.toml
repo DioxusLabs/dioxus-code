@@ -1,5 +1,5 @@
 [package]
-name = "dioxus-code-live-input"
+name = "dioxus-code-content-editable"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

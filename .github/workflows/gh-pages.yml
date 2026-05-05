@@ -1,0 +1,89 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "42 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  build-deploy:
+    name: Build And Deploy Demo
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev libxdo-dev
+          version: 1.0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu,wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+          cache-on-failure: "false"
+          cache-directories: "target/dx"
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Install Dioxus CLI
+        run: cargo binstall dioxus-cli -y --force --version 0.7.7
+      - name: Build
+        run: cd demo && dx build --web --release --no-default-features --features web --debug-symbols false --base-path "${{ github.event.repository.name }}"
+      - name: Copy output
+        run: cp -r target/dx/dioxus-code-demo/release/web/public docs
+      - name: Add GitHub Pages 404
+        run: |
+          cat > docs/404.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Redirecting</title>
+          </head>
+          <body>
+              <script>
+                  const parts = window.location.pathname.split('/');
+                  let realUrl;
+                  if (parts[2] === 'pr-preview') {
+                      realUrl = '/' + parts.slice(1, 4).join('/') + '/';
+                  } else {
+                      realUrl = '/' + parts.slice(1, 2).join('/') + '/';
+                  }
+                  fetch(realUrl)
+                      .then(response => response.text())
+                      .then(html => {
+                          document.documentElement.innerHTML = html;
+                          document.documentElement.querySelectorAll('script').forEach(oldScript => {
+                              const newScript = document.createElement('script');
+                              for (const { name, value } of oldScript.attributes) {
+                                  newScript.setAttribute(name, value);
+                              }
+                              newScript.textContent = oldScript.textContent;
+                              oldScript.replaceWith(newScript);
+                          });
+                      });
+              </script>
+          </body>
+          </html>
+          EOF
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4.2.3
+        with:
+          branch: gh-pages
+          folder: docs
+          target-folder: .
+          clean: true
+          clean-exclude: pr-preview/**

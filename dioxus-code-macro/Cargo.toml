@@ -9,6 +9,7 @@ proc-macro = true
 
 [dependencies]
 arborium = { version = "2.16.0", default-features = false, features = ["all-languages"] }
+arborium-theme = "2.16.0"
 proc-macro-crate = "3.5.0"
 proc-macro2 = "1.0.103"
 quote = "1.0.42"

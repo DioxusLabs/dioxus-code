@@ -82,18 +82,16 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
 
     let language_lit = LitStr::new(&language, Span::call_site());
     let absolute_lit = LitStr::new(&absolute_path.to_string_lossy(), Span::call_site());
-    let spans = spans.into_iter().map(|span| {
+    let spans = normalize_spans(spans).into_iter().map(|span| {
         let start = span.start;
         let end = span.end;
-        let capture = LitStr::new(&span.capture, Span::call_site());
-        let pattern_index = span.pattern_index;
+        let tag = LitStr::new(span.tag, Span::call_site());
 
         quote! {
             #crate_path::StaticSpan {
                 start: #start,
                 end: #end,
-                capture: #capture,
-                pattern_index: #pattern_index,
+                tag: #tag,
             }
         }
     });
@@ -103,6 +101,74 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         static SPANS: &[#crate_path::StaticSpan] = &[#(#spans),*];
         #crate_path::CodeTree::from_static_parts(SOURCE, #language_lit, SPANS)
     }})
+}
+
+struct NormalizedSpan {
+    start: u32,
+    end: u32,
+    tag: &'static str,
+}
+
+struct RawSpan {
+    start: u32,
+    end: u32,
+    tag: Option<&'static str>,
+    pattern_index: u32,
+}
+
+fn normalize_spans(spans: Vec<arborium::advanced::Span>) -> Vec<NormalizedSpan> {
+    use std::collections::HashMap;
+
+    let mut deduped: HashMap<(u32, u32), RawSpan> = HashMap::new();
+    for span in spans {
+        let span = RawSpan {
+            start: span.start,
+            end: span.end,
+            tag: arborium_theme::tag_for_capture(&span.capture),
+            pattern_index: span.pattern_index,
+        };
+        let key = (span.start, span.end);
+
+        if let Some(existing) = deduped.get(&key) {
+            let should_replace = match (span.tag.is_some(), existing.tag.is_some()) {
+                (true, false) => true,
+                (false, true) => false,
+                _ => span.pattern_index >= existing.pattern_index,
+            };
+            if should_replace {
+                deduped.insert(key, span);
+            }
+        } else {
+            deduped.insert(key, span);
+        }
+    }
+
+    let mut spans: Vec<_> = deduped
+        .into_values()
+        .filter_map(|span| {
+            Some(NormalizedSpan {
+                start: span.start,
+                end: span.end,
+                tag: span.tag?,
+            })
+        })
+        .collect();
+
+    spans.sort_by_key(|span| (span.start, span.end));
+
+    let mut coalesced: Vec<NormalizedSpan> = Vec::with_capacity(spans.len());
+    for span in spans {
+        if let Some(last) = coalesced.last_mut()
+            && span.tag == last.tag
+            && span.start <= last.end
+        {
+            last.end = last.end.max(span.end);
+            continue;
+        }
+        coalesced.push(span);
+    }
+
+    coalesced
 }
 
 fn dioxus_code_crate_path() -> syn::Result<TokenStream2> {

@@ -2,7 +2,9 @@
 members = [
     ".",
     "dioxus-code-macro",
+    "demo",
     "examples/basic",
+    "examples/content-editable",
     "examples/dioxus-hello",
     "examples/live-input",
     "examples/macro-only",
@@ -29,6 +31,7 @@ all-languages = ["runtime", "arborium/all-languages"]
 
 [dependencies]
 arborium = { version = "2.16.0", default-features = false }
+arborium-theme = "2.16.0"
 dioxus = { version = "0.7.0", default-features = false, features = ["lib"] }
 dioxus-code-macro = { path = "dioxus-code-macro", optional = true }
 

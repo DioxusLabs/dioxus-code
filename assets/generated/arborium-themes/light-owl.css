@@ -7,66 +7,66 @@
   --accent: #4876d6;
   --muted: #989fb1;
 }
-.dxc-light-owl a-at { color: #4876d6; font-style: italic; }
-.dxc-light-owl a-co { color: #4876d6; }
-.dxc-light-owl a-cb { color: #4876d6; }
-.dxc-light-owl a-fb { color: #4876d6; font-style: italic; }
-.dxc-light-owl a-f { color: #4876d6; font-style: italic; }
-.dxc-light-owl a-fm { color: #4876d6; font-style: italic; }
-.dxc-light-owl a-k { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-kc { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-ko { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-kd { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-ke { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-kf { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-ki { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-kp { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-kr { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-kt { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-ky { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-o { color: #0c969b; }
-.dxc-light-owl a-pr { color: #4876d6; }
-.dxc-light-owl a-p { color: #403f53; }
-.dxc-light-owl a-pb { color: #403f53; }
-.dxc-light-owl a-pd { color: #403f53; }
-.dxc-light-owl a-ps { color: #0c969b; }
-.dxc-light-owl a-s { color: #c96765; }
-.dxc-light-owl a-ss { color: #5ca7e4; }
-.dxc-light-owl a-tg { color: #994cc3; }
-.dxc-light-owl a-td { color: #994cc3; }
-.dxc-light-owl a-te { color: #994cc3; }
-.dxc-light-owl a-t { color: #111111; }
-.dxc-light-owl a-tb { color: #111111; }
-.dxc-light-owl a-tq { color: #111111; }
-.dxc-light-owl a-v { color: #403f53; }
-.dxc-light-owl a-vb { color: #bc5454; }
-.dxc-light-owl a-vp { color: #403f53; }
-.dxc-light-owl a-c { color: #989fb1; font-style: italic; }
-.dxc-light-owl a-cd { color: #989fb1; font-style: italic; }
-.dxc-light-owl a-m { color: #994cc3; }
-.dxc-light-owl a-l { color: #0c969b; }
-.dxc-light-owl a-n { color: #aa0982; }
-.dxc-light-owl a-tl { color: #403f53; }
-.dxc-light-owl a-em { font-style: italic; }
-.dxc-light-owl a-st { font-weight: bold; }
-.dxc-light-owl a-tu { color: #4876d6; text-decoration: underline; }
-.dxc-light-owl a-tr { color: #4876d6; }
-.dxc-light-owl a-se { color: #0c969b; }
-.dxc-light-owl a-tt { color: #994cc3; font-weight: bold; }
-.dxc-light-owl a-tx { text-decoration: line-through; }
-.dxc-light-owl a-sp { color: #403f53; }
-.dxc-light-owl a-in { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-sc { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-rp { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-cn { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-ex { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-pp { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-ch { color: #c96765; }
-.dxc-light-owl a-cs { color: #c96765; }
-.dxc-light-owl a-vm { color: #403f53; }
-.dxc-light-owl a-fd { color: #4876d6; font-style: italic; }
-.dxc-light-owl a-tf { color: #111111; }
-.dxc-light-owl a-fc { color: #4876d6; font-style: italic; }
-.dxc-light-owl a-km { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-dr { color: #994cc3; font-style: italic; }
-.dxc-light-owl a-rx { color: #c96765; }
+.dxc-light-owl .a-at { color: #4876d6; font-style: italic; }
+.dxc-light-owl .a-co { color: #4876d6; }
+.dxc-light-owl .a-cb { color: #4876d6; }
+.dxc-light-owl .a-fb { color: #4876d6; font-style: italic; }
+.dxc-light-owl .a-f { color: #4876d6; font-style: italic; }
+.dxc-light-owl .a-fm { color: #4876d6; font-style: italic; }
+.dxc-light-owl .a-k { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-kc { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-ko { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-kd { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-ke { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-kf { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-ki { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-kp { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-kr { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-kt { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-ky { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-o { color: #0c969b; }
+.dxc-light-owl .a-pr { color: #4876d6; }
+.dxc-light-owl .a-p { color: #403f53; }
+.dxc-light-owl .a-pb { color: #403f53; }
+.dxc-light-owl .a-pd { color: #403f53; }
+.dxc-light-owl .a-ps { color: #0c969b; }
+.dxc-light-owl .a-s { color: #c96765; }
+.dxc-light-owl .a-ss { color: #5ca7e4; }
+.dxc-light-owl .a-tg { color: #994cc3; }
+.dxc-light-owl .a-td { color: #994cc3; }
+.dxc-light-owl .a-te { color: #994cc3; }
+.dxc-light-owl .a-t { color: #111111; }
+.dxc-light-owl .a-tb { color: #111111; }
+.dxc-light-owl .a-tq { color: #111111; }
+.dxc-light-owl .a-v { color: #403f53; }
+.dxc-light-owl .a-vb { color: #bc5454; }
+.dxc-light-owl .a-vp { color: #403f53; }
+.dxc-light-owl .a-c { color: #989fb1; font-style: italic; }
+.dxc-light-owl .a-cd { color: #989fb1; font-style: italic; }
+.dxc-light-owl .a-m { color: #994cc3; }
+.dxc-light-owl .a-l { color: #0c969b; }
+.dxc-light-owl .a-n { color: #aa0982; }
+.dxc-light-owl .a-tl { color: #403f53; }
+.dxc-light-owl .a-em { font-style: italic; }
+.dxc-light-owl .a-st { font-weight: bold; }
+.dxc-light-owl .a-tu { color: #4876d6; text-decoration: underline; }
+.dxc-light-owl .a-tr { color: #4876d6; }
+.dxc-light-owl .a-se { color: #0c969b; }
+.dxc-light-owl .a-tt { color: #994cc3; font-weight: bold; }
+.dxc-light-owl .a-tx { text-decoration: line-through; }
+.dxc-light-owl .a-sp { color: #403f53; }
+.dxc-light-owl .a-in { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-sc { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-rp { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-cn { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-ex { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-pp { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-ch { color: #c96765; }
+.dxc-light-owl .a-cs { color: #c96765; }
+.dxc-light-owl .a-vm { color: #403f53; }
+.dxc-light-owl .a-fd { color: #4876d6; font-style: italic; }
+.dxc-light-owl .a-tf { color: #111111; }
+.dxc-light-owl .a-fc { color: #4876d6; font-style: italic; }
+.dxc-light-owl .a-km { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-dr { color: #994cc3; font-style: italic; }
+.dxc-light-owl .a-rx { color: #c96765; }
