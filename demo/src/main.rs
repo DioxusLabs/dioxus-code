@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use dioxus_code::{Code, RuntimeCode, Theme, code};
+use dioxus_code::{Code, SourceCode, Theme, code};
 use dioxus_code_editor::CodeEditor;
 
 const STARTER: &str = r#"use dioxus::prelude::*;
@@ -28,11 +28,11 @@ print(weights)
 const DOCS_INSTALL: &str = r#"dioxus-code = { version = "0.1", features = ["runtime"] }
 "#;
 
-const DOCS_RUNTIME: &str = r#"use dioxus_code::{Code, RuntimeCode, Theme};
+const DOCS_RUNTIME: &str = r#"use dioxus_code::{Code, SourceCode, Theme};
 
 rsx! {
     Code {
-        src: RuntimeCode::new(source).with_language("rust"),
+        src: SourceCode::new(source).with_language("rust"),
         theme: Theme::TOKYO_NIGHT,
     }
 }
@@ -46,6 +46,20 @@ rsx! {
         theme: Theme::RUSTDOC_AYU,
     }
 }
+"#;
+
+const SYSTEM_THEME_SCRIPT: &str = r#"
+const media = window.matchMedia("(prefers-color-scheme: dark)");
+const send = () => dioxus.send(media.matches);
+send();
+
+if (media.addEventListener) {
+    media.addEventListener("change", send);
+} else {
+    media.addListener(send);
+}
+
+await new Promise(() => {});
 "#;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -63,6 +77,44 @@ impl Scheme {
             Scheme::Dark => "site-shell theme-dark",
         }
     }
+
+    fn resolved(self, system_theme: ThemeMode) -> ThemeMode {
+        match self {
+            Scheme::System => system_theme,
+            Scheme::Light => ThemeMode::Light,
+            Scheme::Dark => ThemeMode::Dark,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ThemeMode {
+    Light,
+    Dark,
+}
+
+impl ThemeMode {
+    fn from_is_dark(is_dark: bool) -> Self {
+        if is_dark {
+            ThemeMode::Dark
+        } else {
+            ThemeMode::Light
+        }
+    }
+
+    fn demo_themes(self) -> &'static [DemoTheme] {
+        match self {
+            ThemeMode::Light => light_demo_themes(),
+            ThemeMode::Dark => dark_demo_themes(),
+        }
+    }
+
+    fn pick(self, light: Theme, dark: Theme) -> Theme {
+        match self {
+            ThemeMode::Light => light,
+            ThemeMode::Dark => dark,
+        }
+    }
 }
 
 fn main() {
@@ -74,16 +126,29 @@ fn App() -> Element {
     let source = use_signal(|| STARTER.to_string());
     let active_theme = use_signal(|| 0usize);
     let scheme = use_signal(|| Scheme::System);
+    let mut system_theme = use_signal(|| ThemeMode::Light);
+
+    use_future(move || async move {
+        let mut eval = document::eval(SYSTEM_THEME_SCRIPT);
+
+        while let Ok(is_dark) = eval.recv::<bool>().await {
+            system_theme.set(ThemeMode::from_is_dark(is_dark));
+        }
+    });
+
+    let theme_mode = scheme().resolved(system_theme());
+    let themes = theme_mode.demo_themes();
+    let active_theme_index = active_theme().min(themes.len() - 1);
 
     rsx! {
         style { {APP_CSS} }
         main { class: scheme().class(),
             Header { scheme }
-            Hero { source: source(), theme: demo_themes()[active_theme()].theme }
-            Highlights {}
-            Playground { source, active_theme }
-            Demos {}
-            Docs {}
+            Hero { source: source(), theme: themes[active_theme_index].theme }
+            SizeCharts {}
+            Playground { source, active_theme, theme_mode }
+            Demos { theme_mode }
+            Docs { theme_mode }
             SiteFooter {}
         }
     }
@@ -98,6 +163,7 @@ fn Header(scheme: Signal<Scheme>) -> Element {
                 span { "dioxus-code" }
             }
             nav {
+                a { href: "#sizes", "Size" }
                 a { href: "#playground", "Playground" }
                 a { href: "#demos", "Demos" }
                 a { href: "#docs", "Docs" }
@@ -193,7 +259,6 @@ fn Hero(source: String, theme: Theme) -> Element {
         section { id: "top", class: "hero hero-terminal",
             div { class: "hero-terminal-grid",
                 div { class: "hero-terminal-copy",
-                    span { class: "hero-eyebrow", "// v0.1.0 · ready to ship" }
                     h1 { class: "hero-h1",
                         "Highlight code in Dioxus, with one "
                         em { "cargo add" }
@@ -236,7 +301,7 @@ fn Hero(source: String, theme: Theme) -> Element {
                         span { "{theme.name()}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: RuntimeCode::new(source).with_language("rust"), theme }
+                        Code { src: SourceCode::new(source).with_language("rust"), theme }
                     }
                 }
             }
@@ -244,57 +309,78 @@ fn Hero(source: String, theme: Theme) -> Element {
     }
 }
 
+#[derive(Clone, Copy)]
+struct BuildDelta {
+    example: &'static str,
+    mode: &'static str,
+    delta: &'static str,
+    detail: &'static str,
+    width: &'static str,
+    accent: &'static str,
+}
+
+fn build_deltas() -> &'static [BuildDelta] {
+    &[
+        BuildDelta {
+            example: "Macro only",
+            mode: "compile-time",
+            delta: "+0.20 MiB",
+            detail: "12% over baseline",
+            width: "6.09%",
+            accent: "#16a34a",
+        },
+        BuildDelta {
+            example: "Basic",
+            mode: "runtime",
+            delta: "+3.33 MiB",
+            detail: "198% over baseline",
+            width: "100%",
+            accent: "#dc2626",
+        },
+    ]
+}
+
 #[component]
-fn Highlights() -> Element {
+fn SizeCharts() -> Element {
     rsx! {
-        section { class: "section",
+        section { id: "sizes", class: "section",
             div { class: "section-head",
                 div {
-                    span { class: "section-eyebrow", "// What's in the box" }
-                    h2 { class: "section-title", "A code component, fully assembled." }
+                    h2 { class: "section-title", "opt into runtime parsing" }
                 }
                 p { class: "section-sub",
-                    "Two source modes, thirty-two themes, zero runtime cost when you choose the macro."
+                    "Release web WASM over the Dioxus hello baseline."
                 }
             }
-            div { class: "highlights-grid",
-                div { class: "card card-install",
-                    span { class: "card-eyebrow", "Install" }
-                    code { class: "shell-cmd", "cargo add dioxus-code" }
-                    p { class: "card-note", "Add the runtime feature for user-supplied source." }
+            div { class: "size-panel",
+                div { class: "size-source",
+                    span { "dx build --web -r" }
+                    span { "WASM over baseline" }
                 }
-                div { class: "card card-modes",
-                    span { class: "card-eyebrow", "Two source modes" }
-                    div { class: "modes-row",
-                        div { class: "mode-cell",
-                            p { class: "mode-name", "code!()" }
-                            span { class: "mode-desc", "compile-time macro" }
-                            span { class: "mode-tag", "0kb runtime" }
-                        }
-                        div { class: "mode-cell",
-                            p { class: "mode-name", "RuntimeCode" }
-                            span { class: "mode-desc", "user input · network · generated" }
-                            span { class: "mode-tag", "tree-sitter detection" }
-                        }
+                div { class: "chart-block",
+                    div { class: "chart-head",
+                        span { class: "card-eyebrow", "Over baseline" }
+                        span { class: "chart-scale", "max +3.33 MiB" }
                     }
-                }
-                div { class: "card card-zero",
-                    span { class: "card-eyebrow", "Compile-time output" }
-                    p { class: "stat-num", "0kb" }
-                    p { class: "card-note",
-                        "Static snippets ship as pre-tokenized markup. No JS, no runtime parser, no flash of unstyled code."
-                    }
-                }
-                div { class: "card card-themes",
-                    span { class: "card-eyebrow", "32 themes shipped" }
-                    div { class: "swatches",
-                        for swatch in demo_themes() {
-                            span { class: "swatch-chip", style: "background:{swatch.accent};" }
+                    div { class: "size-bars",
+                        for build in build_deltas() {
+                            div { class: "size-row",
+                                div { class: "size-row-label",
+                                    strong { "{build.example}" }
+                                    span { "{build.mode}" }
+                                }
+                                div { class: "size-track", role: "img", "aria-label": "{build.example} adds {build.delta} over baseline",
+                                    div {
+                                        class: "size-bar",
+                                        style: "width:{build.width}; background:{build.accent};",
+                                    }
+                                }
+                                div { class: "size-row-value",
+                                    strong { "{build.delta}" }
+                                    span { "{build.detail}" }
+                                }
+                            }
                         }
-                        span { class: "swatch-more", "+27" }
-                    }
-                    p { class: "card-note",
-                        "Tokyo Night, GitHub, Catppuccin, Gruvbox, Rose Pine, Ayu, Solarized — pick one or expose all of them."
                     }
                 }
             }
@@ -303,15 +389,19 @@ fn Highlights() -> Element {
 }
 
 #[component]
-fn Playground(mut source: Signal<String>, mut active_theme: Signal<usize>) -> Element {
-    let theme = demo_themes()[active_theme()].theme;
-    let active_idx = active_theme();
-    let active_swatch = demo_themes()[active_idx].accent;
+fn Playground(
+    mut source: Signal<String>,
+    mut active_theme: Signal<usize>,
+    theme_mode: ThemeMode,
+) -> Element {
+    let themes = theme_mode.demo_themes();
+    let active_idx = active_theme().min(themes.len() - 1);
+    let theme = themes[active_idx].theme;
+    let active_swatch = themes[active_idx].accent;
     rsx! {
         section { id: "playground", class: "section",
             div { class: "section-head",
                 div {
-                    span { class: "section-eyebrow", "// Live playground" }
                     h2 { class: "section-title", "Edit highlighted code inline." }
                 }
                 p { class: "section-sub",
@@ -343,12 +433,12 @@ fn Playground(mut source: Signal<String>, mut active_theme: Signal<usize>) -> El
                 div { class: "card card-themepicker",
                     div { class: "card-bar",
                         span { "active theme" }
-                        span { {format!("{} of {}", active_idx + 1, demo_themes().len())} }
+                        span { {format!("{} of {}", active_idx + 1, themes.len())} }
                     }
                     div { class: "theme-strip",
-                        for (index, swatch) in demo_themes().iter().enumerate() {
+                        for (index, swatch) in themes.iter().enumerate() {
                             button {
-                                class: if active_theme() == index { "theme-pill active" } else { "theme-pill" },
+                                class: if active_idx == index { "theme-pill active" } else { "theme-pill" },
                                 onclick: move |_| active_theme.set(index),
                                 span { class: "theme-pill-swatch", style: "background:{swatch.accent};" }
                                 span { "{swatch.theme.name()}" }
@@ -362,16 +452,18 @@ fn Playground(mut source: Signal<String>, mut active_theme: Signal<usize>) -> El
 }
 
 #[component]
-fn Demos() -> Element {
+fn Demos(theme_mode: ThemeMode) -> Element {
+    let feature_theme = theme_mode.pick(Theme::MELANGE_LIGHT, Theme::KANAGAWA_DRAGON);
+    let runtime_theme = theme_mode.pick(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK);
+
     rsx! {
         section { id: "demos", class: "section",
             div { class: "section-head",
                 div {
-                    span { class: "section-eyebrow", "// Three rendering modes" }
-                    h2 { class: "section-title", "One component. Real-world examples." }
+                    h2 { class: "section-title", "Examples" }
                 }
                 p { class: "section-sub",
-                    "Static at compile time, runtime detection, fallback for unknown languages — same component, different src input."
+                    "Static snippets at compile time, runtime parsing when the source is dynamic."
                 }
             }
             div { class: "demos-grid",
@@ -389,47 +481,30 @@ fn Demos() -> Element {
                     div { class: "demo-feature-frame",
                         div { class: "card-bar",
                             span { "snippets/palette.rs" }
-                            span { "kanagawa-dragon" }
+                            span { "{feature_theme.name()}" }
                         }
                         div { class: "card-code-body",
                             Code {
                                 src: code!("/snippets/palette.rs"),
-                                theme: Theme::KANAGAWA_DRAGON,
+                                theme: feature_theme,
                             }
                         }
                     }
                 }
-                article { class: "card card-demo",
+                article { class: "card card-demo card-demo-runtime",
                     div { class: "card-bar",
                         span { "runtime · python" }
-                        span { "github-light" }
+                        span { "{runtime_theme.name()}" }
                     }
                     div { class: "card-code-body",
                         Code {
-                            src: RuntimeCode::new(PYTHON).with_language("python"),
-                            theme: Theme::GITHUB_LIGHT,
+                            src: SourceCode::new(PYTHON).with_language("python"),
+                            theme: runtime_theme,
                         }
                     }
                     div { class: "demo-foot",
                         p { class: "card-note",
                             "Pass any string with a known language. Tree-sitter grammars cover Rust, JS, Python, Go, and dozens more."
-                        }
-                    }
-                }
-                article { class: "card card-demo",
-                    div { class: "card-bar",
-                        span { "fallback · plain text" }
-                        span { "rustdoc-light" }
-                    }
-                    div { class: "card-code-body",
-                        Code {
-                            src: RuntimeCode::new("no language marker here"),
-                            theme: Theme::RUSTDOC_LIGHT,
-                        }
-                    }
-                    div { class: "demo-foot",
-                        p { class: "card-note",
-                            "When the language is unknown, the component renders plain styled text — no fight, no error."
                         }
                     }
                 }
@@ -439,13 +514,16 @@ fn Demos() -> Element {
 }
 
 #[component]
-fn Docs() -> Element {
+fn Docs(theme_mode: ThemeMode) -> Element {
+    let install_theme = theme_mode.pick(Theme::MELANGE_LIGHT, Theme::MELANGE_DARK);
+    let runtime_theme = theme_mode.pick(Theme::RUSTDOC_LIGHT, Theme::RUSTDOC_AYU);
+    let static_theme = theme_mode.pick(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT);
+
     rsx! {
         section { id: "docs", class: "section",
             div { class: "section-head",
                 div {
-                    span { class: "section-eyebrow", "// Three steps" }
-                    h2 { class: "section-title", "Use it in three moves." }
+                    h2 { class: "section-title", "Get started" }
                 }
                 p { class: "section-sub",
                     "Add the dependency, pick a theme, and choose between compile-time or runtime source."
@@ -460,17 +538,17 @@ fn Docs() -> Element {
                     copy: "Enable the runtime feature when source comes from user input, generated files, or network responses.",
                     code: DOCS_INSTALL,
                     language: "toml",
-                    theme: Theme::MELANGE_LIGHT,
+                    theme: install_theme,
                 }
                 DocStep {
                     id: "runtime",
                     num: "02",
                     eyebrow: "Runtime source",
-                    title: "RuntimeCode for live input",
-                    copy: "Pass any string through RuntimeCode. Provide a language hint when you already know it — Arborium handles tokenizing.",
+                    title: "SourceCode for live input",
+                    copy: "Pass any string through SourceCode. Provide a language hint when you already know it — Arborium handles tokenizing.",
                     code: DOCS_RUNTIME,
                     language: "rust",
-                    theme: Theme::RUSTDOC_AYU,
+                    theme: runtime_theme,
                 }
                 DocStep {
                     id: "static",
@@ -480,7 +558,7 @@ fn Docs() -> Element {
                     copy: "Use the macro for examples, docs, and any source checked in alongside your app. Highlight markup is generated at compile time.",
                     code: DOCS_STATIC,
                     language: "rust",
-                    theme: Theme::TOKYO_NIGHT,
+                    theme: static_theme,
                 }
             }
         }
@@ -508,7 +586,7 @@ fn DocStep(
             p { class: "doc-copy", "{copy}" }
             div { class: "doc-frame",
                 Code {
-                    src: RuntimeCode::new(code).with_language(language),
+                    src: SourceCode::new(code).with_language(language),
                     theme,
                 }
             }
@@ -533,6 +611,7 @@ fn SiteFooter() -> Element {
                     }
                     div { class: "footer-col",
                         span { class: "card-eyebrow", "Project" }
+                        a { href: "#sizes", "Release size" }
                         a { href: "#playground", "Playground" }
                         a { href: "#demos", "Demos" }
                         a { href: "#docs", "Documentation" }
@@ -565,27 +644,140 @@ struct DemoTheme {
     accent: &'static str,
 }
 
-fn demo_themes() -> &'static [DemoTheme] {
+fn light_demo_themes() -> &'static [DemoTheme] {
     &[
         DemoTheme {
-            theme: Theme::TOKYO_NIGHT,
-            accent: "#7aa2f7",
+            theme: Theme::ALABASTER,
+            accent: "#aa3731",
         },
         DemoTheme {
-            theme: Theme::RUSTDOC_AYU,
-            accent: "#ffb454",
+            theme: Theme::AYU_LIGHT,
+            accent: "#f07171",
+        },
+        DemoTheme {
+            theme: Theme::CATPPUCCIN_LATTE,
+            accent: "#1e66f5",
+        },
+        DemoTheme {
+            theme: Theme::DAYFOX,
+            accent: "#2848a9",
         },
         DemoTheme {
             theme: Theme::GITHUB_LIGHT,
             accent: "#0969da",
         },
         DemoTheme {
-            theme: Theme::MELANGE_DARK,
-            accent: "#e49b5d",
+            theme: Theme::GRUVBOX_LIGHT,
+            accent: "#076678",
+        },
+        DemoTheme {
+            theme: Theme::LIGHT_OWL,
+            accent: "#403f53",
+        },
+        DemoTheme {
+            theme: Theme::LUCIUS_LIGHT,
+            accent: "#005f87",
+        },
+        DemoTheme {
+            theme: Theme::MELANGE_LIGHT,
+            accent: "#c47f2c",
+        },
+        DemoTheme {
+            theme: Theme::RUSTDOC_LIGHT,
+            accent: "#7c3aed",
+        },
+        DemoTheme {
+            theme: Theme::SOLARIZED_LIGHT,
+            accent: "#268bd2",
+        },
+    ]
+}
+
+fn dark_demo_themes() -> &'static [DemoTheme] {
+    &[
+        DemoTheme {
+            theme: Theme::AYU_DARK,
+            accent: "#ff8f40",
+        },
+        DemoTheme {
+            theme: Theme::CATPPUCCIN_FRAPPE,
+            accent: "#8caaee",
+        },
+        DemoTheme {
+            theme: Theme::CATPPUCCIN_MACCHIATO,
+            accent: "#8aadf4",
+        },
+        DemoTheme {
+            theme: Theme::CATPPUCCIN_MOCHA,
+            accent: "#89b4fa",
+        },
+        DemoTheme {
+            theme: Theme::COBALT2,
+            accent: "#ffc600",
+        },
+        DemoTheme {
+            theme: Theme::DESERT256,
+            accent: "#ffd700",
+        },
+        DemoTheme {
+            theme: Theme::DRACULA,
+            accent: "#bd93f9",
+        },
+        DemoTheme {
+            theme: Theme::EF_MELISSA_DARK,
+            accent: "#ef9fe4",
+        },
+        DemoTheme {
+            theme: Theme::GITHUB_DARK,
+            accent: "#58a6ff",
+        },
+        DemoTheme {
+            theme: Theme::GRUVBOX_DARK,
+            accent: "#83a598",
         },
         DemoTheme {
             theme: Theme::KANAGAWA_DRAGON,
             accent: "#c5c9c5",
+        },
+        DemoTheme {
+            theme: Theme::MELANGE_DARK,
+            accent: "#e49b5d",
+        },
+        DemoTheme {
+            theme: Theme::MONOKAI,
+            accent: "#66d9ef",
+        },
+        DemoTheme {
+            theme: Theme::NORD,
+            accent: "#88c0d0",
+        },
+        DemoTheme {
+            theme: Theme::ONE_DARK,
+            accent: "#61afef",
+        },
+        DemoTheme {
+            theme: Theme::ROSE_PINE_MOON,
+            accent: "#c4a7e7",
+        },
+        DemoTheme {
+            theme: Theme::RUSTDOC_AYU,
+            accent: "#ffb454",
+        },
+        DemoTheme {
+            theme: Theme::RUSTDOC_DARK,
+            accent: "#2bab63",
+        },
+        DemoTheme {
+            theme: Theme::SOLARIZED_DARK,
+            accent: "#268bd2",
+        },
+        DemoTheme {
+            theme: Theme::TOKYO_NIGHT,
+            accent: "#7aa2f7",
+        },
+        DemoTheme {
+            theme: Theme::ZENBURN,
+            accent: "#efef8f",
         },
     ]
 }
@@ -621,8 +813,13 @@ const APP_CSS: &str = r#"
   --feature-cta-ghost-bg: rgba(250, 250, 246, 0.08);
   --feature-cta-ghost-line: rgba(250, 250, 246, 0.18);
   --feature-cta-ghost-fg: rgba(250, 250, 246, 0.92);
-  --editor-bg: #0c0c0c;
-  --editor-fg: #f3eadb;
+  --code-bg: #ffffff;
+  --editor-bg: #ffffff;
+  --editor-fg: #1f2328;
+  --editor-gutter-bg: #f6f8fa;
+  --editor-gutter-fg: rgba(31, 35, 40, 0.42);
+  --editor-gutter-line: rgba(31, 35, 40, 0.1);
+  --editor-selection: rgba(9, 105, 218, 0.2);
   --shadow-card: 0 1px 3px rgba(28, 25, 23, 0.04);
   --shadow-elev: 0 8px 24px -10px rgba(28, 25, 23, 0.16);
   --radius-card: 22px;
@@ -659,8 +856,13 @@ html:has(.theme-dark) {
   --feature-cta-ghost-bg: rgba(245, 243, 238, 0.06);
   --feature-cta-ghost-line: rgba(245, 243, 238, 0.16);
   --feature-cta-ghost-fg: rgba(245, 243, 238, 0.92);
-  --editor-bg: #050505;
-  --editor-fg: #f3eadb;
+  --code-bg: #0d1117;
+  --editor-bg: #0d1117;
+  --editor-fg: #e6edf3;
+  --editor-gutter-bg: rgba(255, 255, 255, 0.03);
+  --editor-gutter-fg: rgba(230, 237, 243, 0.42);
+  --editor-gutter-line: rgba(255, 255, 255, 0.08);
+  --editor-selection: rgba(122, 162, 247, 0.34);
   --shadow-card: none;
   --shadow-elev: none;
   color-scheme: dark;
@@ -695,8 +897,13 @@ html:has(.theme-dark) {
     --feature-cta-ghost-bg: rgba(245, 243, 238, 0.06);
     --feature-cta-ghost-line: rgba(245, 243, 238, 0.16);
     --feature-cta-ghost-fg: rgba(245, 243, 238, 0.92);
-    --editor-bg: #050505;
-    --editor-fg: #f3eadb;
+    --code-bg: #0d1117;
+    --editor-bg: #0d1117;
+    --editor-fg: #e6edf3;
+    --editor-gutter-bg: rgba(255, 255, 255, 0.03);
+    --editor-gutter-fg: rgba(230, 237, 243, 0.42);
+    --editor-gutter-line: rgba(255, 255, 255, 0.08);
+    --editor-selection: rgba(122, 162, 247, 0.34);
     --shadow-card: none;
     --shadow-elev: none;
     color-scheme: dark;
@@ -877,16 +1084,6 @@ button {
   padding: 32px 6px 0;
 }
 
-.section-eyebrow {
-  color: var(--accent);
-  display: block;
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  margin-bottom: 12px;
-}
-
 .section-title {
   font-family: 'Geist', sans-serif;
   font-size: clamp(28px, 3.6vw, 44px);
@@ -948,11 +1145,12 @@ button {
 }
 
 .card-code-body {
+  background: var(--code-bg);
   overflow: auto;
 }
 
 .card-code-body .dxc {
-  background: transparent;
+  background: var(--code-bg);
   border: 0;
   font-family: 'Geist Mono', monospace;
   font-size: 13px;
@@ -1006,16 +1204,6 @@ button {
   max-width: var(--max-width);
   padding: 32px 24px 56px;
   width: 100%;
-}
-
-.hero-eyebrow {
-  color: var(--accent);
-  display: block;
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  margin-bottom: 16px;
 }
 
 .hero-h1 {
@@ -1095,7 +1283,7 @@ button {
 }
 
 .hero-stage .card-code-body .dxc {
-  background: transparent;
+  background: var(--code-bg);
   border: 0;
   font-family: 'Geist Mono', monospace;
   font-size: 13px;
@@ -1191,142 +1379,125 @@ button {
   color: #34d399;
 }
 
-/* ============ Highlights bento ============ */
+/* ============ Size charts ============ */
 
-.highlights-grid {
+.size-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   display: grid;
-  gap: 14px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  grid-template-rows: auto auto;
+  gap: 22px;
   margin: 0 auto;
   max-width: var(--max-width);
+  overflow: hidden;
+  padding: 24px;
   width: 100%;
 }
 
-.highlights-grid .card-install {
-  align-content: start;
-  grid-column: 1;
-  grid-row: 1;
-  padding: 24px;
-}
-
-.highlights-grid .card-modes {
-  align-content: start;
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  padding: 28px;
-}
-
-.highlights-grid .card-zero {
-  align-content: start;
-  grid-column: 1;
-  grid-row: 2;
-  padding: 24px;
-}
-
-.highlights-grid .card-themes {
-  align-content: start;
-  grid-column: 1 / span 2;
-  grid-row: 3;
-  padding: 24px;
-}
-
-.card-install .card-eyebrow,
-.card-modes .card-eyebrow,
-.card-zero .card-eyebrow,
-.card-themes .card-eyebrow {
-  margin-bottom: 14px;
-}
-
-.shell-cmd {
-  background: var(--bg-tint);
-  border-radius: var(--radius-inner);
-  color: var(--ink);
-  display: block;
-  font-family: 'Geist Mono', monospace;
-  font-size: 15px;
-  font-weight: 500;
-  margin: 0 0 14px;
-  overflow-x: auto;
-  padding: 12px 14px;
-}
-
-.modes-row {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 1fr 1fr;
-}
-
-.mode-cell {
-  background: var(--bg-tint);
-  border-radius: var(--radius-inner);
-  display: grid;
-  gap: 6px;
-  padding: 18px;
-}
-
-.mode-name {
-  color: var(--ink);
-  font-family: 'Geist Mono', monospace;
-  font-size: 17px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.mode-desc {
-  color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
-  font-size: 13px;
-}
-
-.mode-tag {
-  align-self: start;
-  background: var(--accent-soft);
-  border-radius: 999px;
-  color: var(--accent);
-  font-family: 'Geist Mono', monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  margin-top: 6px;
-  padding: 4px 10px;
-}
-
-.stat-num {
-  color: var(--ink);
-  font-family: 'Geist', sans-serif;
-  font-size: 64px;
-  font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1;
-  margin: 0 0 14px;
-}
-
-.swatches {
+.size-source {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-mute);
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-
-.swatch-chip {
-  border-radius: 8px;
-  height: 24px;
-  width: 24px;
-}
-
-.swatch-more {
-  align-items: center;
-  background: var(--bg-tint);
-  border-radius: 8px;
-  color: var(--ink-soft);
-  display: inline-flex;
   font-family: 'Geist Mono', monospace;
   font-size: 11px;
-  font-weight: 500;
-  height: 24px;
-  justify-content: center;
-  padding: 0 8px;
+  gap: 10px;
+  letter-spacing: 0.06em;
+  margin: -4px -4px 0;
+  padding: 0 4px 18px;
+  text-transform: uppercase;
+}
+
+.size-source span {
+  background: var(--bg-tint);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.chart-block {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.chart-head {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.chart-scale {
+  color: var(--ink-mute);
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.size-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.size-row {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.8fr) minmax(96px, 0.45fr);
+}
+
+.size-row-label,
+.size-row-value {
+  display: grid;
+  gap: 3px;
+}
+
+.size-row-label strong,
+.size-row-value strong {
+  color: var(--ink);
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.size-row-label span,
+.size-row-value span {
+  color: var(--ink-mute);
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.size-row-value {
+  text-align: right;
+}
+
+.size-track {
+  background: var(--bg-tint);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  height: 18px;
+  overflow: hidden;
+  position: relative;
+}
+
+.size-track::after {
+  background: linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), var(--line) 25%, transparent calc(25% + 1px), transparent calc(50% - 1px), var(--line) 50%, transparent calc(50% + 1px), transparent calc(75% - 1px), var(--line) 75%, transparent calc(75% + 1px));
+  content: "";
+  inset: 0;
+  opacity: 0.7;
+  pointer-events: none;
+  position: absolute;
+}
+
+.size-bar {
+  border-radius: inherit;
+  height: 100%;
 }
 
 /* ============ Playground ============ */
@@ -1363,7 +1534,7 @@ button {
   --dxc-editor-gutter-padding: 20px 0;
   --dxc-editor-gutter-width: 4ch;
   --dxc-editor-padding: 20px 22px 20px 0;
-  --dxc-editor-selection: rgba(122, 162, 247, 0.34);
+  --dxc-editor-selection: var(--editor-selection);
   background: var(--editor-bg);
   color: var(--editor-fg);
   font: 14px/1.65 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1372,9 +1543,9 @@ button {
 }
 
 .playground-code-editor .dxc-editor-gutter {
-  background: rgba(255, 255, 255, 0.03);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(243, 234, 219, 0.38);
+  background: var(--editor-gutter-bg);
+  border-right: 1px solid var(--editor-gutter-line);
+  color: var(--editor-gutter-fg);
 }
 
 .playground-code-editor .dxc-editor-highlight,
@@ -1469,6 +1640,11 @@ button {
   padding: 32px 32px 20px;
 }
 
+.card-demo-runtime {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
 .demo-feature-head {
   align-items: center;
   display: flex;
@@ -1508,7 +1684,7 @@ button {
 }
 
 .demo-feature-frame {
-  background: var(--bg-tint);
+  background: var(--code-bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-inner);
   display: grid;
@@ -1580,14 +1756,14 @@ button {
 }
 
 .doc-frame {
-  background: var(--bg-tint);
+  background: var(--code-bg);
   border-radius: var(--radius-inner);
   border: 1px solid var(--line);
   overflow: hidden;
 }
 
 .doc-frame .dxc {
-  background: transparent;
+  background: var(--code-bg);
   border: 0;
   font-family: 'Geist Mono', monospace;
   font-size: 12.5px;
@@ -1699,18 +1875,6 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .highlights-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .highlights-grid .card-install,
-  .highlights-grid .card-modes,
-  .highlights-grid .card-zero,
-  .highlights-grid .card-themes {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
   .playground-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto;
@@ -1731,6 +1895,11 @@ button {
   }
 
   .card-demo-feature {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .card-demo-runtime {
     grid-column: 1;
     grid-row: auto;
   }
@@ -1770,8 +1939,24 @@ button {
     padding: 24px 14px 40px;
   }
 
-  .modes-row {
+  .size-panel {
+    padding: 18px;
+  }
+
+  .size-row {
+    align-items: stretch;
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .size-row-value {
+    text-align: left;
+  }
+
+  .chart-head {
+    align-items: start;
+    flex-direction: column;
+    gap: 5px;
   }
 
   .footer-grid {

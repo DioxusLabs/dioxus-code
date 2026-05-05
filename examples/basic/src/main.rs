@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use dioxus_code::{Code, RuntimeCode, Theme, code};
+use dioxus_code::{Code, SourceCode, Theme, code};
 
 fn main() {
     dioxus::launch(App);
@@ -15,7 +15,7 @@ fn App() -> Element {
                 theme: Theme::RUSTDOC_AYU,
             }
             Code {
-                src: RuntimeCode::new("fn main() {\n    println!(\"runtime\");\n}").with_language("rust"),
+                src: SourceCode::new("fn main() {\n    println!(\"runtime\");\n}").with_language("rust"),
                 theme: Theme::GITHUB_LIGHT,
             }
         }

@@ -15,16 +15,23 @@ resolver = "3"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/ealmloff/dioxus-code"
+keywords = ["dioxus", "code", "highlighting", "editor"]
+categories = ["gui", "web-programming"]
 
 [workspace.dependencies]
-dioxus-code = { path = "." }
-dioxus-code-editor = { path = "code-editor", default-features = false }
+dioxus-code = { version = "0.1.0", path = "." }
+dioxus-code-editor = { version = "0.1.0", path = "code-editor", default-features = false }
 
 [package]
 name = "dioxus-code"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Syntax-highlighted code blocks for Dioxus."
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [features]
 default = ["macro"]
@@ -38,7 +45,7 @@ all-languages = ["runtime", "arborium/all-languages"]
 arborium = { version = "2.16.0", default-features = false }
 arborium-theme = "2.16.0"
 dioxus = { version = "0.7.0", default-features = false, features = ["lib"] }
-dioxus-code-macro = { path = "dioxus-code-macro", optional = true }
+dioxus-code-macro = { version = "0.1.0", path = "dioxus-code-macro", optional = true }
 
 [build-dependencies]
 arborium = { version = "2.16.0", default-features = false }

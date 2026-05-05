@@ -181,13 +181,13 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<HighlightSpan> 
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RuntimeCode {
+pub struct SourceCode {
     source: String,
     language: Option<String>,
     name: Option<String>,
 }
 
-impl RuntimeCode {
+impl SourceCode {
     pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),
@@ -253,7 +253,7 @@ impl IntoTree for CodeTree {
     }
 }
 
-impl IntoTree for RuntimeCode {
+impl IntoTree for SourceCode {
     fn into_tree(self) -> CodeTree {
         self.highlight()
     }
@@ -262,14 +262,14 @@ impl IntoTree for RuntimeCode {
 #[cfg(feature = "runtime")]
 impl IntoTree for &str {
     fn into_tree(self) -> CodeTree {
-        RuntimeCode::new(self).highlight()
+        SourceCode::new(self).highlight()
     }
 }
 
 #[cfg(feature = "runtime")]
 impl IntoTree for String {
     fn into_tree(self) -> CodeTree {
-        RuntimeCode::new(self).highlight()
+        SourceCode::new(self).highlight()
     }
 }
 
@@ -279,8 +279,8 @@ impl From<CodeTree> for CodeSource {
     }
 }
 
-impl From<RuntimeCode> for CodeSource {
-    fn from(code: RuntimeCode) -> Self {
+impl From<SourceCode> for CodeSource {
+    fn from(code: SourceCode) -> Self {
         Self(code.into_tree())
     }
 }
@@ -454,7 +454,7 @@ mod tests {
     #[cfg(feature = "runtime")]
     #[test]
     fn runtime_name_detection_highlights() {
-        let tree = RuntimeCode::new("fn main() {}")
+        let tree = SourceCode::new("fn main() {}")
             .with_name("main.rs")
             .into_tree();
         assert_eq!(tree.language(), Some("rust"));
@@ -466,7 +466,7 @@ mod tests {
     #[cfg(feature = "runtime")]
     #[test]
     fn runtime_raw_string_uses_arborium_detection_fallback() {
-        let tree = RuntimeCode::new("fn main() {}").into_tree();
+        let tree = SourceCode::new("fn main() {}").into_tree();
         assert_eq!(tree.language(), None);
         assert_eq!(tree.error(), Some("could not detect language"));
     }

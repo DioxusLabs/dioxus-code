@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use dioxus_code::{CodeSpan, HighlightSpan, IntoTree, RuntimeCode, Theme};
+use dioxus_code::{CodeSpan, HighlightSpan, IntoTree, SourceCode, Theme};
 use std::{cell::RefCell, rc::Rc};
 
 /// Base stylesheet injected by [`CodeEditor`].
@@ -56,15 +56,15 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
         }))
     });
 
-    let mut runtime_code = RuntimeCode::new(props.value.clone());
+    let mut source_code = SourceCode::new(props.value.clone());
     if !props.language.is_empty() {
-        runtime_code = runtime_code.with_language(props.language.clone());
+        source_code = source_code.with_language(props.language.clone());
     }
     if !props.name.is_empty() {
-        runtime_code = runtime_code.with_name(props.name.clone());
+        source_code = source_code.with_name(props.name.clone());
     }
 
-    let tree = runtime_code.into_tree();
+    let tree = source_code.into_tree();
     let lines = editor_lines(tree.source(), tree.spans());
     let line_count = lines.len();
     let theme_asset = props.theme.asset();

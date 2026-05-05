@@ -3,6 +3,10 @@ name = "dioxus-code-macro-only"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Compile-time macro dioxus-code example application."
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 dioxus = { version = "0.7.0" }

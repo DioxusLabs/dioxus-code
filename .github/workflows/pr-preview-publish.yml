@@ -1,0 +1,19 @@
+name: PR Preview Publish
+
+on:
+  workflow_run:
+    workflows: ["PR Preview Build"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pr-preview-publish-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    uses: ealmloff/dioxus-ci/.github/workflows/pr-preview-publish.yml@main

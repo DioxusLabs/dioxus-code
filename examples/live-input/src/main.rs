@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use dioxus_code::{Code, RuntimeCode, Theme};
+use dioxus_code::{Code, SourceCode, Theme};
 
 const STARTER: &str = r#"pub fn luminance(rgb: (u8, u8, u8)) -> f32 {
     let (r, g, b) = rgb;
@@ -36,7 +36,7 @@ fn App() -> Element {
                     span { "runtime" }
                 }
                 Code {
-                    src: RuntimeCode::new(source()).with_language("rust"),
+                    src: SourceCode::new(source()).with_language("rust"),
                     theme: Theme::TOKYO_NIGHT,
                 }
             }
