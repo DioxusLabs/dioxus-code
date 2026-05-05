@@ -427,12 +427,19 @@ fn push_code_segment<'a>(
     segments.push(CodeSegment { text, tag });
 }
 
+/// Props for [`CodeSpan`].
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeSpanProps {
+    /// The literal text rendered inside the span.
     pub text: String,
+    /// Highlight tag class suffix used to derive the span's class name.
     pub tag: &'static str,
 }
 
+/// Render a single highlighted token as `<span class="a-{tag}">{text}</span>`.
+///
+/// Used internally by [`Code`] but exposed so callers can build their own
+/// layouts on top of [`HighlightSpan`].
 #[component]
 pub fn CodeSpan(props: CodeSpanProps) -> Element {
     let class = format!("a-{}", props.tag);

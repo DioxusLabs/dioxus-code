@@ -54,4 +54,4 @@ jobs:
       features: fullstack
       debug-symbols: false
       base-path: ${{ github.event.repository.name }}
-      dx-cli-version: 0.7.6
+      dx-cli-version: 0.7.7
