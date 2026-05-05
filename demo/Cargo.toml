@@ -13,6 +13,7 @@ publish = false
 dioxus = { version = "0.7.0", features = ["router"] }
 dioxus-code = { workspace = true, features = ["runtime", "lang-python", "lang-toml"] }
 dioxus-code-editor = { workspace = true }
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false, features = ["router"] }
 
 [features]
 default = ["desktop"]

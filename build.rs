@@ -14,7 +14,9 @@ fn main() {
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let asset_dir = manifest_dir.join("assets/generated/arborium-themes");
-    fs::create_dir_all(&asset_dir).unwrap();
+    if !asset_dir.exists() {
+        fs::create_dir_all(&asset_dir).unwrap();
+    }
 
     let themes = themes();
     let mut generated = String::from(
@@ -27,8 +29,11 @@ fn main() {
         let css_file = format!("{name}.css");
         let class = format!("dxc-{name}");
         let selector = format!(".{class}");
-        let css = flatten_theme_css(&selector, &theme.theme.to_css(&selector));
-        fs::write(asset_dir.join(&css_file), css).unwrap();
+        let css_path = asset_dir.join(&css_file);
+        if !css_path.exists() {
+            let css = flatten_theme_css(&selector, &theme.theme.to_css(&selector));
+            fs::write(css_path, css).unwrap();
+        }
 
         generated.push_str(&format!(
             "    /// Stylesheet asset for the `{name}` theme.\n    pub const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",

@@ -1,6 +1,24 @@
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 use dioxus_code::{Code, SourceCode, Theme, code};
 use dioxus_code_editor::CodeEditor;
+use dioxus_primitives::ContentSide;
+
+mod components;
+#[cfg(not(feature = "server"))]
+mod theme;
+
+use components::badge::{Badge, BadgeVariant};
+use components::card::{Card, CardContent, CardDescription, CardHeader, CardTitle};
+use components::navbar::{Navbar, NavbarContent, NavbarItem, NavbarNav, NavbarTrigger};
+use components::select::{
+    Select, SelectItemIndicator, SelectList, SelectOption, SelectTrigger, SelectValue,
+};
+use components::separator::Separator;
+use components::tabs::{TabContent, TabList, TabTrigger, Tabs, TabsVariant};
+use components::toggle_group::{ToggleGroup, ToggleItem};
+use components::tooltip::{Tooltip, TooltipContent, TooltipTrigger};
 
 const STARTER: &str = r#"use dioxus::prelude::*;
 
@@ -63,6 +81,8 @@ if (media.addEventListener) {
 await new Promise(() => {});
 "#;
 
+const COMPONENTS_THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Scheme {
     System,
@@ -71,19 +91,27 @@ enum Scheme {
 }
 
 impl Scheme {
-    fn class(self) -> &'static str {
-        match self {
-            Scheme::System => "site-shell theme-system",
-            Scheme::Light => "site-shell theme-light",
-            Scheme::Dark => "site-shell theme-dark",
-        }
-    }
-
     fn resolved(self, system_theme: ThemeMode) -> ThemeMode {
         match self {
             Scheme::System => system_theme,
             Scheme::Light => ThemeMode::Light,
             Scheme::Dark => ThemeMode::Dark,
+        }
+    }
+
+    fn toggle_index(self) -> usize {
+        match self {
+            Scheme::System => 0,
+            Scheme::Light => 1,
+            Scheme::Dark => 2,
+        }
+    }
+
+    fn from_toggle_index(index: usize) -> Self {
+        match index {
+            1 => Scheme::Light,
+            2 => Scheme::Dark,
+            _ => Scheme::System,
         }
     }
 }
@@ -165,7 +193,11 @@ fn static_routes() -> Vec<String> {
 
 #[component]
 fn App() -> Element {
+    #[cfg(not(feature = "server"))]
+    use_hook(theme::theme_seed);
+
     rsx! {
+        document::Link { rel: "stylesheet", href: COMPONENTS_THEME_CSS }
         Router::<Route> {}
     }
 }
@@ -180,7 +212,7 @@ enum Route {
 fn Home() -> Element {
     let source = use_signal(|| STARTER.to_string());
     let active_theme = use_signal(|| 0usize);
-    let scheme = use_signal(|| Scheme::System);
+    let mut scheme = use_signal(|| Scheme::System);
     let system_theme = use_signal(|| ThemeMode::Light);
 
     #[cfg(not(feature = "server"))]
@@ -193,17 +225,23 @@ fn Home() -> Element {
                 system_theme_for_script.set(ThemeMode::from_is_dark(is_dark));
             }
         });
+
+        use_future(move || async move {
+            scheme.set(theme::read_cookie_scheme().await);
+        });
     }
 
     let theme_mode = scheme().resolved(system_theme());
+
     let themes = theme_mode.demo_themes();
     let active_theme_index = active_theme().min(themes.len() - 1);
 
     rsx! {
         style { {APP_CSS} }
-        main { class: scheme().class(),
+        main { class: "site-shell",
             Header { scheme }
             Hero { source: source(), theme: themes[active_theme_index].theme }
+            FeatureRow {}
             SizeCharts {}
             Playground { source, active_theme, theme_mode }
             Demos { theme_mode }
@@ -221,13 +259,66 @@ fn Header(scheme: Signal<Scheme>) -> Element {
                 span { class: "brand-mark", "dx" }
                 span { "dioxus-code" }
             }
-            nav {
-                a { href: "#sizes", "Size" }
-                a { href: "#playground", "Playground" }
-                a { href: "#demos", "Demos" }
-                a { href: "#docs", "Docs" }
+            Navbar { "aria-label": "Main navigation",
+                NavbarItem {
+                    index: 0usize,
+                    value: "features".to_string(),
+                    to: "#features",
+                    "Why"
+                }
+                NavbarItem {
+                    index: 1usize,
+                    value: "sizes".to_string(),
+                    to: "#sizes",
+                    "Size"
+                }
+                NavbarItem {
+                    index: 2usize,
+                    value: "playground".to_string(),
+                    to: "#playground",
+                    "Playground"
+                }
+                NavbarItem {
+                    index: 3usize,
+                    value: "demos".to_string(),
+                    to: "#demos",
+                    "Demos"
+                }
+                NavbarItem {
+                    index: 4usize,
+                    value: "docs".to_string(),
+                    to: "#docs",
+                    "Docs"
+                }
+                NavbarNav { index: 5usize,
+                    NavbarTrigger { "Resources" }
+                    NavbarContent {
+                        NavbarItem {
+                            index: 0usize,
+                            value: "crates".to_string(),
+                            to: "https://crates.io/crates/dioxus-code",
+                            new_tab: true,
+                            "crates.io ↗"
+                        }
+                        NavbarItem {
+                            index: 1usize,
+                            value: "docs".to_string(),
+                            to: "https://docs.rs/dioxus-code",
+                            new_tab: true,
+                            "docs.rs ↗"
+                        }
+                        NavbarItem {
+                            index: 2usize,
+                            value: "github".to_string(),
+                            to: "https://github.com/ealmloff/dioxus-code",
+                            new_tab: true,
+                            "GitHub ↗"
+                        }
+                    }
+                }
+            }
+            div { class: "topbar-tail",
                 ThemeToggle { scheme }
-                a { class: "topbar-cta", href: "https://crates.io/crates/dioxus-code", "crates.io ↗" }
             }
         }
     }
@@ -235,27 +326,37 @@ fn Header(scheme: Signal<Scheme>) -> Element {
 
 #[component]
 fn ThemeToggle(mut scheme: Signal<Scheme>) -> Element {
+    let pressed_set = use_memo(move || Some(HashSet::from([scheme().toggle_index()])));
+
     rsx! {
-        div { class: "theme-toggle", role: "group", "aria-label": "Color scheme",
-            button {
-                class: if scheme() == Scheme::System { "theme-seg active" } else { "theme-seg" },
-                title: "System",
+        ToggleGroup {
+            "aria-label": "Color scheme",
+            horizontal: true,
+            pressed: pressed_set,
+            on_pressed_change: move |set: HashSet<usize>| {
+                if let Some(&idx) = set.iter().next() {
+                    let new = Scheme::from_toggle_index(idx);
+                    scheme.set(new);
+                    #[cfg(not(feature = "server"))]
+                    theme::set_scheme(new);
+                }
+            },
+            ToggleItem {
+                index: 0usize,
                 "aria-label": "Use system color scheme",
-                onclick: move |_| scheme.set(Scheme::System),
+                title: "System",
                 IconMonitor {}
             }
-            button {
-                class: if scheme() == Scheme::Light { "theme-seg active" } else { "theme-seg" },
-                title: "Light",
+            ToggleItem {
+                index: 1usize,
                 "aria-label": "Light color scheme",
-                onclick: move |_| scheme.set(Scheme::Light),
+                title: "Light",
                 IconSun {}
             }
-            button {
-                class: if scheme() == Scheme::Dark { "theme-seg active" } else { "theme-seg" },
-                title: "Dark",
+            ToggleItem {
+                index: 2usize,
                 "aria-label": "Dark color scheme",
-                onclick: move |_| scheme.set(Scheme::Dark),
+                title: "Dark",
                 IconMoon {}
             }
         }
@@ -266,6 +367,8 @@ fn ThemeToggle(mut scheme: Signal<Scheme>) -> Element {
 fn IconSun() -> Element {
     rsx! {
         svg {
+            width: "16",
+            height: "16",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -283,6 +386,8 @@ fn IconSun() -> Element {
 fn IconMoon() -> Element {
     rsx! {
         svg {
+            width: "16",
+            height: "16",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -299,6 +404,8 @@ fn IconMoon() -> Element {
 fn IconMonitor() -> Element {
     rsx! {
         svg {
+            width: "16",
+            height: "16",
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
@@ -318,6 +425,9 @@ fn Hero(source: String, theme: Theme) -> Element {
         section { id: "top", class: "hero hero-terminal",
             div { class: "hero-terminal-grid",
                 div { class: "hero-terminal-copy",
+                    div { class: "hero-eyebrow",
+                        Badge { variant: BadgeVariant::Outline, "v0.1 · Dioxus 0.7" }
+                    }
                     h1 { class: "hero-h1",
                         "Highlight code in Dioxus, with one "
                         em { "cargo add" }
@@ -350,8 +460,12 @@ fn Hero(source: String, theme: Theme) -> Element {
                         }
                     }
                     div { class: "hero-actions",
-                        a { class: "hero-cta primary", href: "#docs", "Read the docs →" }
-                        a { class: "hero-cta", href: "#playground", "See it live" }
+                        a { class: "button", "data-style": "primary", href: "#docs",
+                            "Read the docs →"
+                        }
+                        a { class: "button", "data-style": "outline", href: "#playground",
+                            "See it live"
+                        }
                     }
                 }
                 div { class: "hero-stage hero-stage-split",
@@ -369,6 +483,60 @@ fn Hero(source: String, theme: Theme) -> Element {
 }
 
 #[derive(Clone, Copy)]
+struct Feature {
+    eyebrow: &'static str,
+    title: &'static str,
+    body: &'static str,
+}
+
+fn features() -> &'static [Feature] {
+    &[
+        Feature {
+            eyebrow: "Compile-time",
+            title: "Zero parser shipped",
+            body: "The code! macro tokenizes during cargo build, so the runtime gets pre-styled markup with no parser bytes.",
+        },
+        Feature {
+            eyebrow: "Runtime",
+            title: "Live source, opt-in",
+            body: "Pull SourceCode in when input is dynamic. Tree-sitter grammars detect language automatically.",
+        },
+        Feature {
+            eyebrow: "Themes",
+            title: "Thirty-plus, scoped",
+            body: "Tokyo Night, Catppuccin, Dracula, Rosé Pine, GitHub… each theme is scoped CSS so you can mix several on a page.",
+        },
+    ]
+}
+
+#[component]
+fn FeatureRow() -> Element {
+    rsx! {
+        section { id: "features", class: "section",
+            div { class: "section-head",
+                div {
+                    h2 { class: "section-title", "Two ways to highlight." }
+                }
+                p { class: "section-sub",
+                    "Built around dx components — every interactive surface on this page is from the dx-component registry."
+                }
+            }
+            div { class: "feature-grid",
+                for feature in features() {
+                    Card { class: "feature-card",
+                        CardHeader {
+                            Badge { variant: BadgeVariant::Secondary, "{feature.eyebrow}" }
+                            CardTitle { "{feature.title}" }
+                            CardDescription { "{feature.body}" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 struct BuildDelta {
     example: &'static str,
     mode: &'static str,
@@ -376,6 +544,7 @@ struct BuildDelta {
     detail: &'static str,
     width: &'static str,
     accent: &'static str,
+    explainer: &'static str,
 }
 
 fn build_deltas() -> &'static [BuildDelta] {
@@ -387,6 +556,7 @@ fn build_deltas() -> &'static [BuildDelta] {
             detail: "12% over baseline",
             width: "6.09%",
             accent: "#16a34a",
+            explainer: "code! emits pre-styled spans during cargo build. The runtime ships zero parsing logic.",
         },
         BuildDelta {
             example: "Basic",
@@ -395,6 +565,7 @@ fn build_deltas() -> &'static [BuildDelta] {
             detail: "198% over baseline",
             width: "100%",
             accent: "#dc2626",
+            explainer: "SourceCode pulls in tree-sitter grammars. Use only when the source isn't known at build time.",
         },
     ]
 }
@@ -405,38 +576,46 @@ fn SizeCharts() -> Element {
         section { id: "sizes", class: "section",
             div { class: "section-head",
                 div {
-                    h2 { class: "section-title", "opt into runtime parsing" }
+                    h2 { class: "section-title", "Opt into runtime parsing" }
                 }
                 p { class: "section-sub",
-                    "Release web WASM over the Dioxus hello baseline."
+                    "Release web WASM over the Dioxus hello baseline. Hover any row for context."
                 }
             }
-            div { class: "size-panel",
-                div { class: "size-source",
-                    span { "dx build --web -r" }
-                    span { "WASM over baseline" }
-                }
-                div { class: "chart-block",
-                    div { class: "chart-head",
-                        span { class: "card-eyebrow", "Over baseline" }
-                        span { class: "chart-scale", "max +3.33 MiB" }
+            Card { class: "size-card",
+                CardContent { class: "size-card-content",
+                    div { class: "size-source",
+                        Badge { variant: BadgeVariant::Outline, "dx build --web -r" }
+                        Badge { variant: BadgeVariant::Outline, "WASM over baseline" }
                     }
-                    div { class: "size-bars",
-                        for build in build_deltas() {
-                            div { class: "size-row",
-                                div { class: "size-row-label",
-                                    strong { "{build.example}" }
-                                    span { "{build.mode}" }
-                                }
-                                div { class: "size-track", role: "img", "aria-label": "{build.example} adds {build.delta} over baseline",
-                                    div {
-                                        class: "size-bar",
-                                        style: "width:{build.width}; background:{build.accent};",
+                    div { class: "chart-block",
+                        div { class: "chart-head",
+                            span { class: "card-eyebrow", "Over baseline" }
+                            span { class: "chart-scale", "max +3.33 MiB" }
+                        }
+                        div { class: "size-bars",
+                            for build in build_deltas() {
+                                Tooltip {
+                                    TooltipTrigger {
+                                        div { class: "size-row",
+                                            div { class: "size-row-label",
+                                                strong { "{build.example}" }
+                                                span { "{build.mode}" }
+                                            }
+                                            div { class: "size-track", role: "img",
+                                                "aria-label": "{build.example} adds {build.delta} over baseline",
+                                                div {
+                                                    class: "size-bar",
+                                                    style: "width:{build.width}; background:{build.accent};",
+                                                }
+                                            }
+                                            div { class: "size-row-value",
+                                                strong { "{build.delta}" }
+                                                span { "{build.detail}" }
+                                            }
+                                        }
                                     }
-                                }
-                                div { class: "size-row-value",
-                                    strong { "{build.delta}" }
-                                    span { "{build.detail}" }
+                                    TooltipContent { side: ContentSide::Top, "{build.explainer}" }
                                 }
                             }
                         }
@@ -468,7 +647,7 @@ fn Playground(
                 }
             }
             div { class: "playground-grid",
-                div { class: "card card-editor",
+                Card { class: "card-editor",
                     div { class: "card-bar",
                         span { "source.rs" }
                         span { class: "editor-meta",
@@ -489,18 +668,35 @@ fn Playground(
                         oninput: move |value| source.set(value),
                     }
                 }
-                div { class: "card card-themepicker",
+                Card { class: "card-themepicker",
                     div { class: "card-bar",
                         span { "active theme" }
                         span { {format!("{} of {}", active_idx + 1, themes.len())} }
                     }
                     div { class: "theme-strip",
-                        for (index, swatch) in themes.iter().enumerate() {
-                            button {
-                                class: if active_idx == index { "theme-pill active" } else { "theme-pill" },
-                                onclick: move |_| active_theme.set(index),
-                                span { class: "theme-pill-swatch", style: "background:{swatch.accent};" }
-                                span { "{swatch.theme.name()}" }
+                        Select::<usize> {
+                            value: Some(use_memo(move || Some(active_idx)).into()),
+                            on_value_change: move |v: Option<usize>| {
+                                if let Some(idx) = v {
+                                    active_theme.set(idx);
+                                }
+                            },
+                            SelectTrigger {
+                                SelectValue { placeholder: "Choose a theme" }
+                            }
+                            SelectList {
+                                for (i, swatch) in themes.iter().enumerate() {
+                                    SelectOption::<usize> {
+                                        value: i,
+                                        text_value: swatch.theme.name().to_string(),
+                                        index: i,
+                                        div { class: "theme-option-label",
+                                            span { class: "theme-pill-swatch", style: "background:{swatch.accent};" }
+                                            span { "{swatch.theme.name()}" }
+                                        }
+                                        SelectItemIndicator {}
+                                    }
+                                }
                             }
                         }
                     }
@@ -515,6 +711,9 @@ fn Demos(theme_mode: ThemeMode) -> Element {
     let feature_theme = theme_mode.pick(Theme::MELANGE_LIGHT, Theme::KANAGAWA_DRAGON);
     let runtime_theme = theme_mode.pick(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK);
 
+    let mut active_demo = use_signal(|| "macro".to_string());
+    let value = use_memo(move || Some(active_demo()));
+
     rsx! {
         section { id: "demos", class: "section",
             div { class: "section-head",
@@ -522,48 +721,82 @@ fn Demos(theme_mode: ThemeMode) -> Element {
                     h2 { class: "section-title", "Examples" }
                 }
                 p { class: "section-sub",
-                    "Static snippets at compile time, runtime parsing when the source is dynamic."
+                    "Static snippets at compile time, runtime parsing when the source is dynamic. Switch between the two."
                 }
             }
-            div { class: "demos-grid",
-                article { class: "card card-demo card-demo-feature",
-                    div { class: "demo-feature-head",
-                        span { class: "card-eyebrow", "Compile time · code! macro" }
-                        span { class: "demo-feature-tag", "0kb runtime" }
-                    }
-                    h3 { class: "demo-feature-title",
-                        "Static snippets, tokenized at build."
-                    }
-                    p { class: "demo-feature-copy",
-                        "Point the macro at a file in your repo. Highlighting happens during cargo build, so the output is plain pre-styled markup. No runtime parser shipped to users."
-                    }
-                    div { class: "demo-feature-frame",
-                        div { class: "card-bar",
-                            span { "snippets/palette.rs" }
-                            span { "{feature_theme.name()}" }
-                        }
-                        div { class: "card-code-body",
-                            Code {
-                                src: code!("/snippets/palette.rs"),
-                                theme: feature_theme,
+            Card { class: "demos-card",
+                CardContent { class: "demos-card-content",
+                    Tabs {
+                        variant: TabsVariant::Ghost,
+                        horizontal: true,
+                        value,
+                        default_value: "macro".to_string(),
+                        on_value_change: move |v: String| active_demo.set(v),
+                        TabList {
+                            TabTrigger {
+                                value: "macro".to_string(),
+                                index: 0usize,
+                                span { class: "demo-tab-label",
+                                    "Compile time"
+                                    Badge { variant: BadgeVariant::Secondary, "0kb runtime" }
+                                }
+                            }
+                            TabTrigger {
+                                value: "runtime".to_string(),
+                                index: 1usize,
+                                span { class: "demo-tab-label",
+                                    "Runtime"
+                                    Badge { variant: BadgeVariant::Outline, "live source" }
+                                }
                             }
                         }
-                    }
-                }
-                article { class: "card card-demo card-demo-runtime",
-                    div { class: "card-bar",
-                        span { "runtime · python" }
-                        span { "{runtime_theme.name()}" }
-                    }
-                    div { class: "card-code-body",
-                        Code {
-                            src: SourceCode::new(PYTHON).with_language("python"),
-                            theme: runtime_theme,
+                        TabContent {
+                            value: "macro".to_string(),
+                            index: 0usize,
+                            div { class: "demo-pane",
+                                div { class: "demo-pane-copy",
+                                    h3 { class: "demo-pane-title", "code! tokenizes at build." }
+                                    p { class: "demo-pane-body",
+                                        "Point the macro at a file in your repo. Highlighting happens during cargo build, so the output is pre-styled markup. No runtime parser ships to users."
+                                    }
+                                }
+                                div { class: "demo-pane-frame",
+                                    div { class: "card-bar",
+                                        span { "snippets/palette.rs" }
+                                        span { "{feature_theme.name()}" }
+                                    }
+                                    div { class: "card-code-body",
+                                        Code {
+                                            src: code!("/snippets/palette.rs"),
+                                            theme: feature_theme,
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    }
-                    div { class: "demo-foot",
-                        p { class: "card-note",
-                            "Pass any string with a known language. Tree-sitter grammars cover Rust, JS, Python, Go, and dozens more."
+                        TabContent {
+                            value: "runtime".to_string(),
+                            index: 1usize,
+                            div { class: "demo-pane",
+                                div { class: "demo-pane-copy",
+                                    h3 { class: "demo-pane-title", "SourceCode handles live input." }
+                                    p { class: "demo-pane-body",
+                                        "Pass any string with a language hint (or let auto-detection do it). Tree-sitter grammars cover Rust, JS, Python, Go, and dozens more."
+                                    }
+                                }
+                                div { class: "demo-pane-frame",
+                                    div { class: "card-bar",
+                                        span { "runtime · python" }
+                                        span { "{runtime_theme.name()}" }
+                                    }
+                                    div { class: "card-code-body",
+                                        Code {
+                                            src: SourceCode::new(PYTHON).with_language("python"),
+                                            theme: runtime_theme,
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -636,17 +869,21 @@ fn DocStep(
     theme: Theme,
 ) -> Element {
     rsx! {
-        article { id, class: "card card-doc",
-            div { class: "doc-head",
-                span { class: "doc-num", "{num}" }
-                span { class: "card-eyebrow", "{eyebrow}" }
+        Card { id, class: "doc-card",
+            CardHeader {
+                div { class: "doc-head",
+                    Badge { variant: BadgeVariant::Primary, "{num}" }
+                    span { class: "card-eyebrow", "{eyebrow}" }
+                }
+                CardTitle { "{title}" }
+                CardDescription { "{copy}" }
             }
-            h3 { class: "doc-title", "{title}" }
-            p { class: "doc-copy", "{copy}" }
-            div { class: "doc-frame",
-                Code {
-                    src: SourceCode::new(code).with_language(language),
-                    theme,
+            CardContent {
+                div { class: "doc-frame",
+                    Code {
+                        src: SourceCode::new(code).with_language(language),
+                        theme,
+                    }
                 }
             }
         }
@@ -657,7 +894,7 @@ fn DocStep(
 fn SiteFooter() -> Element {
     rsx! {
         footer { class: "section site-footer",
-            div { class: "card card-footer",
+            div { class: "card-footer",
                 div { class: "footer-grid",
                     div { class: "footer-brand",
                         div { class: "footer-brand-row",
@@ -688,7 +925,7 @@ fn SiteFooter() -> Element {
                         span { class: "footer-meta", "MIT licensed" }
                     }
                 }
-                div { class: "footer-rule" }
+                Separator { class: "footer-separator", horizontal: true }
                 p { class: "footer-fineprint",
                     "© 2026 dioxus-code. The component, not the editor."
                 }
@@ -842,131 +1079,36 @@ fn dark_demo_themes() -> &'static [DemoTheme] {
 }
 
 const APP_CSS: &str = r#"
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..900&family=Geist+Mono:wght@400;500;600;700&display=swap');
-
-:root,
-.theme-light {
-  --bg: #fafaf6;
-  --bg-tint: #f4f3ed;
-  --card: #ffffff;
-  --line: rgba(28, 25, 23, 0.07);
-  --line-strong: rgba(28, 25, 23, 0.14);
-  --ink: #1c1917;
-  --ink-soft: rgba(28, 25, 23, 0.65);
-  --ink-mute: rgba(28, 25, 23, 0.5);
-  --accent: #6366f1;
-  --accent-soft: rgba(99, 102, 241, 0.1);
-  --surface-soft: rgba(28, 25, 23, 0.06);
-  --topbar-bg: rgba(250, 250, 246, 0.78);
-  --feature-bg: linear-gradient(135deg, #0a0a0a 0%, #1c1917 100%);
-  --feature-mesh-1: radial-gradient(ellipse at 80% 0%, rgba(99, 102, 241, 0.18), transparent 55%);
-  --feature-mesh-2: radial-gradient(ellipse at 0% 100%, rgba(244, 114, 182, 0.1), transparent 55%);
-  --feature-bg-footer: linear-gradient(140deg, #0a0a0a 0%, #1c1917 100%);
-  --feature-mesh-footer: radial-gradient(ellipse at 90% 0%, rgba(99, 102, 241, 0.18), transparent 60%);
-  --feature-text: #fafaf6;
-  --feature-soft: rgba(250, 250, 246, 0.7);
-  --feature-mute: rgba(250, 250, 246, 0.5);
-  --feature-line: rgba(250, 250, 246, 0.12);
-  --feature-cta-bg: #fafaf6;
-  --feature-cta-fg: #0a0a0a;
-  --feature-cta-ghost-bg: rgba(250, 250, 246, 0.08);
-  --feature-cta-ghost-line: rgba(250, 250, 246, 0.18);
-  --feature-cta-ghost-fg: rgba(250, 250, 246, 0.92);
-  --code-bg: #ffffff;
-  --editor-bg: #ffffff;
-  --editor-fg: #1f2328;
-  --editor-gutter-bg: #f6f8fa;
-  --editor-gutter-fg: rgba(31, 35, 40, 0.42);
-  --editor-gutter-line: rgba(31, 35, 40, 0.1);
-  --editor-selection: rgba(9, 105, 218, 0.2);
-  --shadow-card: 0 1px 3px rgba(28, 25, 23, 0.04);
-  --shadow-elev: 0 8px 24px -10px rgba(28, 25, 23, 0.16);
+:root {
+  --bg: var(--primary-color-1);
+  --bg-tint: var(--primary-color-3);
+  --card: var(--primary-color-2);
+  --line: var(--primary-color-6);
+  --line-strong: var(--primary-color-7);
+  --ink: var(--secondary-color-1);
+  --ink-soft: var(--secondary-color-4);
+  --ink-mute: var(--secondary-color-5);
+  --accent: var(--focused-border-color);
+  --accent-soft: rgb(43 127 255 / 14%);
+  --surface-soft: var(--primary-color-3);
+  --topbar-bg: var(--primary-color-1);
+  --feature-bg-footer: var(--primary-color-3);
+  --feature-text: var(--secondary-color-1);
+  --feature-soft: var(--secondary-color-4);
+  --feature-mute: var(--secondary-color-5);
+  --feature-line: var(--primary-color-6);
+  --code-bg: var(--primary-color-2);
+  --editor-bg: var(--primary-color-2);
+  --editor-fg: var(--secondary-color-4);
+  --editor-gutter-bg: var(--primary-color-3);
+  --editor-gutter-fg: var(--secondary-color-5);
+  --editor-gutter-line: var(--primary-color-6);
+  --editor-selection: rgb(43 127 255 / 24%);
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 6%);
+  --shadow-elev: 0 8px 24px -10px rgb(0 0 0 / 16%);
   --radius-card: 22px;
   --radius-inner: 12px;
   --max-width: 1340px;
-  color-scheme: light;
-}
-
-:root:has(.theme-dark),
-html:has(.theme-dark) {
-  --bg: #0c0a08;
-  --bg-tint: #1a1612;
-  --card: #1a1612;
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.16);
-  --ink: #f5f3ee;
-  --ink-soft: rgba(245, 243, 238, 0.7);
-  --ink-mute: rgba(245, 243, 238, 0.5);
-  --accent: #a5b4fc;
-  --accent-soft: rgba(165, 180, 252, 0.14);
-  --surface-soft: rgba(255, 255, 255, 0.06);
-  --topbar-bg: rgba(12, 10, 8, 0.78);
-  --feature-bg: #1a1612;
-  --feature-mesh-1: none;
-  --feature-mesh-2: none;
-  --feature-bg-footer: #1a1612;
-  --feature-mesh-footer: none;
-  --feature-text: #f5f3ee;
-  --feature-soft: rgba(245, 243, 238, 0.72);
-  --feature-mute: rgba(245, 243, 238, 0.48);
-  --feature-line: rgba(255, 255, 255, 0.08);
-  --feature-cta-bg: #f5f3ee;
-  --feature-cta-fg: #0a0a0a;
-  --feature-cta-ghost-bg: rgba(245, 243, 238, 0.06);
-  --feature-cta-ghost-line: rgba(245, 243, 238, 0.16);
-  --feature-cta-ghost-fg: rgba(245, 243, 238, 0.92);
-  --code-bg: #0d1117;
-  --editor-bg: #0d1117;
-  --editor-fg: #e6edf3;
-  --editor-gutter-bg: rgba(255, 255, 255, 0.03);
-  --editor-gutter-fg: rgba(230, 237, 243, 0.42);
-  --editor-gutter-line: rgba(255, 255, 255, 0.08);
-  --editor-selection: rgba(122, 162, 247, 0.34);
-  --shadow-card: none;
-  --shadow-elev: none;
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:has(.theme-system),
-  html:has(.theme-system) {
-    --bg: #0c0a08;
-    --bg-tint: #1a1612;
-    --card: #1a1612;
-    --line: rgba(255, 255, 255, 0.07);
-    --line-strong: rgba(255, 255, 255, 0.16);
-    --ink: #f5f3ee;
-    --ink-soft: rgba(245, 243, 238, 0.7);
-    --ink-mute: rgba(245, 243, 238, 0.5);
-    --accent: #a5b4fc;
-    --accent-soft: rgba(165, 180, 252, 0.14);
-    --surface-soft: rgba(255, 255, 255, 0.06);
-    --topbar-bg: rgba(12, 10, 8, 0.78);
-    --feature-bg: #1a1612;
-    --feature-mesh-1: none;
-    --feature-mesh-2: none;
-    --feature-bg-footer: #1a1612;
-    --feature-mesh-footer: none;
-    --feature-text: #f5f3ee;
-    --feature-soft: rgba(245, 243, 238, 0.72);
-    --feature-mute: rgba(245, 243, 238, 0.48);
-    --feature-line: rgba(255, 255, 255, 0.08);
-    --feature-cta-bg: #f5f3ee;
-    --feature-cta-fg: #0a0a0a;
-    --feature-cta-ghost-bg: rgba(245, 243, 238, 0.06);
-    --feature-cta-ghost-line: rgba(245, 243, 238, 0.16);
-    --feature-cta-ghost-fg: rgba(245, 243, 238, 0.92);
-    --code-bg: #0d1117;
-    --editor-bg: #0d1117;
-    --editor-fg: #e6edf3;
-    --editor-gutter-bg: rgba(255, 255, 255, 0.03);
-    --editor-gutter-fg: rgba(230, 237, 243, 0.42);
-    --editor-gutter-line: rgba(255, 255, 255, 0.08);
-    --editor-selection: rgba(122, 162, 247, 0.34);
-    --shadow-card: none;
-    --shadow-elev: none;
-    color-scheme: dark;
-  }
 }
 
 html {
@@ -982,8 +1124,6 @@ body,
 
 body {
   background: var(--bg);
-  color: var(--ink);
-  font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -995,11 +1135,6 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-}
-
-button {
-  cursor: pointer;
-  font: inherit;
 }
 
 .site-shell {
@@ -1024,19 +1159,20 @@ button {
   z-index: 30;
 }
 
-.brand,
-.topbar nav {
+.brand {
   align-items: center;
   display: flex;
-  gap: 6px;
-}
-
-.brand {
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 15px;
   font-weight: 600;
   gap: 12px;
   letter-spacing: -0.01em;
+}
+
+.topbar-tail {
+  align-items: center;
+  display: flex;
+  gap: 14px;
 }
 
 .brand-mark {
@@ -1045,7 +1181,7 @@ button {
   border-radius: 8px;
   color: var(--bg);
   display: inline-flex;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   font-weight: 600;
   height: 28px;
@@ -1053,78 +1189,8 @@ button {
   width: 28px;
 }
 
-.topbar nav a {
-  border-radius: 8px;
-  color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 12px;
-  transition: background 0.15s, color 0.15s;
-}
+/* Theme toggle (uses ToggleGroup component) */
 
-.topbar nav a:hover {
-  background: var(--accent-soft);
-  color: var(--ink);
-}
-
-.topbar-cta {
-  background: var(--ink) !important;
-  color: var(--bg) !important;
-  margin-left: 6px;
-}
-
-.topbar-cta:hover {
-  filter: brightness(1.08);
-}
-
-/* Theme toggle */
-
-.theme-toggle {
-  align-items: center;
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  display: inline-flex;
-  gap: 2px;
-  margin: 0 4px 0 8px;
-  padding: 3px;
-}
-
-.theme-seg {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  color: var(--ink-mute);
-  cursor: pointer;
-  display: inline-flex;
-  height: 26px;
-  justify-content: center;
-  padding: 0;
-  transition: background 0.15s, color 0.15s;
-  width: 28px;
-}
-
-.theme-seg:hover {
-  color: var(--ink);
-}
-
-.theme-seg.active {
-  background: var(--card);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  color: var(--ink);
-}
-
-.theme-dark .theme-seg.active,
-.theme-system .theme-seg.active {
-  box-shadow: none;
-}
-
-.theme-seg svg {
-  height: 14px;
-  width: 14px;
-}
 
 /* ============ Section shell ============ */
 
@@ -1144,7 +1210,7 @@ button {
 }
 
 .section-title {
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: clamp(28px, 3.6vw, 44px);
   font-weight: 600;
   letter-spacing: -0.03em;
@@ -1155,7 +1221,7 @@ button {
 
 .section-sub {
   color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 15px;
   line-height: 1.55;
   margin: 0;
@@ -1163,29 +1229,16 @@ button {
   text-align: right;
 }
 
-/* ============ Card primitives ============ */
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  display: grid;
-  position: relative;
-}
+/* ============ Card primitive overrides ============ */
 
 .card-eyebrow {
   color: var(--ink-mute);
   display: block;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-
-.card-eyebrow-light {
-  color: var(--feature-mute);
 }
 
 .card-bar {
@@ -1193,7 +1246,7 @@ button {
   border-bottom: 1px solid var(--line);
   color: var(--ink-mute);
   display: flex;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   font-weight: 500;
   justify-content: space-between;
@@ -1211,52 +1264,14 @@ button {
 .card-code-body .dxc {
   background: var(--code-bg);
   border: 0;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.65;
   margin: 0;
   padding: 18px 20px;
 }
 
-.card-note {
-  color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.cta {
-  border-radius: 999px;
-  display: inline-flex;
-  font-family: 'Geist', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 11px 20px;
-  transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.cta.primary {
-  background: var(--feature-cta-bg);
-  color: var(--feature-cta-fg);
-}
-
-.cta.primary:hover {
-  filter: brightness(1.04);
-  transform: translateY(-1px);
-}
-
-.cta:not(.primary) {
-  background: var(--feature-cta-ghost-bg);
-  border: 1px solid var(--feature-cta-ghost-line);
-  color: var(--feature-cta-ghost-fg);
-}
-
-.cta:not(.primary):hover {
-  background: var(--feature-cta-ghost-line);
-}
-
-/* ============ Hero (shared primitives) ============ */
+/* ============ Hero ============ */
 
 .hero {
   margin: 0 auto;
@@ -1265,9 +1280,13 @@ button {
   width: 100%;
 }
 
+.hero-eyebrow {
+  margin-bottom: 18px;
+}
+
 .hero-h1 {
   color: var(--ink);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: clamp(40px, 5.6vw, 80px);
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -1279,7 +1298,7 @@ button {
 
 .hero-h1 em {
   color: var(--accent);
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-style: normal;
   font-weight: 500;
   letter-spacing: -0.02em;
@@ -1287,7 +1306,7 @@ button {
 
 .hero-lede {
   color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 18px;
   line-height: 1.55;
   margin: 0 0 28px;
@@ -1301,34 +1320,8 @@ button {
   gap: 10px;
 }
 
-.hero-cta {
-  border: 1px solid transparent;
-  border-radius: 999px;
+.hero-actions a {
   display: inline-flex;
-  font-family: 'Geist', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  padding: 11px 22px;
-  transition: transform 0.15s, background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
-}
-
-.hero-cta.primary {
-  background: var(--ink);
-  color: var(--bg);
-}
-
-.hero-cta.primary:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-}
-
-.hero-cta:not(.primary) {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-
-.hero-cta:not(.primary):hover {
-  background: var(--surface-soft);
 }
 
 .hero-stage {
@@ -1344,7 +1337,7 @@ button {
 .hero-stage .card-code-body .dxc {
   background: var(--code-bg);
   border: 0;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.65;
   margin: 0;
@@ -1406,14 +1399,14 @@ button {
 
 .hero-terminal-title {
   color: rgba(255, 255, 255, 0.5);
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
   margin-left: 8px;
 }
 
 .hero-terminal-body {
   color: #f3eadb;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.85;
   padding: 18px 20px;
@@ -1438,41 +1431,41 @@ button {
   color: #34d399;
 }
 
-/* ============ Size charts ============ */
+/* ============ Feature row ============ */
 
-.size-panel {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+.feature-grid {
   display: grid;
-  gap: 22px;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0 auto;
   max-width: var(--max-width);
-  overflow: hidden;
-  padding: 24px;
   width: 100%;
+}
+
+.feature-card {
+  align-content: start;
+}
+
+/* ============ Size charts ============ */
+
+.size-card {
+  margin: 0 auto;
+  max-width: var(--max-width);
+  width: 100%;
+}
+
+.size-card-content {
+  display: grid;
+  gap: 18px;
 }
 
 .size-source {
   align-items: center;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink-mute);
   display: flex;
   flex-wrap: wrap;
-  font-family: 'Geist Mono', monospace;
-  font-size: 11px;
-  gap: 10px;
-  letter-spacing: 0.06em;
-  margin: -4px -4px 0;
-  padding: 0 4px 18px;
-  text-transform: uppercase;
-}
-
-.size-source span {
-  background: var(--bg-tint);
-  border-radius: 8px;
-  padding: 6px 8px;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .chart-block {
@@ -1490,7 +1483,7 @@ button {
 
 .chart-scale {
   color: var(--ink-mute);
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1501,8 +1494,18 @@ button {
   gap: 14px;
 }
 
+.size-bars .tooltip {
+  display: block;
+}
+
+.size-bars .tooltip-trigger {
+  display: block;
+  width: 100%;
+}
+
 .size-row {
   align-items: center;
+  cursor: help;
   display: grid;
   gap: 14px;
   grid-template-columns: minmax(150px, 0.7fr) minmax(0, 1.8fr) minmax(96px, 0.45fr);
@@ -1517,7 +1520,7 @@ button {
 .size-row-label strong,
 .size-row-value strong {
   color: var(--ink);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0;
@@ -1526,7 +1529,7 @@ button {
 .size-row-label span,
 .size-row-value span {
   color: var(--ink-mute);
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1573,17 +1576,17 @@ button {
 
 .card-editor {
   grid-row: 1;
-  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   padding: 0;
+  gap: 0;
 }
 
 .card-themepicker {
   grid-column: 1;
   grid-row: 2;
-  grid-template-rows: auto auto;
   overflow: hidden;
   padding: 0;
+  gap: 0;
 }
 
 .playground-code-editor {
@@ -1632,37 +1635,12 @@ button {
 }
 
 .theme-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 18px 18px 20px;
+  padding: 18px;
 }
 
-.theme-pill {
-  align-items: center;
-  background: var(--bg-tint);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  color: var(--ink-soft);
-  display: inline-flex;
-  font-family: 'Geist', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  gap: 8px;
-  min-height: 32px;
-  padding: 0 12px 0 8px;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-
-.theme-pill:hover {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-
-.theme-pill.active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--bg);
+.theme-strip .select-list {
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .theme-pill-swatch {
@@ -1671,95 +1649,73 @@ button {
   width: 12px;
 }
 
+.theme-option-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
 /* ============ Demos ============ */
 
-.demos-grid {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+.demos-card {
   margin: 0 auto;
   max-width: var(--max-width);
   width: 100%;
 }
 
-.card-demo {
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  overflow: hidden;
-  padding: 0;
+.demos-card-content {
+  padding-top: 0;
 }
 
-.card-demo-feature {
-  align-content: start;
-  background: var(--card);
-  display: grid;
-  grid-column: 1 / span 2;
-  grid-row: 1 / span 2;
-  grid-template-rows: auto auto auto auto;
-  padding: 32px 32px 20px;
-}
-
-.card-demo-runtime {
-  grid-column: 3;
-  grid-row: 1 / span 2;
-}
-
-.demo-feature-head {
+.demo-tab-label {
   align-items: center;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  margin-bottom: 22px;
+  display: inline-flex;
+  gap: 10px;
 }
 
-.demo-feature-tag {
-  background: var(--accent-soft);
-  border-radius: 999px;
-  color: var(--accent);
-  font-family: 'Geist Mono', monospace;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  padding: 4px 10px;
+.demo-pane {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr);
+  align-items: start;
 }
 
-.demo-feature-title {
-  font-family: 'Geist', sans-serif;
-  font-size: clamp(24px, 2.6vw, 36px);
+.demo-pane-copy {
+  align-content: center;
+  display: grid;
+  gap: 12px;
+  padding: 4px 6px;
+}
+
+.demo-pane-title {
+  font-family: Inter, sans-serif;
+  font-size: clamp(22px, 2vw, 30px);
   font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-  margin: 0 0 14px;
-  max-width: 18ch;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+  max-width: 22ch;
 }
 
-.demo-feature-copy {
+.demo-pane-body {
   color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 15px;
   line-height: 1.55;
-  margin: 0 0 22px;
-  max-width: 60ch;
+  margin: 0;
+  max-width: 56ch;
 }
 
-.demo-feature-frame {
+.demo-pane-frame {
   background: var(--code-bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-inner);
-  display: grid;
-  grid-template-rows: auto 1fr;
-  margin: 0 -8px -8px;
   overflow: hidden;
 }
 
-.demo-feature-frame .card-bar {
+.demo-pane-frame .card-bar {
   background: var(--card);
   border-bottom: 1px solid var(--line);
-}
-
-.demo-foot {
-  border-top: 1px solid var(--line);
-  padding: 16px 18px;
 }
 
 /* ============ Docs ============ */
@@ -1773,45 +1729,14 @@ button {
   width: 100%;
 }
 
-.card-doc {
+.doc-card {
   align-content: start;
-  display: grid;
-  gap: 0;
-  padding: 28px;
 }
 
 .doc-head {
   align-items: center;
   display: flex;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.doc-num {
-  background: var(--ink);
-  border-radius: 8px;
-  color: var(--bg);
-  font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px;
-}
-
-.doc-title {
-  font-family: 'Geist', sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  margin: 0 0 12px;
-}
-
-.doc-copy {
-  color: var(--ink-soft);
-  font-family: 'Geist', sans-serif;
-  font-size: 14px;
-  line-height: 1.55;
-  margin: 0 0 20px;
+  gap: 10px;
 }
 
 .doc-frame {
@@ -1824,7 +1749,7 @@ button {
 .doc-frame .dxc {
   background: var(--code-bg);
   border: 0;
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12.5px;
   line-height: 1.65;
   margin: 0;
@@ -1839,16 +1764,18 @@ button {
 }
 
 .card-footer {
-  background:
-    var(--feature-mesh-footer),
-    var(--feature-bg-footer);
+  background: var(--feature-bg-footer);
   border: 1px solid var(--feature-line);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   color: var(--feature-text);
   margin: 0 auto;
   max-width: var(--max-width);
   padding: 40px 40px 28px;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .footer-grid {
@@ -1865,12 +1792,12 @@ button {
 
 .card-footer .brand-mark {
   background: var(--feature-text);
-  color: #1c1917;
+  color: var(--feature-bg-footer);
 }
 
 .footer-brand-name {
   color: var(--feature-text);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -1878,7 +1805,7 @@ button {
 
 .footer-tag {
   color: var(--feature-soft);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 14px;
   line-height: 1.55;
   margin: 14px 0 0;
@@ -1898,7 +1825,7 @@ button {
 
 .footer-col a {
   color: var(--feature-soft);
-  font-family: 'Geist', sans-serif;
+  font-family: Inter, sans-serif;
   font-size: 14px;
   font-weight: 500;
   transition: color 0.15s;
@@ -1910,18 +1837,17 @@ button {
 
 .footer-meta {
   color: var(--feature-mute);
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
 
-.footer-rule {
-  border-top: 1px solid var(--feature-line);
-  margin: 32px 0 20px;
+.footer-separator {
+  margin: 0;
 }
 
 .footer-fineprint {
   color: var(--feature-mute);
-  font-family: 'Geist Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
   margin: 0;
 }
@@ -1934,33 +1860,13 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .playground-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-  }
-
-  .card-editor {
-    grid-row: auto;
-  }
-
-  .card-themepicker {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .demos-grid,
+  .feature-grid,
   .docs-grid {
     grid-template-columns: 1fr;
   }
 
-  .card-demo-feature {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .card-demo-runtime {
-    grid-column: 1;
-    grid-row: auto;
+  .demo-pane {
+    grid-template-columns: 1fr;
   }
 
   .footer-grid {
@@ -1976,7 +1882,7 @@ button {
     padding: 14px 18px;
   }
 
-  .topbar nav {
+  .topbar-tail {
     flex-wrap: wrap;
   }
 
@@ -1996,10 +1902,6 @@ button {
 
   .hero {
     padding: 24px 14px 40px;
-  }
-
-  .size-panel {
-    padding: 18px;
   }
 
   .size-row {
@@ -2024,12 +1926,6 @@ button {
 
   .card-footer {
     padding: 28px 24px 22px;
-  }
-
-  .demo-feature-head {
-    flex-direction: column;
-    align-items: start;
-    gap: 8px;
   }
 }
 
