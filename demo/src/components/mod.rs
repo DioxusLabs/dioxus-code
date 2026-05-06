@@ -4,6 +4,5 @@ pub mod card;
 pub mod navbar;
 pub mod select;
 pub mod separator;
-pub mod tabs;
 pub mod toggle_group;
 pub mod tooltip;
