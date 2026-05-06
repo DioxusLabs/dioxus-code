@@ -67,10 +67,11 @@ fn try_extract_language(expr: &Expr) -> Option<String> {
         Expr::Group(group) => try_extract_language(&group.expr),
         Expr::Paren(paren) => try_extract_language(&paren.expr),
         Expr::MethodCall(method) => {
-            if method.method == "with_language" && method.args.len() == 1 {
-                if let Some(slug) = try_parse_language_arg(method.args.first().unwrap()) {
-                    return Some(slug);
-                }
+            if method.method == "with_language"
+                && method.args.len() == 1
+                && let Some(slug) = try_parse_language_arg(method.args.first().unwrap())
+            {
+                return Some(slug);
             }
             try_extract_language(&method.receiver)
         }
