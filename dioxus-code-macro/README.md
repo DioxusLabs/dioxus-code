@@ -42,11 +42,11 @@ When the file extension isn't enough to infer the language, pass
 [`CodeOptions`](https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html):
 
 ```rust
-use dioxus_code::{CodeOptions, code};
+use dioxus_code::{CodeOptions, Language, code};
 
 let _tree = code!(
-    "/snippets/Containerfile",
-    CodeOptions::builder().with_language("dockerfile")
+    "/snippets/demo.rs",
+    CodeOptions::builder().with_language(Language::Rust)
 );
 ```
 

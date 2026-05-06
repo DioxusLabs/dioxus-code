@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_code::advanced::HighlightedSource;
-use dioxus_code::{Code, CodeOptions, Theme, code};
+use dioxus_code::{Code, CodeOptions, Language, Theme, code};
 
 fn main() {
     dioxus::launch(App);
@@ -10,7 +10,7 @@ fn main() {
 fn App() -> Element {
     const CODE: HighlightedSource = code!(
         "/snippets/demo.rs",
-        CodeOptions::builder().with_language("rust")
+        CodeOptions::builder().with_language(Language::Rust)
     );
     rsx! {
         style { {APP_CSS} }

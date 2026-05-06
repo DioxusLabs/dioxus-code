@@ -2409,7 +2409,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus-code-demo"
+name = "dioxus-code-docsite"
 version = "0.0.1"
 dependencies = [
  "dioxus",

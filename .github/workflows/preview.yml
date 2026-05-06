@@ -16,7 +16,7 @@ jobs:
   build:
     uses: ealmloff/dioxus-ci/.github/workflows/pr-preview-build.yml@main
     with:
-      working-directory: demo
+      working-directory: docsite
       ssg: true
       no-default-features: true
       features: fullstack

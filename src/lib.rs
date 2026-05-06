@@ -12,6 +12,9 @@ use dioxus::prelude::*;
 #[cfg(feature = "runtime")]
 use std::collections::HashMap;
 
+mod language;
+pub use language::Language;
+
 /// Base stylesheet for [`Code()`].
 ///
 /// This contains layout styles only; syntax colors live in the generated theme
@@ -27,41 +30,42 @@ pub const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 pub use dioxus_code_macro::code;
 
-/// Options for the `code!` macro.
+/// Options shared by the `code!` macro and runtime [`SourceCode`].
 ///
-/// The `code!` macro reads this builder syntax at compile time.
+/// The `code!` macro reads this builder syntax at compile time, and
+/// [`SourceCode`] consumes the same builder at runtime.
 ///
 /// ```rust
-/// use dioxus_code::{CodeOptions, code};
+/// use dioxus_code::{CodeOptions, Language, code};
 ///
 /// let _source = code!(
-///     "/snippets/Containerfile",
-///     CodeOptions::builder().with_language("dockerfile")
+///     "/snippets/demo.rs",
+///     CodeOptions::builder().with_language(Language::Rust)
 /// );
 /// ```
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CodeOptions {
-    _private: (),
+    language: Option<Language>,
 }
 
 impl CodeOptions {
-    /// Create default macro options.
+    /// Create default code options.
     ///
     /// ```rust
     /// use dioxus_code::CodeOptions;
     /// let _opts = CodeOptions::new();
     /// ```
     pub const fn new() -> Self {
-        Self { _private: () }
+        Self { language: None }
     }
 
-    /// Create default macro options.
+    /// Create default code options.
     ///
     /// Alias for [`CodeOptions::new`], matching builder-style asset APIs.
     ///
     /// ```rust
-    /// use dioxus_code::CodeOptions;
-    /// let _opts = CodeOptions::builder().with_language("rust");
+    /// use dioxus_code::{CodeOptions, Language};
+    /// let _opts = CodeOptions::builder().with_language(Language::Rust);
     /// ```
     pub const fn builder() -> Self {
         Self::new()
@@ -69,14 +73,20 @@ impl CodeOptions {
 
     /// Set the language explicitly.
     ///
-    /// The macro parses this call during expansion.
+    /// Pass a [`Language`] variant directly, `Some(Language::...)`, or `None`.
     ///
     /// ```rust
-    /// use dioxus_code::CodeOptions;
-    /// let _opts = CodeOptions::new().with_language("rust");
+    /// use dioxus_code::{CodeOptions, Language};
+    /// let _opts = CodeOptions::new().with_language(Language::Rust);
     /// ```
-    pub const fn with_language(self, _language: &'static str) -> Self {
+    pub fn with_language(mut self, language: impl Into<Option<Language>>) -> Self {
+        self.language = language.into();
         self
+    }
+
+    /// The explicit language, if one was configured.
+    pub const fn language(self) -> Option<Language> {
+        self.language
     }
 }
 
@@ -209,12 +219,6 @@ impl From<Theme> for CodeTheme {
 
 include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
 
-#[cfg(feature = "runtime")]
-mod language;
-#[cfg(feature = "runtime")]
-#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
-pub use language::Language;
-
 pub mod advanced;
 
 /// Source text to highlight at runtime.
@@ -232,7 +236,7 @@ pub mod advanced;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
-    language: Option<Language>,
+    options: CodeOptions,
     filename: Option<String>,
 }
 
@@ -248,9 +252,21 @@ impl SourceCode {
     pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),
-            language: None,
+            options: CodeOptions::new(),
             filename: None,
         }
+    }
+
+    /// Apply shared code options.
+    ///
+    /// ```rust
+    /// use dioxus_code::{CodeOptions, Language, SourceCode};
+    /// let options = CodeOptions::builder().with_language(Language::Rust);
+    /// let _src = SourceCode::new("fn main() {}").with_options(options);
+    /// ```
+    pub fn with_options(mut self, options: CodeOptions) -> Self {
+        self.options = options;
+        self
     }
 
     /// Set the language explicitly.
@@ -262,8 +278,8 @@ impl SourceCode {
     /// use dioxus_code::{Language, SourceCode};
     /// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
     /// ```
-    pub fn with_language(mut self, language: Language) -> Self {
-        self.language = Some(language);
+    pub fn with_language(mut self, language: impl Into<Option<Language>>) -> Self {
+        self.options = self.options.with_language(language);
         self
     }
 
@@ -296,7 +312,7 @@ impl SourceCode {
         highlighter.highlight(
             &self.source,
             None,
-            self.language.as_ref().map(Language::slug),
+            self.options.language().map(|language| language.slug()),
             self.filename.as_deref(),
         )
     }
@@ -487,6 +503,23 @@ mod tests {
         assert!(lines[1].is_empty());
     }
 
+    #[test]
+    fn code_options_accepts_language_options() {
+        assert_eq!(
+            CodeOptions::builder()
+                .with_language(Language::Rust)
+                .language(),
+            Some(Language::Rust),
+        );
+        assert_eq!(
+            CodeOptions::builder()
+                .with_language(Some(Language::Rust))
+                .language(),
+            Some(Language::Rust),
+        );
+        assert_eq!(CodeOptions::builder().with_language(None).language(), None);
+    }
+
     #[cfg(feature = "runtime")]
     #[test]
     fn runtime_filename_detection_highlights() {
@@ -501,11 +534,10 @@ mod tests {
 
     #[cfg(feature = "runtime")]
     #[test]
-    fn runtime_language_string_highlights() {
-        let tree: advanced::HighlightedSource =
-            SourceCode::new("fn main() {}")
-                .with_language(Language::Rust)
-                .into();
+    fn runtime_code_options_highlights() {
+        let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}")
+            .with_options(CodeOptions::builder().with_language(Language::Rust))
+            .into();
         assert_eq!(tree.language(), Some("rust"));
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"

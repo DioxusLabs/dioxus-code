@@ -47,7 +47,7 @@ fn ReadMe() -> Element {
 ```
 
 The path is resolved from the consumer's `CARGO_MANIFEST_DIR`. `concat!` and `env!` work too.
-When the file extension is ambiguous, pass `CodeOptions::builder().with_language("rust")`.
+When the file extension is ambiguous, pass `CodeOptions::builder().with_language(Language::Rust)`.
 
 ## Runtime highlighting
 
@@ -60,19 +60,20 @@ dioxus-code = { version = "0.1", features = ["runtime"] }
 
 ```rust
 # use dioxus::prelude::*;
-use dioxus_code::{Code, Language, SourceCode, Theme};
+use dioxus_code::{Code, CodeOptions, Language, SourceCode, Theme};
 # let user_input = String::new();
 # let _ =
 rsx! {
     Code {
-        src: SourceCode::new(user_input).with_language(Language::Rust),
+        src: SourceCode::new(user_input)
+            .with_options(CodeOptions::builder().with_language(Language::Rust)),
         theme: Theme::GITHUB_LIGHT,
     }
 }
 # ;
 ```
 
-Language can be set explicitly, inferred from a filename via `with_filename("main.rs")`, or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
+Language can be set explicitly with the same `CodeOptions` builder used by `code!()`, inferred from a filename via `with_filename("main.rs")`, or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
 
 ## Editor
 
