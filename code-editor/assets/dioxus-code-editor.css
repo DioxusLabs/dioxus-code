@@ -1,9 +1,13 @@
 .dxc-editor {
+  --dxc-editor-font-size: 15px;
+  --dxc-editor-line-height: 24px;
   border-radius: 8px;
   box-sizing: border-box;
   display: grid;
-  font: 15px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--dxc-editor-font-size);
   grid-template-columns: max-content minmax(0, 1fr);
+  line-height: var(--dxc-editor-line-height);
   min-height: 0;
   overflow: auto;
   tab-size: 4;
@@ -30,6 +34,7 @@
 
 .dxc-editor-highlight,
 .dxc-editor-input {
+  line-height: var(--dxc-editor-line-height);
   padding: var(--dxc-editor-padding, 14px 18px 14px 0);
   white-space: pre;
 }
@@ -51,12 +56,23 @@
 }
 
 .dxc-editor-input {
+  background: transparent;
+  border: 0;
   caret-color: var(--dxc-editor-caret, currentColor);
   color: transparent;
+  display: block;
+  font: inherit;
+  height: 100%;
   inset: 0;
+  letter-spacing: 0;
+  margin: 0;
   outline: none;
+  overflow: hidden;
   overflow-wrap: normal;
   position: absolute;
+  resize: none;
+  tab-size: inherit;
+  width: 100%;
   z-index: 1;
 }
 
@@ -71,13 +87,20 @@
   opacity: 0.72;
 }
 
+.dxc-editor-input::placeholder {
+  color: var(--muted, currentColor);
+  opacity: 0.72;
+}
+
 .dxc-editor:focus-within {
   box-shadow: var(--dxc-editor-focus-ring, 0 0 0 3px rgba(122, 162, 247, 0.22));
 }
 
 .dxc-editor-line,
 .dxc-editor-gutter-line {
-  min-height: 1.55em;
+  height: var(--dxc-editor-line-height);
+  line-height: var(--dxc-editor-line-height);
+  min-height: var(--dxc-editor-line-height);
 }
 
 .dxc-editor-gutter-line {

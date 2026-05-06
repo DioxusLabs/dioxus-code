@@ -3,15 +3,15 @@
 
 use dioxus::prelude::*;
 use dioxus_code::CodeTheme;
+pub use dioxus_code::Language;
 #[cfg(test)]
 use dioxus_code::Theme;
-use dioxus_code::advanced::{CodeThemeStyles, IncrementalHighlighter, SourceEdit, TokenSpan};
+use dioxus_code::advanced::{CodeThemeStyles, IncrementalHighlighter, TokenSpan};
 #[cfg(test)]
 use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
 use std::{cell::RefCell, rc::Rc};
 
-#[cfg(target_arch = "wasm32")]
-mod web_input;
+mod edit_capture;
 
 /// Base stylesheet injected by [`CodeEditor`].
 ///
@@ -25,10 +25,10 @@ pub const CODE_EDITOR_CSS: Asset = asset!("/assets/dioxus-code-editor.css");
 ///
 /// ```rust,no_run
 /// use dioxus_code::{CodeTheme, Theme};
-/// use dioxus_code_editor::CodeEditorProps;
+/// use dioxus_code_editor::{CodeEditorProps, Language};
 /// let _props = CodeEditorProps::builder()
 ///     .value("fn main() {}")
-///     .language(Some("rust".to_string()))
+///     .language(Some(Language::Rust))
 ///     .theme(CodeTheme::fixed(Theme::TOKYO_NIGHT))
 ///     .build();
 /// ```
@@ -37,9 +37,13 @@ pub struct CodeEditorProps {
     /// The current editor contents.
     #[props(into)]
     pub value: String,
-    /// Optional Arborium language hint, for example `"rust"`.
+    /// Tree-sitter grammar used for syntax highlighting.
+    ///
+    /// Pass a [`Language`] variant directly, or use [`Language::from_slug`] for
+    /// custom Arborium slugs. When unset, the grammar is inferred from
+    /// `filename` or the source.
     #[props(into, default)]
-    pub language: Option<String>,
+    pub language: Option<Language>,
     /// Optional filename used for language detection when `language` is unset.
     #[props(into, default)]
     pub filename: Option<String>,
@@ -52,7 +56,7 @@ pub struct CodeEditorProps {
     /// Disable editing while preserving syntax highlighting and text selection.
     #[props(default = false)]
     pub read_only: bool,
-    /// Forward spellcheck to the contenteditable input layer.
+    /// Forward spellcheck to the textarea input layer.
     #[props(default = false)]
     pub spellcheck: bool,
     /// Accessible label for the editor textbox.
@@ -77,14 +81,14 @@ pub struct CodeEditorProps {
 /// ```rust
 /// use dioxus::prelude::*;
 /// use dioxus_code::Theme;
-/// use dioxus_code_editor::CodeEditor;
+/// use dioxus_code_editor::{CodeEditor, Language};
 ///
 /// fn _example() -> Element {
 ///     let mut source = use_signal(String::new);
 ///     rsx! {
 ///         CodeEditor {
 ///             value: source(),
-///             language: "rust",
+///             language: Language::Rust,
 ///             theme: Theme::TOKYO_NIGHT,
 ///             oninput: move |value| source.set(value),
 ///         }
@@ -93,39 +97,29 @@ pub struct CodeEditorProps {
 /// ```
 #[component]
 pub fn CodeEditor(props: CodeEditorProps) -> Element {
-    let input_sync = use_hook(|| {
-        Rc::new(RefCell::new(InputSyncState {
-            rendered_value: props.value.clone(),
-            last_local_value: props.value.clone(),
-            version: 0,
-        }))
+    let highlighter = use_hook(|| Rc::new(RefCell::new(IncrementalHighlighter::new())));
+    let edit_tracker = use_hook(|| {
+        Rc::new(RefCell::new(edit_capture::InputEditTracker::new(
+            props.value.clone(),
+        )))
     });
 
-    let highlighter = use_hook(|| Rc::new(RefCell::new(IncrementalHighlighter::new())));
-    let pending_edit: Rc<RefCell<Option<SourceEdit>>> = use_hook(|| Rc::new(RefCell::new(None)));
-    #[cfg(target_arch = "wasm32")]
-    let edit_capture: Rc<RefCell<Option<web_input::InputEditCapture>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-
-    let language = non_empty(props.language.clone());
+    let language = props.language.as_ref().map(Language::slug);
     let filename = non_empty(props.filename.clone());
-    let edit = pending_edit.borrow_mut().take();
-    let source = highlighter.borrow_mut().highlight(
-        &props.value,
-        edit,
-        language.as_deref(),
-        filename.as_deref(),
-    );
+    let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
+    let source =
+        highlighter
+            .borrow_mut()
+            .highlight(&props.value, edit, language, filename.as_deref());
     let lines = source.lines();
     let line_count = lines.len();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
-    let (input_value, input_version) = synced_input_value(&input_sync, &props.value);
-    let contenteditable = if props.read_only {
-        "false"
-    } else {
-        "plaintext-only"
-    };
+    let textarea_value = props.value.clone();
     let readonly = props.read_only.then_some("true");
+    let input_attributes = edit_capture::use_input_edit_attributes(edit_tracker.clone(), {
+        let oninput = props.oninput;
+        move |value| oninput.call(value)
+    });
 
     rsx! {
         CodeThemeStyles { theme: props.theme }
@@ -156,42 +150,18 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                         }
                     }
                 }
-                div {
-                    key: "{input_version}",
+                textarea {
                     class: "dxc-editor-input",
-                    contenteditable,
+                    readonly: props.read_only,
                     spellcheck: props.spellcheck,
                     role: "textbox",
                     "aria-label": props.aria_label,
                     "aria-multiline": "true",
                     "aria-readonly": readonly,
-                    "data-placeholder": props.placeholder,
-                    onmounted: {
-                        #[cfg(target_arch = "wasm32")]
-                        let pending_edit = pending_edit.clone();
-                        #[cfg(target_arch = "wasm32")]
-                        let edit_capture = edit_capture.clone();
-                        move |event: MountedEvent| {
-                            #[cfg(target_arch = "wasm32")]
-                            {
-                                use dioxus::web::WebEventExt;
-                                if let Some(element) = event.try_as_web_event() {
-                                    *edit_capture.borrow_mut() =
-                                        Some(web_input::install(element, pending_edit.clone()));
-                                }
-                            }
-                            #[cfg(not(target_arch = "wasm32"))]
-                            {
-                                let _ = event;
-                            }
-                        }
-                    },
-                    oninput: move |event| {
-                        let value = event.value();
-                        input_sync.borrow_mut().last_local_value = value.clone();
-                        props.oninput.call(value);
-                    },
-                    "{input_value}"
+                    placeholder: props.placeholder,
+                    value: textarea_value,
+                    wrap: "off",
+                    ..input_attributes,
                 }
             }
         }
@@ -200,25 +170,6 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
 
 fn non_empty(value: Option<String>) -> Option<String> {
     value.filter(|value| !value.is_empty())
-}
-
-#[derive(Debug)]
-struct InputSyncState {
-    rendered_value: String,
-    last_local_value: String,
-    version: usize,
-}
-
-fn synced_input_value(input_sync: &Rc<RefCell<InputSyncState>>, value: &str) -> (String, usize) {
-    let mut state = input_sync.borrow_mut();
-
-    if value != state.last_local_value {
-        state.last_local_value = value.to_string();
-        state.rendered_value = value.to_string();
-        state.version += 1;
-    }
-
-    (state.rendered_value.clone(), state.version)
 }
 
 fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &str) -> String {
@@ -272,49 +223,5 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], vec![HighlightSegment::new("let x = 1;", None)]);
         assert!(lines[1].is_empty());
-    }
-
-    #[test]
-    fn local_input_echo_does_not_rewrite_editable_text() {
-        let input_sync = Rc::new(RefCell::new(InputSyncState {
-            rendered_value: "abc".to_string(),
-            last_local_value: "abc".to_string(),
-            version: 0,
-        }));
-
-        input_sync.borrow_mut().last_local_value = "abxc".to_string();
-
-        assert_eq!(
-            synced_input_value(&input_sync, "abxc"),
-            ("abc".to_string(), 0)
-        );
-    }
-
-    #[test]
-    fn external_value_change_resyncs_editable_text() {
-        let input_sync = Rc::new(RefCell::new(InputSyncState {
-            rendered_value: "abc".to_string(),
-            last_local_value: "abxc".to_string(),
-            version: 0,
-        }));
-
-        assert_eq!(
-            synced_input_value(&input_sync, "xyz"),
-            ("xyz".to_string(), 1)
-        );
-    }
-
-    #[test]
-    fn external_reset_to_rendered_value_still_forces_remount() {
-        let input_sync = Rc::new(RefCell::new(InputSyncState {
-            rendered_value: "abc".to_string(),
-            last_local_value: "abxc".to_string(),
-            version: 0,
-        }));
-
-        assert_eq!(
-            synced_input_value(&input_sync, "abc"),
-            ("abc".to_string(), 1)
-        );
     }
 }

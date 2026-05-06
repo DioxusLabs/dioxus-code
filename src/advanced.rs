@@ -649,512 +649,512 @@ fn grammar_for(slug: &str) -> Option<(arborium_tree_sitter::LanguageFn, &'static
             arborium::lang_rust::language(),
             arborium::lang_rust::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ada", feature = "all-languages"))]
+        #[cfg(feature = "lang-ada")]
         "ada" => Some((
             arborium::lang_ada::language(),
             arborium::lang_ada::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-agda", feature = "all-languages"))]
+        #[cfg(feature = "lang-agda")]
         "agda" => Some((
             arborium::lang_agda::language(),
             arborium::lang_agda::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-asciidoc", feature = "all-languages"))]
+        #[cfg(feature = "lang-asciidoc")]
         "asciidoc" => Some((
             arborium::lang_asciidoc::language(),
             arborium::lang_asciidoc::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-asm", feature = "all-languages"))]
+        #[cfg(feature = "lang-asm")]
         "asm" => Some((
             arborium::lang_asm::language(),
             arborium::lang_asm::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-awk", feature = "all-languages"))]
+        #[cfg(feature = "lang-awk")]
         "awk" => Some((
             arborium::lang_awk::language(),
             arborium::lang_awk::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-bash", feature = "all-languages"))]
+        #[cfg(feature = "lang-bash")]
         "bash" => Some((
             arborium::lang_bash::language(),
             arborium::lang_bash::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-batch", feature = "all-languages"))]
+        #[cfg(feature = "lang-batch")]
         "batch" => Some((
             arborium::lang_batch::language(),
             arborium::lang_batch::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-c", feature = "all-languages"))]
+        #[cfg(feature = "lang-c")]
         "c" => Some((
             arborium::lang_c::language(),
             arborium::lang_c::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-c-sharp", feature = "all-languages"))]
+        #[cfg(feature = "lang-c-sharp")]
         "c-sharp" => Some((
             arborium::lang_c_sharp::language(),
             arborium::lang_c_sharp::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-caddy", feature = "all-languages"))]
+        #[cfg(feature = "lang-caddy")]
         "caddy" => Some((
             arborium::lang_caddy::language(),
             arborium::lang_caddy::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-capnp", feature = "all-languages"))]
+        #[cfg(feature = "lang-capnp")]
         "capnp" => Some((
             arborium::lang_capnp::language(),
             arborium::lang_capnp::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-cedar", feature = "all-languages"))]
+        #[cfg(feature = "lang-cedar")]
         "cedar" => Some((
             arborium::lang_cedar::language(),
             arborium::lang_cedar::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-cedarschema", feature = "all-languages"))]
+        #[cfg(feature = "lang-cedarschema")]
         "cedarschema" => Some((
             arborium::lang_cedarschema::language(),
             arborium::lang_cedarschema::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-clojure", feature = "all-languages"))]
+        #[cfg(feature = "lang-clojure")]
         "clojure" => Some((
             arborium::lang_clojure::language(),
             arborium::lang_clojure::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-cmake", feature = "all-languages"))]
+        #[cfg(feature = "lang-cmake")]
         "cmake" => Some((
             arborium::lang_cmake::language(),
             arborium::lang_cmake::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-cobol", feature = "all-languages"))]
+        #[cfg(feature = "lang-cobol")]
         "cobol" => Some((
             arborium::lang_cobol::language(),
             arborium::lang_cobol::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-commonlisp", feature = "all-languages"))]
+        #[cfg(feature = "lang-commonlisp")]
         "commonlisp" => Some((
             arborium::lang_commonlisp::language(),
             arborium::lang_commonlisp::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-cpp", feature = "all-languages"))]
+        #[cfg(feature = "lang-cpp")]
         "cpp" => Some((
             arborium::lang_cpp::language(),
             &arborium::lang_cpp::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-css", feature = "all-languages"))]
+        #[cfg(feature = "lang-css")]
         "css" => Some((
             arborium::lang_css::language(),
             arborium::lang_css::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-d", feature = "all-languages"))]
+        #[cfg(feature = "lang-d")]
         "d" => Some((
             arborium::lang_d::language(),
             arborium::lang_d::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-dart", feature = "all-languages"))]
+        #[cfg(feature = "lang-dart")]
         "dart" => Some((
             arborium::lang_dart::language(),
             arborium::lang_dart::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-devicetree", feature = "all-languages"))]
+        #[cfg(feature = "lang-devicetree")]
         "devicetree" => Some((
             arborium::lang_devicetree::language(),
             arborium::lang_devicetree::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-diff", feature = "all-languages"))]
+        #[cfg(feature = "lang-diff")]
         "diff" => Some((
             arborium::lang_diff::language(),
             arborium::lang_diff::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-dockerfile", feature = "all-languages"))]
+        #[cfg(feature = "lang-dockerfile")]
         "dockerfile" => Some((
             arborium::lang_dockerfile::language(),
             arborium::lang_dockerfile::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-dot", feature = "all-languages"))]
+        #[cfg(feature = "lang-dot")]
         "dot" => Some((
             arborium::lang_dot::language(),
             arborium::lang_dot::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-elisp", feature = "all-languages"))]
+        #[cfg(feature = "lang-elisp")]
         "elisp" => Some((
             arborium::lang_elisp::language(),
             arborium::lang_elisp::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-elixir", feature = "all-languages"))]
+        #[cfg(feature = "lang-elixir")]
         "elixir" => Some((
             arborium::lang_elixir::language(),
             arborium::lang_elixir::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-elm", feature = "all-languages"))]
+        #[cfg(feature = "lang-elm")]
         "elm" => Some((
             arborium::lang_elm::language(),
             arborium::lang_elm::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-erlang", feature = "all-languages"))]
+        #[cfg(feature = "lang-erlang")]
         "erlang" => Some((
             arborium::lang_erlang::language(),
             arborium::lang_erlang::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-fish", feature = "all-languages"))]
+        #[cfg(feature = "lang-fish")]
         "fish" => Some((
             arborium::lang_fish::language(),
             arborium::lang_fish::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-fsharp", feature = "all-languages"))]
+        #[cfg(feature = "lang-fsharp")]
         "fsharp" => Some((
             arborium::lang_fsharp::language(),
             arborium::lang_fsharp::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-gleam", feature = "all-languages"))]
+        #[cfg(feature = "lang-gleam")]
         "gleam" => Some((
             arborium::lang_gleam::language(),
             arborium::lang_gleam::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-glsl", feature = "all-languages"))]
+        #[cfg(feature = "lang-glsl")]
         "glsl" => Some((
             arborium::lang_glsl::language(),
             &arborium::lang_glsl::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-go", feature = "all-languages"))]
+        #[cfg(feature = "lang-go")]
         "go" => Some((
             arborium::lang_go::language(),
             arborium::lang_go::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-graphql", feature = "all-languages"))]
+        #[cfg(feature = "lang-graphql")]
         "graphql" => Some((
             arborium::lang_graphql::language(),
             arborium::lang_graphql::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-groovy", feature = "all-languages"))]
+        #[cfg(feature = "lang-groovy")]
         "groovy" => Some((
             arborium::lang_groovy::language(),
             arborium::lang_groovy::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-haskell", feature = "all-languages"))]
+        #[cfg(feature = "lang-haskell")]
         "haskell" => Some((
             arborium::lang_haskell::language(),
             arborium::lang_haskell::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-hcl", feature = "all-languages"))]
+        #[cfg(feature = "lang-hcl")]
         "hcl" => Some((
             arborium::lang_hcl::language(),
             arborium::lang_hcl::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-hlsl", feature = "all-languages"))]
+        #[cfg(feature = "lang-hlsl")]
         "hlsl" => Some((
             arborium::lang_hlsl::language(),
             &arborium::lang_hlsl::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-html", feature = "all-languages"))]
+        #[cfg(feature = "lang-html")]
         "html" => Some((
             arborium::lang_html::language(),
             arborium::lang_html::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-idris", feature = "all-languages"))]
+        #[cfg(feature = "lang-idris")]
         "idris" => Some((
             arborium::lang_idris::language(),
             arborium::lang_idris::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ini", feature = "all-languages"))]
+        #[cfg(feature = "lang-ini")]
         "ini" => Some((
             arborium::lang_ini::language(),
             arborium::lang_ini::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-java", feature = "all-languages"))]
+        #[cfg(feature = "lang-java")]
         "java" => Some((
             arborium::lang_java::language(),
             arborium::lang_java::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-javascript", feature = "all-languages"))]
+        #[cfg(feature = "lang-javascript")]
         "javascript" => Some((
             arborium::lang_javascript::language(),
             arborium::lang_javascript::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-jinja2", feature = "all-languages"))]
+        #[cfg(feature = "lang-jinja2")]
         "jinja2" => Some((
             arborium::lang_jinja2::language(),
             arborium::lang_jinja2::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-jq", feature = "all-languages"))]
+        #[cfg(feature = "lang-jq")]
         "jq" => Some((
             arborium::lang_jq::language(),
             arborium::lang_jq::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-json", feature = "all-languages"))]
+        #[cfg(feature = "lang-json")]
         "json" => Some((
             arborium::lang_json::language(),
             arborium::lang_json::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-julia", feature = "all-languages"))]
+        #[cfg(feature = "lang-julia")]
         "julia" => Some((
             arborium::lang_julia::language(),
             arborium::lang_julia::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-kotlin", feature = "all-languages"))]
+        #[cfg(feature = "lang-kotlin")]
         "kotlin" => Some((
             arborium::lang_kotlin::language(),
             arborium::lang_kotlin::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-lean", feature = "all-languages"))]
+        #[cfg(feature = "lang-lean")]
         "lean" => Some((
             arborium::lang_lean::language(),
             arborium::lang_lean::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-lua", feature = "all-languages"))]
+        #[cfg(feature = "lang-lua")]
         "lua" => Some((
             arborium::lang_lua::language(),
             arborium::lang_lua::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-markdown", feature = "all-languages"))]
+        #[cfg(feature = "lang-markdown")]
         "markdown" => Some((
             arborium::lang_markdown::language(),
             arborium::lang_markdown::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-matlab", feature = "all-languages"))]
+        #[cfg(feature = "lang-matlab")]
         "matlab" => Some((
             arborium::lang_matlab::language(),
             arborium::lang_matlab::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-meson", feature = "all-languages"))]
+        #[cfg(feature = "lang-meson")]
         "meson" => Some((
             arborium::lang_meson::language(),
             arborium::lang_meson::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-nginx", feature = "all-languages"))]
+        #[cfg(feature = "lang-nginx")]
         "nginx" => Some((
             arborium::lang_nginx::language(),
             arborium::lang_nginx::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ninja", feature = "all-languages"))]
+        #[cfg(feature = "lang-ninja")]
         "ninja" => Some((
             arborium::lang_ninja::language(),
             arborium::lang_ninja::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-nix", feature = "all-languages"))]
+        #[cfg(feature = "lang-nix")]
         "nix" => Some((
             arborium::lang_nix::language(),
             arborium::lang_nix::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-objc", feature = "all-languages"))]
+        #[cfg(feature = "lang-objc")]
         "objc" => Some((
             arborium::lang_objc::language(),
             &arborium::lang_objc::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ocaml", feature = "all-languages"))]
+        #[cfg(feature = "lang-ocaml")]
         "ocaml" => Some((
             arborium::lang_ocaml::language(),
             arborium::lang_ocaml::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-perl", feature = "all-languages"))]
+        #[cfg(feature = "lang-perl")]
         "perl" => Some((
             arborium::lang_perl::language(),
             arborium::lang_perl::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-php", feature = "all-languages"))]
+        #[cfg(feature = "lang-php")]
         "php" => Some((
             arborium::lang_php::language(),
             arborium::lang_php::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-postscript", feature = "all-languages"))]
+        #[cfg(feature = "lang-postscript")]
         "postscript" => Some((
             arborium::lang_postscript::language(),
             arborium::lang_postscript::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-powershell", feature = "all-languages"))]
+        #[cfg(feature = "lang-powershell")]
         "powershell" => Some((
             arborium::lang_powershell::language(),
             arborium::lang_powershell::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-prolog", feature = "all-languages"))]
+        #[cfg(feature = "lang-prolog")]
         "prolog" => Some((
             arborium::lang_prolog::language(),
             arborium::lang_prolog::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-python", feature = "all-languages"))]
+        #[cfg(feature = "lang-python")]
         "python" => Some((
             arborium::lang_python::language(),
             arborium::lang_python::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-query", feature = "all-languages"))]
+        #[cfg(feature = "lang-query")]
         "query" => Some((
             arborium::lang_query::language(),
             arborium::lang_query::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-r", feature = "all-languages"))]
+        #[cfg(feature = "lang-r")]
         "r" => Some((
             arborium::lang_r::language(),
             arborium::lang_r::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-rego", feature = "all-languages"))]
+        #[cfg(feature = "lang-rego")]
         "rego" => Some((
             arborium::lang_rego::language(),
             arborium::lang_rego::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-rescript", feature = "all-languages"))]
+        #[cfg(feature = "lang-rescript")]
         "rescript" => Some((
             arborium::lang_rescript::language(),
             arborium::lang_rescript::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ron", feature = "all-languages"))]
+        #[cfg(feature = "lang-ron")]
         "ron" => Some((
             arborium::lang_ron::language(),
             arborium::lang_ron::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ruby", feature = "all-languages"))]
+        #[cfg(feature = "lang-ruby")]
         "ruby" => Some((
             arborium::lang_ruby::language(),
             arborium::lang_ruby::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-scala", feature = "all-languages"))]
+        #[cfg(feature = "lang-scala")]
         "scala" => Some((
             arborium::lang_scala::language(),
             arborium::lang_scala::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-scheme", feature = "all-languages"))]
+        #[cfg(feature = "lang-scheme")]
         "scheme" => Some((
             arborium::lang_scheme::language(),
             arborium::lang_scheme::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-scss", feature = "all-languages"))]
+        #[cfg(feature = "lang-scss")]
         "scss" => Some((
             arborium::lang_scss::language(),
             &arborium::lang_scss::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-solidity", feature = "all-languages"))]
+        #[cfg(feature = "lang-solidity")]
         "solidity" => Some((
             arborium::lang_solidity::language(),
             arborium::lang_solidity::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-sparql", feature = "all-languages"))]
+        #[cfg(feature = "lang-sparql")]
         "sparql" => Some((
             arborium::lang_sparql::language(),
             arborium::lang_sparql::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-sql", feature = "all-languages"))]
+        #[cfg(feature = "lang-sql")]
         "sql" => Some((
             arborium::lang_sql::language(),
             arborium::lang_sql::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-ssh-config", feature = "all-languages"))]
+        #[cfg(feature = "lang-ssh-config")]
         "ssh-config" => Some((
             arborium::lang_ssh_config::language(),
             arborium::lang_ssh_config::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-starlark", feature = "all-languages"))]
+        #[cfg(feature = "lang-starlark")]
         "starlark" => Some((
             arborium::lang_starlark::language(),
             arborium::lang_starlark::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-styx", feature = "all-languages"))]
+        #[cfg(feature = "lang-styx")]
         "styx" => Some((
             arborium::lang_styx::language(),
             arborium::lang_styx::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-svelte", feature = "all-languages"))]
+        #[cfg(feature = "lang-svelte")]
         "svelte" => Some((
             arborium::lang_svelte::language(),
             &arborium::lang_svelte::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-swift", feature = "all-languages"))]
+        #[cfg(feature = "lang-swift")]
         "swift" => Some((
             arborium::lang_swift::language(),
             arborium::lang_swift::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-textproto", feature = "all-languages"))]
+        #[cfg(feature = "lang-textproto")]
         "textproto" => Some((
             arborium::lang_textproto::language(),
             arborium::lang_textproto::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-thrift", feature = "all-languages"))]
+        #[cfg(feature = "lang-thrift")]
         "thrift" => Some((
             arborium::lang_thrift::language(),
             arborium::lang_thrift::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-tlaplus", feature = "all-languages"))]
+        #[cfg(feature = "lang-tlaplus")]
         "tlaplus" => Some((
             arborium::lang_tlaplus::language(),
             arborium::lang_tlaplus::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-toml", feature = "all-languages"))]
+        #[cfg(feature = "lang-toml")]
         "toml" => Some((
             arborium::lang_toml::language(),
             arborium::lang_toml::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-tsx", feature = "all-languages"))]
+        #[cfg(feature = "lang-tsx")]
         "tsx" => Some((
             arborium::lang_tsx::language(),
             &arborium::lang_tsx::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-typescript", feature = "all-languages"))]
+        #[cfg(feature = "lang-typescript")]
         "typescript" => Some((
             arborium::lang_typescript::language(),
             &arborium::lang_typescript::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-typst", feature = "all-languages"))]
+        #[cfg(feature = "lang-typst")]
         "typst" => Some((
             arborium::lang_typst::language(),
             arborium::lang_typst::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-uiua", feature = "all-languages"))]
+        #[cfg(feature = "lang-uiua")]
         "uiua" => Some((
             arborium::lang_uiua::language(),
             arborium::lang_uiua::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-vb", feature = "all-languages"))]
+        #[cfg(feature = "lang-vb")]
         "vb" => Some((
             arborium::lang_vb::language(),
             arborium::lang_vb::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-verilog", feature = "all-languages"))]
+        #[cfg(feature = "lang-verilog")]
         "verilog" => Some((
             arborium::lang_verilog::language(),
             arborium::lang_verilog::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-vhdl", feature = "all-languages"))]
+        #[cfg(feature = "lang-vhdl")]
         "vhdl" => Some((
             arborium::lang_vhdl::language(),
             arborium::lang_vhdl::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-vim", feature = "all-languages"))]
+        #[cfg(feature = "lang-vim")]
         "vim" => Some((
             arborium::lang_vim::language(),
             arborium::lang_vim::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-vue", feature = "all-languages"))]
+        #[cfg(feature = "lang-vue")]
         "vue" => Some((
             arborium::lang_vue::language(),
             &arborium::lang_vue::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-wit", feature = "all-languages"))]
+        #[cfg(feature = "lang-wit")]
         "wit" => Some((
             arborium::lang_wit::language(),
             arborium::lang_wit::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-x86asm", feature = "all-languages"))]
+        #[cfg(feature = "lang-x86asm")]
         "x86asm" => Some((
             arborium::lang_x86asm::language(),
             arborium::lang_x86asm::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-xml", feature = "all-languages"))]
+        #[cfg(feature = "lang-xml")]
         "xml" => Some((
             arborium::lang_xml::language(),
             arborium::lang_xml::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-yaml", feature = "all-languages"))]
+        #[cfg(feature = "lang-yaml")]
         "yaml" => Some((
             arborium::lang_yaml::language(),
             arborium::lang_yaml::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-yuri", feature = "all-languages"))]
+        #[cfg(feature = "lang-yuri")]
         "yuri" => Some((
             arborium::lang_yuri::language(),
             arborium::lang_yuri::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-zig", feature = "all-languages"))]
+        #[cfg(feature = "lang-zig")]
         "zig" => Some((
             arborium::lang_zig::language(),
             arborium::lang_zig::HIGHLIGHTS_QUERY,
         )),
-        #[cfg(any(feature = "lang-zsh", feature = "all-languages"))]
+        #[cfg(feature = "lang-zsh")]
         "zsh" => Some((
             arborium::lang_zsh::language(),
             arborium::lang_zsh::HIGHLIGHTS_QUERY,
@@ -1287,7 +1287,7 @@ mod incremental_tests {
         let source = "fn main() { let x = 1; }";
         let inc = hl.highlight(source, None, Some("rust"), None);
         let batch: HighlightedSource = SourceCode::new(source.to_owned())
-            .with_language("rust")
+            .with_language(Language::Rust)
             .into();
 
         assert_eq!(inc.language(), Some("rust"));
@@ -1310,7 +1310,7 @@ mod incremental_tests {
         };
         let inc = hl.highlight(second, Some(edit), Some("rust"), None);
         let batch: HighlightedSource = SourceCode::new(second.to_owned())
-            .with_language("rust")
+            .with_language(Language::Rust)
             .into();
 
         assert_eq!(keyword_ranges(second, &inc), keyword_ranges(second, &batch));
@@ -1332,7 +1332,7 @@ mod incremental_tests {
         };
         let inc = hl.highlight(second, Some(edit), Some("rust"), None);
         let batch: HighlightedSource = SourceCode::new(second.to_owned())
-            .with_language("rust")
+            .with_language(Language::Rust)
             .into();
         assert_eq!(keyword_ranges(second, &inc), keyword_ranges(second, &batch));
     }
@@ -1345,7 +1345,7 @@ mod incremental_tests {
         let updated = "fn main() { 2 }";
         let inc = hl.highlight(updated, None, Some("rust"), None);
         let batch: HighlightedSource = SourceCode::new(updated.to_owned())
-            .with_language("rust")
+            .with_language(Language::Rust)
             .into();
         assert_eq!(
             keyword_ranges(updated, &inc),

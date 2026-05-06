@@ -17,7 +17,7 @@
 
 ---
 
-A controlled, syntax-highlighted code editor for Dioxus. Pairs a `contenteditable` input layer with the [`dioxus-code`](https://crates.io/crates/dioxus-code) highlighter so user edits stay in sync with rendered tokens.
+A controlled, syntax-highlighted code editor for Dioxus. Pairs an editable input layer with the [`dioxus-code`](https://crates.io/crates/dioxus-code) highlighter so user edits stay in sync with rendered tokens.
 
 ## Quick start
 
@@ -29,7 +29,7 @@ dioxus-code-editor = "0.0.1"
 ```rust
 use dioxus::prelude::*;
 use dioxus_code::Theme;
-use dioxus_code_editor::CodeEditor;
+use dioxus_code_editor::{CodeEditor, Language};
 
 #[component]
 fn Editor() -> Element {
@@ -38,7 +38,7 @@ fn Editor() -> Element {
     rsx! {
         CodeEditor {
             value: source(),
-            language: "rust",
+            language: Language::Rust,
             theme: Theme::TOKYO_NIGHT,
             oninput: move |value| source.set(value),
         }
@@ -53,7 +53,7 @@ The component is controlled — drive `value` from your own signal and update it
 | prop | description |
 |---|---|
 | `value` | Current editor contents. |
-| `language` | Arborium language hint, e.g. `"rust"`. |
+| `language` | Tree-sitter grammar selection. Pass a `Language` variant (for example `Language::Rust`) or use `Language::from_slug` for custom slugs. |
 | `filename` | Filename used for language detection when `language` is unset. |
 | `theme` | Syntax theme selection shared with `dioxus-code`; accepts `Theme` or `CodeTheme`. |
 | `line_numbers` | Show a one-based line gutter. Defaults to `true`. |

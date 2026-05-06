@@ -2419,21 +2419,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus-code-dioxus-hello"
-version = "0.0.1"
-dependencies = [
- "dioxus",
-]
-
-[[package]]
 name = "dioxus-code-editor"
 version = "0.0.1"
 dependencies = [
  "dioxus",
  "dioxus-code",
- "js-sys",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "dioxus-code-editor-example"
+version = "0.0.1"
+dependencies = [
+ "dioxus",
+ "dioxus-code",
+ "dioxus-code-editor",
 ]
 
 [[package]]

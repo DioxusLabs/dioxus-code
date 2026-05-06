@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use dioxus_code::{Code, CodeTheme, SourceCode, Theme};
-use dioxus_code_editor::CodeEditor;
+use dioxus_code_editor::{CodeEditor, Language};
 
 mod components;
 #[cfg(not(feature = "server"))]
@@ -18,6 +18,20 @@ use components::separator::Separator;
 use components::toggle_group::{ToggleGroup, ToggleItem};
 
 const STARTER: &str = include_str!("../snippets/starter.rs");
+const HERO_COUNTER: &str = r#"use dioxus::prelude::*;
+
+#[component]
+pub fn Counter() -> Element {
+    let mut count = use_signal(|| 0);
+
+    rsx! {
+        button {
+            onclick: move |_| count += 1,
+            "count: {count}"
+        }
+    }
+}
+"#;
 const DOCS_INSTALL: &str = include_str!("../snippets/install.toml");
 const DOCS_RUNTIME: &str = include_str!("../snippets/runtime.rs");
 const DOCS_STATIC: &str = include_str!("../snippets/static_macro.rs");
@@ -227,7 +241,7 @@ fn Home() -> Element {
         document::Link { rel: "stylesheet", href: APP_CSS }
         main { class: "site-shell",
             Header { scheme }
-            Hero { source: source(), theme: hero_theme, theme_label: hero_theme_label }
+            Hero { theme: hero_theme, theme_label: hero_theme_label }
             FeatureRowReceipt {}
             Playground { source, active_theme, scheme: scheme_value }
             Docs { scheme: scheme_value }
@@ -251,7 +265,7 @@ fn Header(scheme: Signal<Scheme>) -> Element {
                     index: 0usize,
                     value: "features".to_string(),
                     to: "#features",
-                    "Why"
+                    "Features"
                 }
                 NavbarItem {
                     index: 1usize,
@@ -502,7 +516,7 @@ fn IconExternal() -> Element {
 }
 
 #[component]
-fn Hero(source: String, theme: CodeTheme, theme_label: String) -> Element {
+fn Hero(theme: CodeTheme, theme_label: String) -> Element {
     rsx! {
         section { id: "top", class: "hero hero-terminal",
             div { class: "hero-terminal-grid",
@@ -549,7 +563,7 @@ fn Hero(source: String, theme: CodeTheme, theme_label: String) -> Element {
                         span { "{theme_label}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: SourceCode::new(source).with_language("rust"), theme }
+                        Code { src: SourceCode::new(HERO_COUNTER).with_language(Language::Rust), theme }
                     }
                 }
             }
@@ -703,7 +717,7 @@ fn Playground(
                     }
                     CodeEditor {
                         value: source(),
-                        language: "rust",
+                        language: Language::Rust,
                         filename: "source.rs",
                         theme,
                         aria_label: "Rust source editor",
@@ -773,7 +787,7 @@ struct DocStepData {
     title: &'static str,
     copy: &'static str,
     code: &'static str,
-    language: &'static str,
+    language: Language,
     file_name: &'static str,
 }
 
@@ -785,7 +799,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             title: "Add the dependency",
             copy: "Enable the runtime feature when source comes from user input, generated files, or network responses.",
             code: DOCS_INSTALL,
-            language: "toml",
+            language: Language::Toml,
             file_name: "Cargo.toml",
         },
         DocStepData {
@@ -794,7 +808,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             title: "SourceCode for live input",
             copy: "Pass any string through SourceCode. Provide a language hint when you already know it — Arborium handles tokenizing.",
             code: DOCS_RUNTIME,
-            language: "rust",
+            language: Language::Rust,
             file_name: "runtime.rs",
         },
         DocStepData {
@@ -803,7 +817,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             title: "code! for snippets in your repo",
             copy: "Use the macro for examples, docs, and any source checked in alongside your app. Highlight markup is generated at compile time.",
             code: DOCS_STATIC,
-            language: "rust",
+            language: Language::Rust,
             file_name: "static.rs",
         },
     ]
@@ -828,7 +842,7 @@ fn SiteFooter() -> Element {
                     }
                     div { class: "footer-col",
                         span { class: "card-eyebrow", "Project" }
-                        a { href: "#features", "Why" }
+                        a { href: "#features", "Features" }
                         a { href: "#playground", "Playground" }
                         a { href: "#docs", "Documentation" }
                     }

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use dioxus_code::Theme;
-use dioxus_code_editor::CodeEditor;
+use dioxus_code_editor::{CodeEditor, Language};
 
 const DEMO_CSS: Asset = asset!("/assets/demo.css");
 
@@ -27,7 +27,7 @@ fn App() -> Element {
             }
             CodeEditor {
                 value: source(),
-                language: "rust",
+                language: Language::Rust,
                 theme: Theme::TOKYO_NIGHT,
                 oninput: move |value| source.set(value),
             }

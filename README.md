@@ -60,12 +60,12 @@ dioxus-code = { version = "0.1", features = ["runtime"] }
 
 ```rust
 # use dioxus::prelude::*;
-use dioxus_code::{Code, SourceCode, Theme};
+use dioxus_code::{Code, Language, SourceCode, Theme};
 # let user_input = String::new();
 # let _ =
 rsx! {
     Code {
-        src: SourceCode::new(user_input).with_language("rust"),
+        src: SourceCode::new(user_input).with_language(Language::Rust),
         theme: Theme::GITHUB_LIGHT,
     }
 }

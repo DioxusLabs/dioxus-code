@@ -209,6 +209,12 @@ impl From<Theme> for CodeTheme {
 
 include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
 
+#[cfg(feature = "runtime")]
+mod language;
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+pub use language::Language;
+
 pub mod advanced;
 
 /// Source text to highlight at runtime.
@@ -218,15 +224,15 @@ pub mod advanced;
 /// [`Code()`].
 ///
 /// ```rust
-/// use dioxus_code::SourceCode;
-/// let _src = SourceCode::new("fn main() {}").with_language("rust");
+/// use dioxus_code::{Language, SourceCode};
+/// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
 /// ```
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
-    language: Option<String>,
+    language: Option<Language>,
     filename: Option<String>,
 }
 
@@ -249,14 +255,15 @@ impl SourceCode {
 
     /// Set the language explicitly.
     ///
-    /// Accepts an Arborium language slug such as `"rust"`.
+    /// To set the language from a runtime slug, use [`Language::from_slug`]
+    /// and pass the resulting variant.
     ///
     /// ```rust
-    /// use dioxus_code::SourceCode;
-    /// let _src = SourceCode::new("fn main() {}").with_language("rust");
+    /// use dioxus_code::{Language, SourceCode};
+    /// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
     /// ```
-    pub fn with_language(mut self, language: impl Into<String>) -> Self {
-        self.language = Some(language.into());
+    pub fn with_language(mut self, language: Language) -> Self {
+        self.language = Some(language);
         self
     }
 
@@ -289,7 +296,7 @@ impl SourceCode {
         highlighter.highlight(
             &self.source,
             None,
-            self.language.as_deref(),
+            self.language.as_ref().map(Language::slug),
             self.filename.as_deref(),
         )
     }
@@ -496,7 +503,9 @@ mod tests {
     #[test]
     fn runtime_language_string_highlights() {
         let tree: advanced::HighlightedSource =
-            SourceCode::new("fn main() {}").with_language("rust").into();
+            SourceCode::new("fn main() {}")
+                .with_language(Language::Rust)
+                .into();
         assert_eq!(tree.language(), Some("rust"));
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
