@@ -15,24 +15,15 @@ use std::collections::HashMap;
 mod language;
 pub use language::Language;
 
-/// Base stylesheet for [`Code()`].
-///
-/// This contains layout styles only; syntax colors live in the generated theme
-/// assets and the shared generated theme rule asset.
-///
-/// ```rust
-/// use dioxus_code::CODE_CSS;
-/// let _href = CODE_CSS;
-/// ```
-pub const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
+const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 
 #[cfg(feature = "macro")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 pub use dioxus_code_macro::code;
 
-/// Options shared by the `code!` macro and runtime [`SourceCode`].
+/// Options shared by the [`code!`] macro and runtime [`SourceCode`].
 ///
-/// The `code!` macro reads this builder syntax at compile time, and
+/// The [`code!`] macro reads this builder syntax at compile time, and
 /// [`SourceCode`] consumes the same builder at runtime.
 ///
 /// ```rust
@@ -61,7 +52,7 @@ impl CodeOptions {
 
     /// Create default code options.
     ///
-    /// Alias for [`CodeOptions::new`], matching builder-style asset APIs.
+    /// Alias for [`Self::new`], matching builder-style asset APIs.
     ///
     /// ```rust
     /// use dioxus_code::{CodeOptions, Language};
@@ -92,7 +83,7 @@ impl CodeOptions {
 
 /// A syntax-highlighting theme.
 ///
-/// Themes are exposed as associated constants on `Theme` (for example
+/// Themes are exposed as associated constants on [`Theme`] (for example
 /// [`Theme::TOKYO_NIGHT`]) and ship as scoped CSS so multiple themes can
 /// coexist on the same page without leaking styles.
 ///
@@ -224,7 +215,7 @@ pub mod advanced;
 /// Source text to highlight at runtime.
 ///
 /// Available with the `runtime` feature. Build one with [`SourceCode::new`],
-/// optionally annotate it with a language or filename, then pass it to
+/// optionally annotate it with [`SourceCode::with_language`], then pass it to
 /// [`Code()`].
 ///
 /// ```rust
@@ -237,7 +228,6 @@ pub mod advanced;
 pub struct SourceCode {
     source: String,
     options: CodeOptions,
-    filename: Option<String>,
 }
 
 #[cfg(feature = "runtime")]
@@ -253,11 +243,10 @@ impl SourceCode {
         Self {
             source: source.into(),
             options: CodeOptions::new(),
-            filename: None,
         }
     }
 
-    /// Apply shared code options.
+    /// Apply shared [`CodeOptions`].
     ///
     /// ```rust
     /// use dioxus_code::{CodeOptions, Language, SourceCode};
@@ -283,37 +272,12 @@ impl SourceCode {
         self
     }
 
-    /// Set a filename used to infer the language when none is set explicitly.
-    ///
-    /// ```rust
-    /// use dioxus_code::SourceCode;
-    /// let _src = SourceCode::new("fn main() {}").with_filename("main.rs");
-    /// ```
-    pub fn with_filename(mut self, filename: impl Into<String>) -> Self {
-        self.filename = Some(filename.into());
-        self
-    }
-
-    /// Set a filename used to infer the language when none is set explicitly.
-    ///
-    /// ```rust
-    /// # #[allow(deprecated)] {
-    /// use dioxus_code::SourceCode;
-    /// let _src = SourceCode::new("fn main() {}").with_name("main.rs");
-    /// # }
-    /// ```
-    #[deprecated = "use SourceCode::with_filename instead"]
-    pub fn with_name(self, name: impl Into<String>) -> Self {
-        self.with_filename(name)
-    }
-
     fn highlight(self) -> advanced::HighlightedSource {
         let mut highlighter = advanced::IncrementalHighlighter::new();
         highlighter.highlight(
             &self.source,
             None,
             self.options.language().map(|language| language.slug()),
-            self.filename.as_deref(),
         )
     }
 }
@@ -416,7 +380,7 @@ pub struct CodeProps {
 
 /// Render syntax-highlighted source code.
 ///
-/// Pair the `code!` macro for compile-time parsing, or `SourceCode` for
+/// Pair the [`code!`] macro for compile-time parsing, or [`SourceCode`] for
 /// runtime parsing with the `runtime` feature. The component injects its own
 /// stylesheet plus the selected theme's stylesheet.
 ///
@@ -518,18 +482,6 @@ mod tests {
             Some(Language::Rust),
         );
         assert_eq!(CodeOptions::builder().with_language(None).language(), None);
-    }
-
-    #[cfg(feature = "runtime")]
-    #[test]
-    fn runtime_filename_detection_highlights() {
-        let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}")
-            .with_filename("main.rs")
-            .into();
-        assert_eq!(tree.language(), Some("rust"));
-        assert!(tree.spans().iter().any(|span| {
-            span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
-        }));
     }
 
     #[cfg(feature = "runtime")]

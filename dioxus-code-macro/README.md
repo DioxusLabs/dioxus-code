@@ -17,7 +17,7 @@
 
 ---
 
-Implementation crate for the `code!` macro re-exported by [`dioxus-code`](https://crates.io/crates/dioxus-code) under its default `macro` feature. You usually depend on `dioxus-code` instead of pulling this in directly.
+Implementation crate for the [`code!`] macro re-exported by [`dioxus-code`](https://crates.io/crates/dioxus-code) under its default `macro` feature. You usually depend on `dioxus-code` instead of pulling this in directly.
 
 The macro reads a source file at compile time, parses it with [`arborium`](https://crates.io/crates/arborium), and expands to a static span tree. The runtime binary ships only the spans — no parser.
 
@@ -39,7 +39,7 @@ let _tree = code!(concat!(env!("CARGO_MANIFEST_DIR"), "/snippets/demo.rs"));
 ## Explicit language
 
 When the file extension isn't enough to infer the language, pass
-[`CodeOptions`](https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html):
+[`CodeOptions::builder`] with [`CodeOptions::with_language`]:
 
 ```rust
 use dioxus_code::{CodeOptions, Language, code};
@@ -53,3 +53,7 @@ let _tree = code!(
 ## License
 
 MIT.
+
+[`code!`]: https://docs.rs/dioxus-code-macro/latest/dioxus_code_macro/macro.code.html
+[`CodeOptions::builder`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.builder
+[`CodeOptions::with_language`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.with_language

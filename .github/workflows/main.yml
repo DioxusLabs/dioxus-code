@@ -44,15 +44,3 @@ jobs:
       all-features: false
       no-default-features: true
       features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
-
-  web-demo:
-    if: github.event_name == 'push'
-    uses: ealmloff/dioxus-ci/.github/workflows/web-build.yml@main
-    with:
-      working-directory: docsite
-      ssg: true
-      no-default-features: true
-      features: fullstack
-      debug-symbols: false
-      base-path: ${{ github.event.repository.name }}
-      dx-cli-version: 0.7.7

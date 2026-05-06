@@ -40,14 +40,12 @@ pub struct CodeEditorProps {
     /// Tree-sitter grammar used for syntax highlighting.
     ///
     /// Pass a [`Language`] variant directly, or use [`Language::from_slug`] for
-    /// custom Arborium slugs. When unset, the grammar is inferred from
-    /// `filename` or the source.
+    /// custom Arborium slugs. When unset, the grammar is inferred from the source.
     #[props(into, default)]
     pub language: Option<Language>,
-    /// Optional filename used for language detection when `language` is unset.
-    #[props(into, default)]
-    pub filename: Option<String>,
-    /// Syntax theme selection shared with `dioxus-code`.
+    /// Syntax theme selection shared with [`dioxus-code`].
+    ///
+    /// [`dioxus-code`]: https://docs.rs/dioxus-code/latest/dioxus_code/
     #[props(default, into)]
     pub theme: CodeTheme,
     /// Show a gutter with one-based line numbers.
@@ -62,7 +60,7 @@ pub struct CodeEditorProps {
     /// Accessible label for the editor textbox.
     #[props(into, default = "Code editor")]
     pub aria_label: String,
-    /// Placeholder shown only while `value` is empty.
+    /// Placeholder shown only while [`CodeEditorProps::value`] is empty.
     #[props(into, default)]
     pub placeholder: String,
     /// Extra class names appended to the editor root.
@@ -75,8 +73,9 @@ pub struct CodeEditorProps {
 
 /// Editable syntax-highlighted code surface.
 ///
-/// The component is controlled by `value`; update that value from `oninput` to
-/// keep the highlight layer and editable layer in sync.
+/// The component is controlled by [`CodeEditorProps::value`]; update that value
+/// from [`CodeEditorProps::oninput`] to keep the highlight layer and editable
+/// layer in sync.
 ///
 /// ```rust
 /// use dioxus::prelude::*;
@@ -105,12 +104,10 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     });
 
     let language = props.language.as_ref().map(Language::slug);
-    let filename = non_empty(props.filename.clone());
     let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
-    let source =
-        highlighter
-            .borrow_mut()
-            .highlight(&props.value, edit, language, filename.as_deref());
+    let source = highlighter
+        .borrow_mut()
+        .highlight(&props.value, edit, language);
     let lines = source.lines();
     let line_count = lines.len();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
@@ -166,10 +163,6 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
             }
         }
     }
-}
-
-fn non_empty(value: Option<String>) -> Option<String> {
-    value.filter(|value| !value.is_empty())
 }
 
 fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &str) -> String {

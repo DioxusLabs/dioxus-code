@@ -718,7 +718,6 @@ fn Playground(
                     CodeEditor {
                         value: source(),
                         language: Language::Rust,
-                        filename: "source.rs",
                         theme,
                         aria_label: "Rust source editor",
                         placeholder: "Type Rust code...",

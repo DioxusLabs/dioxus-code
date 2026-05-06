@@ -88,7 +88,6 @@ fn App() -> Element {
                 CodeEditor {
                     value: source(),
                     language: Language::Rust,
-                    filename: "fizzbuzz.rs",
                     theme: CodeTheme::fixed(theme),
                     line_numbers: line_numbers(),
                     read_only: read_only(),

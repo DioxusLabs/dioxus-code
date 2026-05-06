@@ -1,24 +1,28 @@
-name: PR Preview Build
+name: Web
 
 on:
+  push:
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-preview-build-${{ github.event.pull_request.number }}
+  group: web-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    uses: ealmloff/dioxus-ci/.github/workflows/pr-preview-build.yml@main
+    uses: ealmloff/dioxus-ci/.github/workflows/web-build.yml@main
     with:
       working-directory: docsite
       ssg: true
       no-default-features: true
       features: fullstack
       debug-symbols: false
+      base-path: ${{ github.event.repository.name }}
       dx-cli-version: 0.7.7

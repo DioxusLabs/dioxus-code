@@ -18,8 +18,11 @@ use syn::{Expr, LitStr, Token, parse_macro_input};
 /// Reads a source file relative to the consumer's `CARGO_MANIFEST_DIR`, parses
 /// it with [`arborium`], and expands to the resulting span tree. Pass the path
 /// as a string literal, `concat!(...)`, or `env!(...)`. Pass
-/// `CodeOptions::builder().with_language(Language::...)` to name the language
-/// explicitly; otherwise it is inferred from the file extension.
+/// [`CodeOptions::builder`] with [`CodeOptions::with_language`] to name the
+/// language explicitly; otherwise it is inferred from the file extension.
+///
+/// [`CodeOptions::builder`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.builder
+/// [`CodeOptions::with_language`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.with_language
 #[proc_macro]
 pub fn code(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as CodeInput);

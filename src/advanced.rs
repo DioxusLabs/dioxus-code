@@ -428,7 +428,7 @@ pub fn TokenSpan(props: TokenSpanProps) -> Element {
 /// ```rust
 /// use dioxus_code::advanced::IncrementalHighlighter;
 /// let mut hl = IncrementalHighlighter::new();
-/// let src = hl.highlight("fn main() {}", None, Some("rust"), None);
+/// let src = hl.highlight("fn main() {}", None, Some("rust"));
 /// assert_eq!(src.language(), Some("rust"));
 /// ```
 #[cfg(feature = "runtime")]
@@ -479,8 +479,7 @@ impl IncrementalHighlighter {
     /// Highlight `source`, reusing the previous parse tree when possible.
     ///
     /// `language` is an explicit Arborium slug such as `"rust"`. If empty or
-    /// unrecognized, `filename` is used to detect the language, and finally the
-    /// source content itself.
+    /// unrecognized, the language is detected from the source content itself.
     ///
     /// Pass `Some(edit)` when the caller knows precisely which bytes changed
     /// (for example, captured from a contenteditable's `beforeinput` event).
@@ -490,7 +489,7 @@ impl IncrementalHighlighter {
     /// ```rust
     /// use dioxus_code::advanced::IncrementalHighlighter;
     /// let mut hl = IncrementalHighlighter::new();
-    /// let src = hl.highlight("fn main() {}", None, Some("rust"), None);
+    /// let src = hl.highlight("fn main() {}", None, Some("rust"));
     /// assert!(!src.spans().is_empty());
     /// ```
     pub fn highlight(
@@ -498,15 +497,9 @@ impl IncrementalHighlighter {
         source: &str,
         edit: Option<SourceEdit>,
         language: Option<&str>,
-        filename: Option<&str>,
     ) -> HighlightedSource {
         let slug = language
             .map(str::to_string)
-            .or_else(|| {
-                filename
-                    .and_then(arborium::detect_language)
-                    .map(str::to_string)
-            })
             .or_else(|| arborium::detect_language(source).map(str::to_string));
 
         let Some(slug) = slug else {
@@ -1285,7 +1278,7 @@ mod incremental_tests {
     fn first_parse_matches_batch_path() {
         let mut hl = IncrementalHighlighter::new();
         let source = "fn main() { let x = 1; }";
-        let inc = hl.highlight(source, None, Some("rust"), None);
+        let inc = hl.highlight(source, None, Some("rust"));
         let batch: HighlightedSource = SourceCode::new(source.to_owned())
             .with_language(Language::Rust)
             .into();
@@ -1299,7 +1292,7 @@ mod incremental_tests {
     fn incremental_edit_with_explicit_source_edit() {
         let mut hl = IncrementalHighlighter::new();
         let first = "fn main() { let x = 1; }";
-        let _ = hl.highlight(first, None, Some("rust"), None);
+        let _ = hl.highlight(first, None, Some("rust"));
 
         // Insertion of a single byte "2" between the existing "1" and ";".
         let second = "fn main() { let x = 12; }";
@@ -1308,7 +1301,7 @@ mod incremental_tests {
             old_end_byte: 21,
             new_end_byte: 22,
         };
-        let inc = hl.highlight(second, Some(edit), Some("rust"), None);
+        let inc = hl.highlight(second, Some(edit), Some("rust"));
         let batch: HighlightedSource = SourceCode::new(second.to_owned())
             .with_language(Language::Rust)
             .into();
@@ -1320,7 +1313,7 @@ mod incremental_tests {
     fn malformed_edit_falls_back_to_full_parse() {
         let mut hl = IncrementalHighlighter::new();
         let first = "fn main() { let x = 1; }";
-        let _ = hl.highlight(first, None, Some("rust"), None);
+        let _ = hl.highlight(first, None, Some("rust"));
 
         // old_end_byte beyond the previous source — must not panic and must
         // produce correct spans (full-parse fallback).
@@ -1330,7 +1323,7 @@ mod incremental_tests {
             old_end_byte: 999,
             new_end_byte: 22,
         };
-        let inc = hl.highlight(second, Some(edit), Some("rust"), None);
+        let inc = hl.highlight(second, Some(edit), Some("rust"));
         let batch: HighlightedSource = SourceCode::new(second.to_owned())
             .with_language(Language::Rust)
             .into();
@@ -1340,10 +1333,10 @@ mod incremental_tests {
     #[test]
     fn missing_edit_falls_back_to_full_parse() {
         let mut hl = IncrementalHighlighter::new();
-        let _ = hl.highlight("fn main() { 1 }", None, Some("rust"), None);
+        let _ = hl.highlight("fn main() { 1 }", None, Some("rust"));
 
         let updated = "fn main() { 2 }";
-        let inc = hl.highlight(updated, None, Some("rust"), None);
+        let inc = hl.highlight(updated, None, Some("rust"));
         let batch: HighlightedSource = SourceCode::new(updated.to_owned())
             .with_language(Language::Rust)
             .into();
@@ -1357,19 +1350,19 @@ mod incremental_tests {
     fn unchanged_source_returns_cached_spans() {
         let mut hl = IncrementalHighlighter::new();
         let source = "fn main() {}";
-        let first = hl.highlight(source, None, Some("rust"), None);
-        let second = hl.highlight(source, None, Some("rust"), None);
+        let first = hl.highlight(source, None, Some("rust"));
+        let second = hl.highlight(source, None, Some("rust"));
         assert_eq!(first.spans(), second.spans());
     }
 
     #[test]
     fn language_switch_resets_state() {
         let mut hl = IncrementalHighlighter::new();
-        let _ = hl.highlight("fn main() {}", None, Some("rust"), None);
-        let result = hl.highlight("hello", None, Some("definitely-not-a-real-language"), None);
+        let _ = hl.highlight("fn main() {}", None, Some("rust"));
+        let result = hl.highlight("hello", None, Some("definitely-not-a-real-language"));
         assert_eq!(result.source(), "hello");
 
-        let after = hl.highlight("fn x() {}", None, Some("rust"), None);
+        let after = hl.highlight("fn x() {}", None, Some("rust"));
         assert_eq!(after.language(), Some("rust"));
         assert!(
             after
@@ -1377,13 +1370,6 @@ mod incremental_tests {
                 .iter()
                 .any(|s| { &after.source()[s.start() as usize..s.end() as usize] == "fn" })
         );
-    }
-
-    #[test]
-    fn filename_drives_language_detection() {
-        let mut hl = IncrementalHighlighter::new();
-        let result = hl.highlight("fn main() {}", None, None, Some("main.rs"));
-        assert_eq!(result.language(), Some("rust"));
     }
 
     #[test]
