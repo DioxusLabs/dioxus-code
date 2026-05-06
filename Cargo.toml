@@ -21,12 +21,12 @@ keywords = ["dioxus", "code", "highlighting", "editor"]
 categories = ["gui", "web-programming"]
 
 [workspace.dependencies]
-dioxus-code = { version = "0.1.0", path = "." }
-dioxus-code-editor = { version = "0.1.0", path = "code-editor", default-features = false }
+dioxus-code = { version = "0.1.1", path = "." }
+dioxus-code-editor = { version = "0.1.1", path = "code-editor", default-features = false }
 
 [package]
 name = "dioxus-code"
-version.workspace = true
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 description = "Syntax-highlighted code blocks for Dioxus."
