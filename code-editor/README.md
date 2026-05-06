@@ -66,4 +66,4 @@ The component is controlled — drive `value` from your own signal and update it
 
 ## License
 
-[MIT](LICENSE).
+MIT.

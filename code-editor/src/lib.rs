@@ -2,7 +2,12 @@
 #![warn(missing_docs)]
 
 use dioxus::prelude::*;
-use dioxus_code::{CodeSpan, CodeTheme, HighlightSpan, IntoTree, SourceCode, Theme};
+#[cfg(test)]
+use dioxus_code::Theme;
+#[cfg(test)]
+use dioxus_code::advanced::HighlightSegment;
+use dioxus_code::advanced::{CodeThemeStyles, HighlightedSource, TokenSpan};
+use dioxus_code::{CodeTheme, SourceCode};
 use std::{cell::RefCell, rc::Rc};
 
 /// Base stylesheet injected by [`CodeEditor`].
@@ -68,8 +73,8 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
         source_code = source_code.with_name(props.name.clone());
     }
 
-    let tree = source_code.into_tree();
-    let lines = editor_lines(tree.source(), tree.spans());
+    let source: HighlightedSource = source_code.into();
+    let lines = source.lines();
     let line_count = lines.len();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
     let (input_value, input_version) = synced_input_value(&input_sync, &props.value);
@@ -81,7 +86,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let readonly = props.read_only.then_some("true");
 
     rsx! {
-        EditorThemeStyles { theme: props.theme }
+        CodeThemeStyles { theme: props.theme }
         document::Stylesheet { href: CODE_EDITOR_CSS }
         div {
             class,
@@ -97,13 +102,13 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                     for line in lines {
                         div { class: "dxc-editor-line",
                             for segment in line {
-                                if let Some(tag) = segment.tag {
-                                    CodeSpan {
-                                        text: segment.text.to_string(),
+                                if let Some(tag) = segment.tag() {
+                                    TokenSpan {
+                                        text: segment.text().to_string(),
                                         tag,
                                     }
                                 } else {
-                                    span { "{segment.text}" }
+                                    span { "{segment.text()}" }
                                 }
                             }
                         }
@@ -126,35 +131,6 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                     },
                     "{input_value}"
                 }
-            }
-        }
-    }
-}
-
-#[component]
-fn EditorThemeStyles(theme: CodeTheme) -> Element {
-    let shared_theme_css = Theme::THEME_CSS;
-
-    match theme {
-        CodeTheme::Fixed(theme) => {
-            let theme_asset = theme.asset();
-            let theme_key = theme.name();
-
-            rsx! {
-                document::Stylesheet { href: shared_theme_css }
-                {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
-            }
-        }
-        CodeTheme::System { light, dark } => {
-            let light_asset = light.system_light_asset();
-            let dark_asset = dark.system_dark_asset();
-            let light_key = format!("{}-system-light", light.name());
-            let dark_key = format!("{}-system-dark", dark.name());
-
-            rsx! {
-                document::Stylesheet { href: shared_theme_css }
-                {rsx!{document::Stylesheet { key: "{light_key}", href: light_asset }}}
-                {rsx!{document::Stylesheet { key: "{dark_key}", href: dark_asset }}}
             }
         }
     }
@@ -191,97 +167,6 @@ fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &s
     class
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Segment<'a> {
-    text: &'a str,
-    tag: Option<&'static str>,
-}
-
-fn editor_lines<'a>(source: &'a str, spans: &[HighlightSpan]) -> Vec<Vec<Segment<'a>>> {
-    let mut lines = vec![Vec::new()];
-
-    for segment in segments(source, spans) {
-        push_line_segments(&mut lines, segment);
-    }
-
-    lines
-}
-
-fn segments<'a>(source: &'a str, spans: &[HighlightSpan]) -> Vec<Segment<'a>> {
-    if spans.is_empty() {
-        return vec![Segment {
-            text: source,
-            tag: None,
-        }];
-    }
-
-    let mut spans = spans.to_vec();
-    spans.sort_by(|a, b| a.start.cmp(&b.start).then_with(|| b.end.cmp(&a.end)));
-
-    let mut events = Vec::with_capacity(spans.len() * 2);
-    for (index, span) in spans.iter().enumerate() {
-        events.push((span.start, true, index));
-        events.push((span.end, false, index));
-    }
-    events.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-
-    let mut segments = Vec::new();
-    let mut last_pos = 0;
-    let mut stack: Vec<usize> = Vec::new();
-
-    for (pos, is_start, span_index) in events {
-        let pos = pos as usize;
-        if pos > last_pos && pos <= source.len() {
-            segments.push(Segment {
-                text: &source[last_pos..pos],
-                tag: stack.last().map(|&i| spans[i].tag),
-            });
-            last_pos = pos;
-        }
-
-        if is_start {
-            stack.push(span_index);
-        } else if let Some(index) = stack.iter().rposition(|&i| i == span_index) {
-            stack.remove(index);
-        }
-    }
-
-    if last_pos < source.len() {
-        segments.push(Segment {
-            text: &source[last_pos..],
-            tag: stack.last().map(|&i| spans[i].tag),
-        });
-    }
-
-    segments
-}
-
-fn push_line_segments<'a>(lines: &mut Vec<Vec<Segment<'a>>>, segment: Segment<'a>) {
-    let mut text = segment.text;
-
-    loop {
-        if let Some(newline) = text.find('\n') {
-            let before_newline = &text[..newline];
-            if !before_newline.is_empty() {
-                lines.last_mut().unwrap().push(Segment {
-                    text: before_newline,
-                    tag: segment.tag,
-                });
-            }
-            lines.push(Vec::new());
-            text = &text[newline + 1..];
-        } else {
-            if !text.is_empty() {
-                lines.last_mut().unwrap().push(Segment {
-                    text,
-                    tag: segment.tag,
-                });
-            }
-            break;
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -316,15 +201,10 @@ mod tests {
 
     #[test]
     fn lines_preserve_trailing_empty_line() {
-        let lines = editor_lines("let x = 1;\n", &[]);
+        let source = HighlightedSource::from_static_parts("let x = 1;\n", "rust", &[]);
+        let lines = source.lines();
         assert_eq!(lines.len(), 2);
-        assert_eq!(
-            lines[0],
-            vec![Segment {
-                text: "let x = 1;",
-                tag: None,
-            }]
-        );
+        assert_eq!(lines[0], vec![HighlightSegment::new("let x = 1;", None)]);
         assert!(lines[1].is_empty());
     }
 

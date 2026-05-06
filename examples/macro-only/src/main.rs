@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
-use dioxus_code::{Code, Theme, code};
+use dioxus_code::advanced::HighlightedSource;
+use dioxus_code::{Code, CodeOptions, Theme, code};
 
 fn main() {
     dioxus::launch(App);
@@ -7,6 +8,10 @@ fn main() {
 
 #[component]
 fn App() -> Element {
+    const CODE: HighlightedSource = code!(
+        "/snippets/demo.rs",
+        CodeOptions::new().with_language("rust")
+    );
     rsx! {
         style { {APP_CSS} }
         main { class: "macro-only-shell",
@@ -15,7 +20,7 @@ fn App() -> Element {
                 p { "This example embeds parsed Arborium spans at compile time through code!()." }
             }
             Code {
-                src: code!("/snippets/demo.rs"),
+                src: CODE,
                 theme: Theme::RUSTDOC_AYU,
             }
         }

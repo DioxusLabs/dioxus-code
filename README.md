@@ -47,6 +47,7 @@ fn ReadMe() -> Element {
 ```
 
 The path is resolved from the consumer's `CARGO_MANIFEST_DIR`. `concat!` and `env!` work too.
+When the file extension is ambiguous, pass `CodeOptions::new().with_language("rust")`.
 
 ## Runtime highlighting
 
@@ -94,7 +95,7 @@ It is controlled — drive `value` from your own signal and update it inside `on
 
 ## Themes
 
-Thirty-odd built-ins, including Tokyo Night, Catppuccin (all four), Dracula, GitHub Light/Dark, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, the Rustdoc themes, and others. Each is exposed as a `Theme` constant and a CSS asset; pages with multiple themes render side-by-side without leaking styles.
+Thirty-odd built-ins, including Tokyo Night, Catppuccin (all four), Dracula, GitHub Light/Dark, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, the Rustdoc themes, and others. Each is exposed as a `Theme` constant; pages with multiple themes render side-by-side without leaking styles.
 
 ```rust,ignore
 Code { src: code!("/example.rs"), theme: Theme::CATPPUCCIN_MOCHA }

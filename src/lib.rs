@@ -18,6 +18,51 @@ pub const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 #[cfg(feature = "macro")]
 pub use dioxus_code_macro::code;
 
+/// Options for the `code!` macro.
+///
+/// The `code!` macro reads this builder syntax at compile time.
+///
+/// ```rust,ignore
+/// use dioxus_code::{CodeOptions, code};
+///
+/// let source = code!(
+///     "/snippets/Containerfile",
+///     CodeOptions::new().with_language("dockerfile")
+/// );
+/// ```
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CodeOptions {
+    _private: (),
+}
+
+impl CodeOptions {
+    /// Create default macro options.
+    pub const fn new() -> Self {
+        Self { _private: () }
+    }
+
+    /// Create default macro options.
+    ///
+    /// Alias for [`CodeOptions::new`], matching builder-style asset APIs.
+    pub const fn builder() -> Self {
+        Self::new()
+    }
+
+    /// Create default macro options.
+    ///
+    /// Equivalent to [`CodeOptions::new`].
+    pub const fn default() -> Self {
+        Self::new()
+    }
+
+    /// Set the language explicitly.
+    ///
+    /// The macro parses this call during expansion.
+    pub const fn with_language(self, _language: &'static str) -> Self {
+        self
+    }
+}
+
 /// A syntax-highlighting theme.
 ///
 /// Themes are exposed as associated constants on `Theme` (for example
@@ -25,51 +70,28 @@ pub use dioxus_code_macro::code;
 /// coexist on the same page without leaking styles.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Theme {
-    name: &'static str,
+    stylesheet: ThemeStylesheet,
+    system_light: ThemeStylesheet,
+    system_dark: ThemeStylesheet,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ThemeStylesheet {
     class: &'static str,
-    system_light_class: &'static str,
-    system_dark_class: &'static str,
     asset: Asset,
-    system_light_asset: Asset,
-    system_dark_asset: Asset,
 }
 
 impl Theme {
-    /// The theme's canonical slug, e.g. `"tokyo-night"`.
-    pub const fn name(self) -> &'static str {
-        self.name
+    const fn stylesheet(self) -> ThemeStylesheet {
+        self.stylesheet
     }
 
-    /// The CSS class applied to the rendered code container, e.g. `"dxc-tokyo-night"`.
-    pub const fn class(self) -> &'static str {
-        self.class
+    const fn system_light(self) -> ThemeStylesheet {
+        self.system_light
     }
 
-    /// The CSS class that supplies this theme's variables to the light slot in
-    /// a [`CodeTheme::System`] pair.
-    pub const fn system_light_class(self) -> &'static str {
-        self.system_light_class
-    }
-
-    /// The CSS class that supplies this theme's variables to the dark slot in
-    /// a [`CodeTheme::System`] pair.
-    pub const fn system_dark_class(self) -> &'static str {
-        self.system_dark_class
-    }
-
-    /// The Dioxus [`Asset`] for the theme's stylesheet.
-    pub const fn asset(self) -> Asset {
-        self.asset
-    }
-
-    /// The Dioxus [`Asset`] for this theme's system light variables.
-    pub const fn system_light_asset(self) -> Asset {
-        self.system_light_asset
-    }
-
-    /// The Dioxus [`Asset`] for this theme's system dark variables.
-    pub const fn system_dark_asset(self) -> Asset {
-        self.system_dark_asset
+    const fn system_dark(self) -> ThemeStylesheet {
+        self.system_dark
     }
 }
 
@@ -81,151 +103,142 @@ impl Default for Theme {
 
 /// Syntax theme selection for [`Code()`].
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum CodeTheme {
-    /// Always render with one concrete theme.
+pub struct CodeTheme {
+    selection: CodeThemeSelection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum CodeThemeSelection {
     Fixed(Theme),
-    /// Render with `light` when `(prefers-color-scheme: light)` matches and
-    /// `dark` when `(prefers-color-scheme: dark)` matches.
+    System { light: Theme, dark: Theme },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum CodeThemeStylesheets {
+    Fixed(ThemeStylesheet),
     System {
-        /// Theme used for light color scheme media queries.
-        light: Theme,
-        /// Theme used for dark color scheme media queries.
-        dark: Theme,
+        light: ThemeStylesheet,
+        dark: ThemeStylesheet,
     },
 }
 
 impl CodeTheme {
     /// Create a fixed theme selection.
     pub const fn fixed(theme: Theme) -> Self {
-        Self::Fixed(theme)
+        Self {
+            selection: CodeThemeSelection::Fixed(theme),
+        }
     }
 
     /// Create a CSS-only system theme pair.
     pub const fn system(light: Theme, dark: Theme) -> Self {
-        Self::System { light, dark }
+        Self {
+            selection: CodeThemeSelection::System { light, dark },
+        }
     }
 
-    /// CSS classes to apply to the rendered code container.
+    /// CSS classes to apply to a code container using this theme selection.
     pub fn classes(self) -> String {
-        match self {
-            Self::Fixed(theme) => theme.class().to_string(),
-            Self::System { light, dark } => format!(
-                "dxc-system {} {}",
-                light.system_light_class(),
-                dark.system_dark_class()
-            ),
+        match self.stylesheets() {
+            CodeThemeStylesheets::Fixed(stylesheet) => stylesheet.class.to_string(),
+            CodeThemeStylesheets::System { light, dark } => {
+                format!("dxc-system {} {}", light.class, dark.class)
+            }
+        }
+    }
+
+    const fn stylesheets(self) -> CodeThemeStylesheets {
+        match self.selection {
+            CodeThemeSelection::Fixed(theme) => CodeThemeStylesheets::Fixed(theme.stylesheet()),
+            CodeThemeSelection::System { light, dark } => CodeThemeStylesheets::System {
+                light: light.system_light(),
+                dark: dark.system_dark(),
+            },
         }
     }
 }
 
 impl Default for CodeTheme {
     fn default() -> Self {
-        Self::Fixed(Theme::default())
+        Self::fixed(Theme::default())
     }
 }
 
 impl From<Theme> for CodeTheme {
     fn from(theme: Theme) -> Self {
-        Self::Fixed(theme)
+        Self::fixed(theme)
     }
 }
 
 include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
 
-/// A parsed source string with its highlighted spans.
+pub mod advanced;
+
+/// Source text to highlight at runtime.
 ///
-/// Produced by [`SourceCode::into_tree`] (runtime parsing) or by the
-/// [`code!`] macro (compile-time parsing). Pass it to [`Code()`] for rendering,
-/// or inspect [`source`](Self::source) and [`spans`](Self::spans) directly.
+/// Available with the `runtime` feature. Build one with [`SourceCode::new`],
+/// optionally annotate it with a language or filename, then pass it to
+/// [`Code()`].
+#[cfg(feature = "runtime")]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CodeTree {
+pub struct SourceCode {
     source: String,
     language: Option<String>,
-    spans: Vec<HighlightSpan>,
-    error: Option<String>,
+    name: Option<String>,
 }
 
-impl CodeTree {
-    /// Build a tree from `'static` parts produced by the [`code!`] macro.
-    ///
-    /// You normally don't call this directly — the macro emits a call to it.
-    pub fn from_static_parts(
-        source: &'static str,
-        language: &'static str,
-        spans: &'static [StaticSpan],
-    ) -> Self {
-        Self {
-            source: source.to_string(),
-            language: Some(language.to_string()),
-            spans: spans.iter().copied().map(HighlightSpan::from).collect(),
-            error: None,
-        }
-    }
-
-    /// Build a tree with no highlighting and an error message describing why.
-    ///
-    /// Used as a fallback when language detection or parsing fails.
-    pub fn plaintext(source: impl Into<String>, error: impl Into<String>) -> Self {
+#[cfg(feature = "runtime")]
+impl SourceCode {
+    /// Wrap a raw source string with no language hint.
+    pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),
             language: None,
-            spans: Vec::new(),
-            error: Some(error.into()),
+            name: None,
         }
     }
 
-    /// The raw source text.
-    pub fn source(&self) -> &str {
-        &self.source
+    /// Set the language explicitly.
+    ///
+    /// Accepts an Arborium language slug such as `"rust"`.
+    pub fn with_language(mut self, language: impl Into<String>) -> Self {
+        self.language = Some(language.into());
+        self
     }
 
-    /// The detected or explicitly set language slug, if any.
-    pub fn language(&self) -> Option<&str> {
-        self.language.as_deref()
+    /// Set a filename used to infer the language when none is set explicitly.
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
     }
 
-    /// An error message, set when highlighting failed and the tree fell back to plaintext.
-    pub fn error(&self) -> Option<&str> {
-        self.error.as_deref()
-    }
+    fn highlight(self) -> advanced::HighlightedSource {
+        let language = self
+            .language
+            .or_else(|| {
+                self.name
+                    .as_deref()
+                    .and_then(arborium::detect_language)
+                    .map(str::to_string)
+            })
+            .or_else(|| arborium::detect_language(&self.source).map(str::to_string));
 
-    /// The highlight spans covering the source.
-    pub fn spans(&self) -> &[HighlightSpan] {
-        &self.spans
-    }
-}
+        let Some(language) = language else {
+            return advanced::HighlightedSource::plaintext(
+                self.source,
+                "could not detect language",
+            );
+        };
 
-/// A highlight span emitted by the [`code!`] macro at compile time.
-///
-/// Mirrors [`HighlightSpan`] but with a `'static` tag so it can live in a
-/// `const` array baked into the binary.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StaticSpan {
-    /// Byte offset (inclusive) of the span's start in the source.
-    pub start: u32,
-    /// Byte offset (exclusive) of the span's end in the source.
-    pub end: u32,
-    /// Highlight tag class suffix (for example `"k"` for keywords).
-    pub tag: &'static str,
-}
-
-/// A highlight span attached to a region of source text.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HighlightSpan {
-    /// Byte offset (inclusive) of the span's start in the source.
-    pub start: u32,
-    /// Byte offset (exclusive) of the span's end in the source.
-    pub end: u32,
-    /// Highlight tag class suffix (for example `"k"` for keywords).
-    pub tag: &'static str,
-}
-
-impl From<StaticSpan> for HighlightSpan {
-    fn from(span: StaticSpan) -> Self {
-        Self {
-            start: span.start,
-            end: span.end,
-            tag: span.tag,
+        let mut highlighter = arborium::Highlighter::new();
+        match highlighter.highlight_spans(&language, &self.source) {
+            Ok(spans) => advanced::HighlightedSource::from_owned_parts(
+                self.source,
+                Some(language),
+                normalize_spans(spans),
+                None,
+            ),
+            Err(error) => advanced::HighlightedSource::plaintext(self.source, error.to_string()),
         }
     }
 }
@@ -251,7 +264,7 @@ impl From<Span> for RawHighlightSpan {
 }
 
 #[cfg(feature = "runtime")]
-fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<HighlightSpan> {
+fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<advanced::HighlightSpan> {
     let mut deduped: HashMap<(u32, u32), RawHighlightSpan> = HashMap::new();
 
     for span in spans.into_iter().map(RawHighlightSpan::from) {
@@ -273,23 +286,21 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<HighlightSpan> 
     let mut spans: Vec<_> = deduped
         .into_values()
         .filter_map(|span| {
-            Some(HighlightSpan {
-                start: span.start,
-                end: span.end,
-                tag: span.tag?,
-            })
+            Some(advanced::HighlightSpan::new(
+                span.start, span.end, span.tag?,
+            ))
         })
         .collect();
 
-    spans.sort_by_key(|span| (span.start, span.end));
+    spans.sort_by_key(|span| (span.start(), span.end()));
 
-    let mut coalesced: Vec<HighlightSpan> = Vec::with_capacity(spans.len());
+    let mut coalesced: Vec<advanced::HighlightSpan> = Vec::with_capacity(spans.len());
     for span in spans {
         if let Some(last) = coalesced.last_mut()
-            && span.tag == last.tag
-            && span.start <= last.end
+            && span.tag() == last.tag()
+            && span.start() <= last.end()
         {
-            last.end = last.end.max(span.end);
+            last.set_end(last.end().max(span.end()));
             continue;
         }
         coalesced.push(span);
@@ -298,246 +309,19 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<HighlightSpan> 
     coalesced
 }
 
-/// Source text to highlight at runtime.
-///
-/// Available with the `runtime` feature. Build one with [`SourceCode::new`],
-/// optionally annotate it with a language or filename, then convert it via
-/// [`IntoTree::into_tree`] (or pass it directly to [`Code()`]).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SourceCode {
-    source: String,
-    language: Option<String>,
-    name: Option<String>,
-}
-
-impl SourceCode {
-    /// Wrap a raw source string with no language hint.
-    pub fn new(source: impl Into<String>) -> Self {
-        Self {
-            source: source.into(),
-            language: None,
-            name: None,
-        }
-    }
-
-    /// Set the language slug explicitly (for example `"rust"`).
-    pub fn with_language(mut self, language: impl Into<String>) -> Self {
-        self.language = Some(language.into());
-        self
-    }
-
-    /// Set a filename used to infer the language when none is set explicitly.
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
-        self.name = Some(name.into());
-        self
-    }
-
-    #[cfg(feature = "runtime")]
-    fn highlight(self) -> CodeTree {
-        let language = self
-            .language
-            .or_else(|| {
-                self.name
-                    .as_deref()
-                    .and_then(arborium::detect_language)
-                    .map(str::to_string)
-            })
-            .or_else(|| arborium::detect_language(&self.source).map(str::to_string));
-
-        let Some(language) = language else {
-            return CodeTree::plaintext(self.source, "could not detect language");
-        };
-
-        let mut highlighter = arborium::Highlighter::new();
-        match highlighter.highlight_spans(&language, &self.source) {
-            Ok(spans) => CodeTree {
-                source: self.source,
-                language: Some(language),
-                spans: normalize_spans(spans),
-                error: None,
-            },
-            Err(error) => CodeTree::plaintext(self.source, error.to_string()),
-        }
-    }
-
-    #[cfg(not(feature = "runtime"))]
-    fn highlight(self) -> CodeTree {
-        CodeTree::plaintext(
-            self.source,
-            "runtime parsing requires the dioxus-code runtime feature",
-        )
-    }
-}
-
-/// Conversion into a [`CodeTree`] suitable for rendering.
-///
-/// Implemented for [`CodeTree`] (identity), [`SourceCode`] (highlights at
-/// runtime), and — with the `runtime` feature — `&str` and `String`
-/// (auto-detect the language and highlight).
-pub trait IntoTree {
-    /// Consume `self` and return its [`CodeTree`] representation.
-    fn into_tree(self) -> CodeTree;
-}
-
-impl IntoTree for CodeTree {
-    fn into_tree(self) -> CodeTree {
-        self
-    }
-}
-
-impl IntoTree for SourceCode {
-    fn into_tree(self) -> CodeTree {
-        self.highlight()
-    }
-}
-
 #[cfg(feature = "runtime")]
-impl IntoTree for &str {
-    fn into_tree(self) -> CodeTree {
-        SourceCode::new(self).highlight()
-    }
-}
-
-#[cfg(feature = "runtime")]
-impl IntoTree for String {
-    fn into_tree(self) -> CodeTree {
-        SourceCode::new(self).highlight()
-    }
-}
-
-impl From<CodeTree> for CodeSource {
-    fn from(tree: CodeTree) -> Self {
-        Self(tree)
-    }
-}
-
-impl From<SourceCode> for CodeSource {
+impl From<SourceCode> for advanced::HighlightedSource {
     fn from(code: SourceCode) -> Self {
-        Self(code.into_tree())
-    }
-}
-
-#[cfg(feature = "runtime")]
-impl From<&str> for CodeSource {
-    fn from(source: &str) -> Self {
-        Self(source.into_tree())
-    }
-}
-
-#[cfg(feature = "runtime")]
-impl From<String> for CodeSource {
-    fn from(source: String) -> Self {
-        Self(source.into_tree())
-    }
-}
-
-/// Pre-parsed source ready to hand to the [`Code()`] component.
-///
-/// Anything implementing [`IntoTree`] — including [`CodeTree`], [`SourceCode`],
-/// and (with the `runtime` feature) string types — converts into this via the
-/// `#[props(into)]` field on [`CodeProps::src`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CodeSource(CodeTree);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct CodeSegment<'a> {
-    text: &'a str,
-    tag: Option<&'static str>,
-}
-
-fn code_segments<'a>(source: &'a str, spans: &[HighlightSpan]) -> Vec<CodeSegment<'a>> {
-    code_segments_inner(source.trim_end_matches('\n'), spans)
-}
-
-fn code_segments_inner<'a>(source: &'a str, spans: &[HighlightSpan]) -> Vec<CodeSegment<'a>> {
-    if spans.is_empty() {
-        return vec![CodeSegment {
-            text: source,
-            tag: None,
-        }];
-    }
-
-    let mut spans = spans.to_vec();
-    spans.sort_by(|a, b| a.start.cmp(&b.start).then_with(|| b.end.cmp(&a.end)));
-
-    let mut events = Vec::with_capacity(spans.len() * 2);
-    for (index, span) in spans.iter().enumerate() {
-        events.push((span.start, true, index));
-        events.push((span.end, false, index));
-    }
-    events.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-
-    let mut segments = Vec::new();
-    let mut last_pos = 0;
-    let mut stack: Vec<usize> = Vec::new();
-
-    for (pos, is_start, span_index) in events {
-        let pos = pos as usize;
-        if pos > last_pos && pos <= source.len() {
-            push_code_segment(
-                &mut segments,
-                &source[last_pos..pos],
-                stack.last().map(|&i| spans[i].tag),
-            );
-            last_pos = pos;
-        }
-
-        if is_start {
-            stack.push(span_index);
-        } else if let Some(index) = stack.iter().rposition(|&i| i == span_index) {
-            stack.remove(index);
-        }
-    }
-
-    if last_pos < source.len() {
-        push_code_segment(
-            &mut segments,
-            &source[last_pos..],
-            stack.last().map(|&i| spans[i].tag),
-        );
-    }
-
-    segments
-}
-
-fn push_code_segment<'a>(
-    segments: &mut Vec<CodeSegment<'a>>,
-    text: &'a str,
-    tag: Option<&'static str>,
-) {
-    segments.push(CodeSegment { text, tag });
-}
-
-/// Props for [`CodeSpan`].
-#[derive(Props, Clone, PartialEq)]
-pub struct CodeSpanProps {
-    /// The literal text rendered inside the span.
-    pub text: String,
-    /// Highlight tag class suffix used to derive the span's class name.
-    pub tag: &'static str,
-}
-
-/// Render a single highlighted token as `<span class="a-{tag}">{text}</span>`.
-///
-/// Used internally by [`Code()`] but exposed so callers can build their own
-/// layouts on top of [`HighlightSpan`].
-#[component]
-pub fn CodeSpan(props: CodeSpanProps) -> Element {
-    let class = format!("a-{}", props.tag);
-    rsx! {
-        span {
-            class,
-            "{props.text}"
-        }
+        code.highlight()
     }
 }
 
 /// Props for [`Code()`].
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeProps {
-    /// Source to render. Accepts anything implementing [`IntoTree`].
+    /// Source to render.
     #[props(into)]
-    pub src: CodeSource,
+    pub src: advanced::HighlightedSource,
     /// Syntax theme. Defaults to [`Theme::RUSTDOC_AYU`].
     #[props(default, into)]
     pub theme: CodeTheme,
@@ -545,24 +329,19 @@ pub struct CodeProps {
 
 /// Render syntax-highlighted source code.
 ///
-/// Pair the [`code!`] macro for compile-time parsing, or [`SourceCode`] for
-/// runtime parsing (with the `runtime` feature). The component injects its
-/// own stylesheet plus the selected theme's stylesheet.
+/// Pair the `code!` macro for compile-time parsing, or `SourceCode` for
+/// runtime parsing with the `runtime` feature. The component injects its own
+/// stylesheet plus the selected theme's stylesheet.
 #[component]
 pub fn Code(props: CodeProps) -> Element {
-    let CodeTree {
-        source,
-        language,
-        spans,
-        error,
-    } = props.src.0;
-    let segments = code_segments(&source, &spans);
+    let source = &props.src;
+    let segments = source.trimmed_segments();
     let class = format!("dxc {}", props.theme.classes());
-    let language = language.as_deref().unwrap_or("text");
-    let error = error.as_deref();
+    let language = source.language().unwrap_or("text");
+    let error = source.error();
 
     rsx! {
-        ThemeStyles { theme: props.theme }
+        advanced::CodeThemeStyles { theme: props.theme }
         document::Stylesheet { href: CODE_CSS }
         pre {
             class,
@@ -570,46 +349,17 @@ pub fn Code(props: CodeProps) -> Element {
             "data-error": error,
             code {
                 for segment in segments {
-                    if let Some(tag) = segment.tag {
-                        CodeSpan {
-                            text: segment.text.to_string(),
+                    if let Some(tag) = segment.tag() {
+                        advanced::TokenSpan {
+                            text: segment.text().to_string(),
                             tag,
                         }
                     } else {
                         span {
-                            "{segment.text}"
+                            "{segment.text()}"
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-#[component]
-fn ThemeStyles(theme: CodeTheme) -> Element {
-    let shared_theme_css = Theme::THEME_CSS;
-
-    match theme {
-        CodeTheme::Fixed(theme) => {
-            let theme_asset = theme.asset();
-            let theme_key = theme.name();
-
-            rsx! {
-                document::Stylesheet { href: shared_theme_css }
-                {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
-            }
-        }
-        CodeTheme::System { light, dark } => {
-            let light_asset = light.system_light_asset();
-            let dark_asset = dark.system_dark_asset();
-            let light_key = format!("{}-system-light", light.name());
-            let dark_key = format!("{}-system-dark", dark.name());
-
-            rsx! {
-                document::Stylesheet { href: shared_theme_css }
-                {rsx!{document::Stylesheet { key: "{light_key}", href: light_asset }}}
-                {rsx!{document::Stylesheet { key: "{dark_key}", href: dark_asset }}}
             }
         }
     }
@@ -629,32 +379,58 @@ mod tests {
 
     #[test]
     fn plaintext_is_escaped() {
-        let tree = CodeTree::plaintext("<script>alert(1)</script>", "plain");
         assert_eq!(
-            code_segments(tree.source(), tree.spans()),
-            vec![CodeSegment {
-                text: "<script>alert(1)</script>",
-                tag: None,
-            }]
+            advanced::HighlightedSource::from_static_parts(
+                "<script>alert(1)</script>",
+                "text",
+                &[]
+            )
+            .segments(),
+            vec![advanced::HighlightSegment::new(
+                "<script>alert(1)</script>",
+                None,
+            )]
         );
+    }
+
+    #[test]
+    fn highlighted_lines_preserve_trailing_empty_line() {
+        let source = advanced::HighlightedSource::from_static_parts("let x = 1;\n", "rust", &[]);
+        let lines = source.lines();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(
+            lines[0],
+            vec![advanced::HighlightSegment::new("let x = 1;", None)]
+        );
+        assert!(lines[1].is_empty());
     }
 
     #[cfg(feature = "runtime")]
     #[test]
     fn runtime_name_detection_highlights() {
-        let tree = SourceCode::new("fn main() {}")
-            .with_name("main.rs")
-            .into_tree();
+        let tree: advanced::HighlightedSource =
+            SourceCode::new("fn main() {}").with_name("main.rs").into();
         assert_eq!(tree.language(), Some("rust"));
         assert!(tree.spans().iter().any(|span| {
-            span.tag == "k" && &tree.source()[span.start as usize..span.end as usize] == "fn"
+            span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
+        }));
+    }
+
+    #[cfg(feature = "runtime")]
+    #[test]
+    fn runtime_language_string_highlights() {
+        let tree: advanced::HighlightedSource =
+            SourceCode::new("fn main() {}").with_language("rust").into();
+        assert_eq!(tree.language(), Some("rust"));
+        assert!(tree.spans().iter().any(|span| {
+            span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
     }
 
     #[cfg(feature = "runtime")]
     #[test]
     fn runtime_raw_string_uses_arborium_detection_fallback() {
-        let tree = SourceCode::new("fn main() {}").into_tree();
+        let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}").into();
         assert_eq!(tree.language(), None);
         assert_eq!(tree.error(), Some("could not detect language"));
     }

@@ -9,17 +9,17 @@ use macro_string::MacroString;
 use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote};
+use quote::{ToTokens, format_ident, quote};
 use syn::parse::{Parse, ParseStream};
-use syn::{Ident, LitStr, Token, parse_macro_input};
+use syn::{Expr, LitStr, Token, parse_macro_input};
 
 /// Compile-time syntax highlighting.
 ///
 /// Reads a source file relative to the consumer's `CARGO_MANIFEST_DIR`, parses
 /// it with [`arborium`], and expands to the resulting span tree. Pass the path
-/// as a string literal, `concat!(...)`, or `env!(...)`. Optionally name the
-/// language explicitly with `code!("/path", "rust")`; otherwise it is inferred
-/// from the file extension.
+/// as a string literal, `concat!(...)`, or `env!(...)`. Pass
+/// `CodeOptions::new().with_language("...")` to name the language explicitly;
+/// otherwise it is inferred from the file extension.
 #[proc_macro]
 pub fn code(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as CodeInput);
@@ -32,31 +32,70 @@ pub fn code(input: TokenStream) -> TokenStream {
 
 struct CodeInput {
     path: String,
-    language: Option<LitStr>,
+    options: CodeOptionsInput,
+}
+
+#[derive(Default)]
+struct CodeOptionsInput {
+    language: Option<String>,
+    validation_tokens: Option<TokenStream2>,
 }
 
 impl Parse for CodeInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let MacroString(path) = input.parse()?;
-        let mut language = None;
+        let mut options = CodeOptionsInput::default();
 
         if input.peek(Token![,]) {
             input.parse::<Token![,]>()?;
             if !input.is_empty() {
-                let ident = input.parse::<Ident>()?;
-                if ident != "language" {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        "expected `language = \"...\"`",
-                    ));
-                }
-                input.parse::<Token![=]>()?;
-                language = Some(input.parse()?);
+                options = parse_code_options(input)?;
             }
         }
 
-        Ok(Self { path, language })
+        Ok(Self { path, options })
     }
+}
+
+fn parse_code_options(input: ParseStream<'_>) -> syn::Result<CodeOptionsInput> {
+    let expr = input.parse::<Expr>()?;
+    parse_optional_trailing_comma(input)?;
+    Ok(CodeOptionsInput {
+        language: extract_language(&expr),
+        validation_tokens: Some(expr.to_token_stream()),
+    })
+}
+
+fn parse_optional_trailing_comma(input: ParseStream<'_>) -> syn::Result<()> {
+    if input.peek(Token![,]) {
+        input.parse::<Token![,]>()?;
+    }
+    if input.is_empty() {
+        Ok(())
+    } else {
+        Err(input.error("unexpected tokens after code macro options"))
+    }
+}
+
+fn extract_language(expr: &Expr) -> Option<String> {
+    let Expr::MethodCall(method) = expr else {
+        return None;
+    };
+
+    let receiver_language = extract_language(&method.receiver);
+    if method.method != "with_language" || method.args.len() != 1 {
+        return receiver_language;
+    }
+
+    method
+        .args
+        .first()
+        .and_then(|arg| eval_string_expr(arg).ok())
+        .or(receiver_language)
+}
+
+fn eval_string_expr(expr: &Expr) -> syn::Result<String> {
+    syn::parse2::<MacroString>(expr.to_token_stream()).map(|MacroString(value)| value)
 }
 
 fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
@@ -73,23 +112,30 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         )
     })?;
 
-    let language = input
+    let crate_path = dioxus_code_crate_path()?;
+    let options_validation = input.options.validation_tokens.map(|options| {
+        quote! {
+            const _: #crate_path::CodeOptions = #options;
+        }
+    });
+    let Some(language) = input
+        .options
         .language
-        .as_ref()
-        .map(LitStr::value)
         .or_else(|| arborium::detect_language(&macro_path).map(str::to_string))
-        .ok_or_else(|| {
-            syn::Error::new(
-                Span::call_site(),
-                format!("could not detect language for `{macro_path}`; pass `language = \"...\"`"),
-            )
-        })?;
+    else {
+        let message = format!(
+            "could not detect language for `{macro_path}`; pass `CodeOptions::new().with_language(\"rust\")`"
+        );
+        return Ok(quote! {{
+            #options_validation
+            compile_error!(#message);
+        }});
+    };
 
     let mut highlighter = arborium::Highlighter::new();
     let spans = highlighter
         .highlight_spans(&language, &source)
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
-    let crate_path = dioxus_code_crate_path()?;
 
     let language_lit = LitStr::new(&language, Span::call_site());
     let absolute_lit = LitStr::new(&absolute_path.to_string_lossy(), Span::call_site());
@@ -99,18 +145,15 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         let tag = LitStr::new(span.tag, Span::call_site());
 
         quote! {
-            #crate_path::StaticSpan {
-                start: #start,
-                end: #end,
-                tag: #tag,
-            }
+            #crate_path::advanced::HighlightSpan::new(#start, #end, #tag)
         }
     });
 
     Ok(quote! {{
+        #options_validation
         const SOURCE: &str = include_str!(#absolute_lit);
-        static SPANS: &[#crate_path::StaticSpan] = &[#(#spans),*];
-        #crate_path::CodeTree::from_static_parts(SOURCE, #language_lit, SPANS)
+        static SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#spans),*];
+        #crate_path::advanced::HighlightedSource::from_static_parts(SOURCE, #language_lit, SPANS)
     }})
 }
 

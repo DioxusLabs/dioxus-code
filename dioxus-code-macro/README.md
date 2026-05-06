@@ -37,12 +37,18 @@ code!(concat!(env!("CARGO_MANIFEST_DIR"), "/snippets/demo.rs"));
 
 ## Explicit language
 
-When the file extension isn't enough to infer the language, pass `language = "..."`:
+When the file extension isn't enough to infer the language, pass
+[`CodeOptions`](https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html):
 
 ```rust,ignore
-code!("/snippets/Containerfile", language = "dockerfile");
+use dioxus_code::{CodeOptions, code};
+
+code!(
+    "/snippets/Containerfile",
+    CodeOptions::new().with_language("dockerfile")
+);
 ```
 
 ## License
 
-[MIT](LICENSE).
+MIT.
