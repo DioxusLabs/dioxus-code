@@ -26,7 +26,7 @@ A controlled, syntax-highlighted code editor for Dioxus. Pairs a `contenteditabl
 dioxus-code-editor = "0.0.1"
 ```
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use dioxus_code::Theme;
 use dioxus_code_editor::CodeEditor;
@@ -54,7 +54,7 @@ The component is controlled — drive `value` from your own signal and update it
 |---|---|
 | `value` | Current editor contents. |
 | `language` | Arborium language hint, e.g. `"rust"`. |
-| `name` | Filename used for language detection when `language` is empty. |
+| `filename` | Filename used for language detection when `language` is unset. |
 | `theme` | Syntax theme selection shared with `dioxus-code`; accepts `Theme` or `CodeTheme`. |
 | `line_numbers` | Show a one-based line gutter. Defaults to `true`. |
 | `read_only` | Disable editing while preserving highlighting. |

@@ -2393,7 +2393,10 @@ version = "0.0.1"
 dependencies = [
  "arborium",
  "arborium-theme",
+ "arborium-tree-sitter",
  "dioxus",
+ "dioxus-code",
+ "dioxus-code-editor",
  "dioxus-code-macro",
 ]
 
@@ -2428,6 +2431,9 @@ version = "0.0.1"
 dependencies = [
  "dioxus",
  "dioxus-code",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -2444,6 +2450,7 @@ version = "0.0.1"
 dependencies = [
  "arborium",
  "arborium-theme",
+ "dioxus-code",
  "macro-string",
  "proc-macro-crate 3.5.0",
  "proc-macro2",

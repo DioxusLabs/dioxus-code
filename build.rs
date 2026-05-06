@@ -43,6 +43,7 @@ struct SharedRules {
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rustc-check-cfg=cfg(docsrs)");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let asset_dir = manifest_dir.join("assets/generated/arborium-themes");
@@ -87,7 +88,7 @@ fn main() {
         ));
 
         generated.push_str(&format!(
-            "    /// The `{slug}` syntax theme.\n    pub const {const_name}: Self = Self {{ stylesheet: ThemeStylesheet {{ class: \"{class}\", asset: Self::{const_name}_CSS }}, system_light: ThemeStylesheet {{ class: \"{system_light_class}\", asset: Self::{const_name}_SYSTEM_LIGHT_CSS }}, system_dark: ThemeStylesheet {{ class: \"{system_dark_class}\", asset: Self::{const_name}_SYSTEM_DARK_CSS }} }};\n",
+            "    /// The `{slug}` syntax theme.\n    ///\n    /// ```rust\n    /// use dioxus_code::Theme;\n    /// let _theme = Theme::{const_name};\n    /// ```\n    pub const {const_name}: Self = Self {{ stylesheet: ThemeStylesheet {{ class: \"{class}\", asset: Self::{const_name}_CSS }}, system_light: ThemeStylesheet {{ class: \"{system_light_class}\", asset: Self::{const_name}_SYSTEM_LIGHT_CSS }}, system_dark: ThemeStylesheet {{ class: \"{system_dark_class}\", asset: Self::{const_name}_SYSTEM_DARK_CSS }} }};\n",
             const_name = theme.const_name,
             slug = theme.slug,
             class = theme.class,

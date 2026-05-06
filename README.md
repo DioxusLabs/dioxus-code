@@ -31,7 +31,7 @@ Two ways to highlight:
 dioxus-code = "0.1"
 ```
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use dioxus_code::{Code, Theme, code};
 
@@ -47,7 +47,7 @@ fn ReadMe() -> Element {
 ```
 
 The path is resolved from the consumer's `CARGO_MANIFEST_DIR`. `concat!` and `env!` work too.
-When the file extension is ambiguous, pass `CodeOptions::new().with_language("rust")`.
+When the file extension is ambiguous, pass `CodeOptions::builder().with_language("rust")`.
 
 ## Runtime highlighting
 
@@ -58,27 +58,32 @@ For editor-style use cases where the source isn't known at compile time:
 dioxus-code = { version = "0.1", features = ["runtime"] }
 ```
 
-```rust,ignore
+```rust
+# use dioxus::prelude::*;
 use dioxus_code::{Code, SourceCode, Theme};
-
+# let user_input = String::new();
+# let _ =
 rsx! {
     Code {
         src: SourceCode::new(user_input).with_language("rust"),
         theme: Theme::GITHUB_LIGHT,
     }
 }
+# ;
 ```
 
-Language can be set explicitly, inferred from a filename via `with_name("main.rs")`, or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
+Language can be set explicitly, inferred from a filename via `with_filename("main.rs")`, or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
 
 ## Editor
 
 `dioxus-code-editor` is a sibling crate that pairs the highlighter with a `contenteditable` input layer:
 
-```rust,ignore
+```rust
+# use dioxus::prelude::*;
 use dioxus_code_editor::CodeEditor;
 use dioxus_code::Theme;
 
+# fn editor() -> Element {
 let mut source = use_signal(|| String::new());
 
 rsx! {
@@ -89,6 +94,7 @@ rsx! {
         oninput: move |value| source.set(value),
     }
 }
+# }
 ```
 
 It is controlled — drive `value` from your own signal and update it inside `oninput`.
@@ -97,20 +103,27 @@ It is controlled — drive `value` from your own signal and update it inside `on
 
 Thirty-odd built-ins, including Tokyo Night, Catppuccin (all four), Dracula, GitHub Light/Dark, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, the Rustdoc themes, and others. Each is exposed as a `Theme` constant; pages with multiple themes render side-by-side without leaking styles.
 
-```rust,ignore
-Code { src: code!("/example.rs"), theme: Theme::CATPPUCCIN_MOCHA }
+```rust
+# use dioxus::prelude::*;
+# use dioxus_code::{Code, Theme, code};
+# let _ = rsx! {
+Code { src: code!("/snippets/demo.rs"), theme: Theme::CATPPUCCIN_MOCHA }
+# };
 ```
 
 Use `CodeTheme::system` to select a light and dark theme with CSS media
 queries. This is JavaScript-free and works during SSR:
 
-```rust,ignore
+```rust
+# use dioxus::prelude::*;
 use dioxus_code::{Code, CodeTheme, Theme, code};
 
+# let _ = rsx! {
 Code {
-    src: code!("/example.rs"),
+    src: code!("/snippets/demo.rs"),
     theme: CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT),
 }
+# };
 ```
 
 ## Examples

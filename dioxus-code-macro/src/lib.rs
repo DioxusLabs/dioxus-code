@@ -18,8 +18,8 @@ use syn::{Expr, LitStr, Token, parse_macro_input};
 /// Reads a source file relative to the consumer's `CARGO_MANIFEST_DIR`, parses
 /// it with [`arborium`], and expands to the resulting span tree. Pass the path
 /// as a string literal, `concat!(...)`, or `env!(...)`. Pass
-/// `CodeOptions::new().with_language("...")` to name the language explicitly;
-/// otherwise it is inferred from the file extension.
+/// `CodeOptions::builder().with_language("...")` to name the language
+/// explicitly; otherwise it is inferred from the file extension.
 #[proc_macro]
 pub fn code(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as CodeInput);
@@ -78,20 +78,21 @@ fn parse_optional_trailing_comma(input: ParseStream<'_>) -> syn::Result<()> {
 }
 
 fn extract_language(expr: &Expr) -> Option<String> {
-    let Expr::MethodCall(method) = expr else {
-        return None;
-    };
+    match expr {
+        Expr::MethodCall(method) => {
+            let receiver_language = extract_language(&method.receiver);
+            if method.method != "with_language" || method.args.len() != 1 {
+                return receiver_language;
+            }
 
-    let receiver_language = extract_language(&method.receiver);
-    if method.method != "with_language" || method.args.len() != 1 {
-        return receiver_language;
+            method
+                .args
+                .first()
+                .and_then(|arg| eval_string_expr(arg).ok())
+                .or(receiver_language)
+        }
+        _ => None,
     }
-
-    method
-        .args
-        .first()
-        .and_then(|arg| eval_string_expr(arg).ok())
-        .or(receiver_language)
 }
 
 fn eval_string_expr(expr: &Expr) -> syn::Result<String> {
@@ -124,7 +125,7 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         .or_else(|| arborium::detect_language(&macro_path).map(str::to_string))
     else {
         let message = format!(
-            "could not detect language for `{macro_path}`; pass `CodeOptions::new().with_language(\"rust\")`"
+            "could not detect language for `{macro_path}`; pass `CodeOptions::builder().with_language(\"rust\")`"
         );
         return Ok(quote! {{
             #options_validation
@@ -145,7 +146,7 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         let tag = LitStr::new(span.tag, Span::call_site());
 
         quote! {
-            #crate_path::advanced::HighlightSpan::new(#start, #end, #tag)
+            #crate_path::advanced::HighlightSpan::new(#start..#end, #tag)
         }
     });
 
@@ -227,7 +228,7 @@ fn normalize_spans(spans: Vec<arborium::advanced::Span>) -> Vec<NormalizedSpan> 
 
 fn dioxus_code_crate_path() -> syn::Result<TokenStream2> {
     match crate_name("dioxus-code") {
-        Ok(FoundCrate::Itself) => Ok(quote!(crate)),
+        Ok(FoundCrate::Itself) => Ok(quote!(::dioxus_code)),
         Ok(FoundCrate::Name(name)) => {
             let ident = format_ident!("{}", name);
             Ok(quote!(::#ident))

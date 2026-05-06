@@ -1,0 +1,6 @@
+FROM debian:stable-slim
+
+WORKDIR /app
+COPY . .
+
+CMD ["./run.sh"]

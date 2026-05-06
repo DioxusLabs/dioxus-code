@@ -511,7 +511,7 @@ fn Hero(source: String, theme: CodeTheme, theme_label: String) -> Element {
                         Badge { variant: BadgeVariant::Outline, "v0.1 · Dioxus 0.7" }
                     }
                     h1 { class: "hero-h1",
-                        "Code highlighter for Dioxus; Runtime or "
+                        "Code highlighter for Dioxus; runtime or "
                         em { "compile time" }
                         "."
                     }
@@ -704,7 +704,7 @@ fn Playground(
                     CodeEditor {
                         value: source(),
                         language: "rust",
-                        name: "source.rs",
+                        filename: "source.rs",
                         theme,
                         aria_label: "Rust source editor",
                         placeholder: "Type Rust code...",

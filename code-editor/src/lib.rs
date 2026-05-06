@@ -2,18 +2,36 @@
 #![warn(missing_docs)]
 
 use dioxus::prelude::*;
+use dioxus_code::CodeTheme;
 #[cfg(test)]
 use dioxus_code::Theme;
+use dioxus_code::advanced::{CodeThemeStyles, IncrementalHighlighter, SourceEdit, TokenSpan};
 #[cfg(test)]
-use dioxus_code::advanced::HighlightSegment;
-use dioxus_code::advanced::{CodeThemeStyles, HighlightedSource, TokenSpan};
-use dioxus_code::{CodeTheme, SourceCode};
+use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
 use std::{cell::RefCell, rc::Rc};
 
+#[cfg(target_arch = "wasm32")]
+mod web_input;
+
 /// Base stylesheet injected by [`CodeEditor`].
+///
+/// ```rust
+/// use dioxus_code_editor::CODE_EDITOR_CSS;
+/// let _href = CODE_EDITOR_CSS;
+/// ```
 pub const CODE_EDITOR_CSS: Asset = asset!("/assets/dioxus-code-editor.css");
 
 /// Props for [`CodeEditor`].
+///
+/// ```rust,no_run
+/// use dioxus_code::{CodeTheme, Theme};
+/// use dioxus_code_editor::CodeEditorProps;
+/// let _props = CodeEditorProps::builder()
+///     .value("fn main() {}")
+///     .language(Some("rust".to_string()))
+///     .theme(CodeTheme::fixed(Theme::TOKYO_NIGHT))
+///     .build();
+/// ```
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeEditorProps {
     /// The current editor contents.
@@ -21,10 +39,10 @@ pub struct CodeEditorProps {
     pub value: String,
     /// Optional Arborium language hint, for example `"rust"`.
     #[props(into, default)]
-    pub language: String,
-    /// Optional file name used for language detection when `language` is empty.
+    pub language: Option<String>,
+    /// Optional filename used for language detection when `language` is unset.
     #[props(into, default)]
-    pub name: String,
+    pub filename: Option<String>,
     /// Syntax theme selection shared with `dioxus-code`.
     #[props(default, into)]
     pub theme: CodeTheme,
@@ -55,6 +73,24 @@ pub struct CodeEditorProps {
 ///
 /// The component is controlled by `value`; update that value from `oninput` to
 /// keep the highlight layer and editable layer in sync.
+///
+/// ```rust
+/// use dioxus::prelude::*;
+/// use dioxus_code::Theme;
+/// use dioxus_code_editor::CodeEditor;
+///
+/// fn _example() -> Element {
+///     let mut source = use_signal(String::new);
+///     rsx! {
+///         CodeEditor {
+///             value: source(),
+///             language: "rust",
+///             theme: Theme::TOKYO_NIGHT,
+///             oninput: move |value| source.set(value),
+///         }
+///     }
+/// }
+/// ```
 #[component]
 pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let input_sync = use_hook(|| {
@@ -65,15 +101,21 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
         }))
     });
 
-    let mut source_code = SourceCode::new(props.value.clone());
-    if !props.language.is_empty() {
-        source_code = source_code.with_language(props.language.clone());
-    }
-    if !props.name.is_empty() {
-        source_code = source_code.with_name(props.name.clone());
-    }
+    let highlighter = use_hook(|| Rc::new(RefCell::new(IncrementalHighlighter::new())));
+    let pending_edit: Rc<RefCell<Option<SourceEdit>>> = use_hook(|| Rc::new(RefCell::new(None)));
+    #[cfg(target_arch = "wasm32")]
+    let edit_capture: Rc<RefCell<Option<web_input::InputEditCapture>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
 
-    let source: HighlightedSource = source_code.into();
+    let language = non_empty(props.language.clone());
+    let filename = non_empty(props.filename.clone());
+    let edit = pending_edit.borrow_mut().take();
+    let source = highlighter.borrow_mut().highlight(
+        &props.value,
+        edit,
+        language.as_deref(),
+        filename.as_deref(),
+    );
     let lines = source.lines();
     let line_count = lines.len();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
@@ -104,7 +146,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                             for segment in line {
                                 if let Some(tag) = segment.tag() {
                                     TokenSpan {
-                                        text: segment.text().to_string(),
+                                        text: segment.text(),
                                         tag,
                                     }
                                 } else {
@@ -124,6 +166,26 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                     "aria-multiline": "true",
                     "aria-readonly": readonly,
                     "data-placeholder": props.placeholder,
+                    onmounted: {
+                        #[cfg(target_arch = "wasm32")]
+                        let pending_edit = pending_edit.clone();
+                        #[cfg(target_arch = "wasm32")]
+                        let edit_capture = edit_capture.clone();
+                        move |event: MountedEvent| {
+                            #[cfg(target_arch = "wasm32")]
+                            {
+                                use dioxus::web::WebEventExt;
+                                if let Some(element) = event.try_as_web_event() {
+                                    *edit_capture.borrow_mut() =
+                                        Some(web_input::install(element, pending_edit.clone()));
+                                }
+                            }
+                            #[cfg(not(target_arch = "wasm32"))]
+                            {
+                                let _ = event;
+                            }
+                        }
+                    },
                     oninput: move |event| {
                         let value = event.value();
                         input_sync.borrow_mut().last_local_value = value.clone();
@@ -134,6 +196,10 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
             }
         }
     }
+}
+
+fn non_empty(value: Option<String>) -> Option<String> {
+    value.filter(|value| !value.is_empty())
 }
 
 #[derive(Debug)]

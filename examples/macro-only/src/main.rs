@@ -10,7 +10,7 @@ fn main() {
 fn App() -> Element {
     const CODE: HighlightedSource = code!(
         "/snippets/demo.rs",
-        CodeOptions::new().with_language("rust")
+        CodeOptions::builder().with_language("rust")
     );
     rsx! {
         style { {APP_CSS} }

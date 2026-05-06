@@ -1,5 +1,8 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
+
+extern crate self as dioxus_code;
 
 #[cfg(feature = "runtime")]
 use arborium::advanced::Span;
@@ -13,21 +16,27 @@ use std::collections::HashMap;
 ///
 /// This contains layout styles only; syntax colors live in the generated theme
 /// assets and the shared generated theme rule asset.
+///
+/// ```rust
+/// use dioxus_code::CODE_CSS;
+/// let _href = CODE_CSS;
+/// ```
 pub const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 
 #[cfg(feature = "macro")]
+#[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 pub use dioxus_code_macro::code;
 
 /// Options for the `code!` macro.
 ///
 /// The `code!` macro reads this builder syntax at compile time.
 ///
-/// ```rust,ignore
+/// ```rust
 /// use dioxus_code::{CodeOptions, code};
 ///
-/// let source = code!(
+/// let _source = code!(
 ///     "/snippets/Containerfile",
-///     CodeOptions::new().with_language("dockerfile")
+///     CodeOptions::builder().with_language("dockerfile")
 /// );
 /// ```
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -37,6 +46,11 @@ pub struct CodeOptions {
 
 impl CodeOptions {
     /// Create default macro options.
+    ///
+    /// ```rust
+    /// use dioxus_code::CodeOptions;
+    /// let _opts = CodeOptions::new();
+    /// ```
     pub const fn new() -> Self {
         Self { _private: () }
     }
@@ -44,20 +58,23 @@ impl CodeOptions {
     /// Create default macro options.
     ///
     /// Alias for [`CodeOptions::new`], matching builder-style asset APIs.
-    pub const fn builder() -> Self {
-        Self::new()
-    }
-
-    /// Create default macro options.
     ///
-    /// Equivalent to [`CodeOptions::new`].
-    pub const fn default() -> Self {
+    /// ```rust
+    /// use dioxus_code::CodeOptions;
+    /// let _opts = CodeOptions::builder().with_language("rust");
+    /// ```
+    pub const fn builder() -> Self {
         Self::new()
     }
 
     /// Set the language explicitly.
     ///
     /// The macro parses this call during expansion.
+    ///
+    /// ```rust
+    /// use dioxus_code::CodeOptions;
+    /// let _opts = CodeOptions::new().with_language("rust");
+    /// ```
     pub const fn with_language(self, _language: &'static str) -> Self {
         self
     }
@@ -68,6 +85,11 @@ impl CodeOptions {
 /// Themes are exposed as associated constants on `Theme` (for example
 /// [`Theme::TOKYO_NIGHT`]) and ship as scoped CSS so multiple themes can
 /// coexist on the same page without leaking styles.
+///
+/// ```rust
+/// use dioxus_code::Theme;
+/// let _theme = Theme::TOKYO_NIGHT;
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Theme {
     stylesheet: ThemeStylesheet,
@@ -102,28 +124,32 @@ impl Default for Theme {
 }
 
 /// Syntax theme selection for [`Code()`].
+///
+/// ```rust
+/// use dioxus_code::{CodeTheme, Theme};
+/// let _theme = CodeTheme::fixed(Theme::TOKYO_NIGHT);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CodeTheme {
     selection: CodeThemeSelection,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum CodeThemeSelection {
-    Fixed(Theme),
-    System { light: Theme, dark: Theme },
+enum CodeThemeChoice<T> {
+    Fixed(T),
+    System { light: T, dark: T },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum CodeThemeStylesheets {
-    Fixed(ThemeStylesheet),
-    System {
-        light: ThemeStylesheet,
-        dark: ThemeStylesheet,
-    },
-}
+type CodeThemeSelection = CodeThemeChoice<Theme>;
+type CodeThemeStylesheets = CodeThemeChoice<ThemeStylesheet>;
 
 impl CodeTheme {
     /// Create a fixed theme selection.
+    ///
+    /// ```rust
+    /// use dioxus_code::{CodeTheme, Theme};
+    /// let _theme = CodeTheme::fixed(Theme::TOKYO_NIGHT);
+    /// ```
     pub const fn fixed(theme: Theme) -> Self {
         Self {
             selection: CodeThemeSelection::Fixed(theme),
@@ -131,6 +157,11 @@ impl CodeTheme {
     }
 
     /// Create a CSS-only system theme pair.
+    ///
+    /// ```rust
+    /// use dioxus_code::{CodeTheme, Theme};
+    /// let _theme = CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT);
+    /// ```
     pub const fn system(light: Theme, dark: Theme) -> Self {
         Self {
             selection: CodeThemeSelection::System { light, dark },
@@ -138,6 +169,12 @@ impl CodeTheme {
     }
 
     /// CSS classes to apply to a code container using this theme selection.
+    ///
+    /// ```rust
+    /// use dioxus_code::{CodeTheme, Theme};
+    /// let classes = CodeTheme::fixed(Theme::TOKYO_NIGHT).classes();
+    /// assert!(classes.contains("dxc-tokyo-night"));
+    /// ```
     pub fn classes(self) -> String {
         match self.stylesheets() {
             CodeThemeStylesheets::Fixed(stylesheet) => stylesheet.class.to_string(),
@@ -179,76 +216,91 @@ pub mod advanced;
 /// Available with the `runtime` feature. Build one with [`SourceCode::new`],
 /// optionally annotate it with a language or filename, then pass it to
 /// [`Code()`].
+///
+/// ```rust
+/// use dioxus_code::SourceCode;
+/// let _src = SourceCode::new("fn main() {}").with_language("rust");
+/// ```
 #[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
     language: Option<String>,
-    name: Option<String>,
+    filename: Option<String>,
 }
 
 #[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 impl SourceCode {
     /// Wrap a raw source string with no language hint.
+    ///
+    /// ```rust
+    /// use dioxus_code::SourceCode;
+    /// let _src = SourceCode::new("fn main() {}");
+    /// ```
     pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),
             language: None,
-            name: None,
+            filename: None,
         }
     }
 
     /// Set the language explicitly.
     ///
     /// Accepts an Arborium language slug such as `"rust"`.
+    ///
+    /// ```rust
+    /// use dioxus_code::SourceCode;
+    /// let _src = SourceCode::new("fn main() {}").with_language("rust");
+    /// ```
     pub fn with_language(mut self, language: impl Into<String>) -> Self {
         self.language = Some(language.into());
         self
     }
 
     /// Set a filename used to infer the language when none is set explicitly.
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
-        self.name = Some(name.into());
+    ///
+    /// ```rust
+    /// use dioxus_code::SourceCode;
+    /// let _src = SourceCode::new("fn main() {}").with_filename("main.rs");
+    /// ```
+    pub fn with_filename(mut self, filename: impl Into<String>) -> Self {
+        self.filename = Some(filename.into());
         self
     }
 
+    /// Set a filename used to infer the language when none is set explicitly.
+    ///
+    /// ```rust
+    /// # #[allow(deprecated)] {
+    /// use dioxus_code::SourceCode;
+    /// let _src = SourceCode::new("fn main() {}").with_name("main.rs");
+    /// # }
+    /// ```
+    #[deprecated = "use SourceCode::with_filename instead"]
+    pub fn with_name(self, name: impl Into<String>) -> Self {
+        self.with_filename(name)
+    }
+
     fn highlight(self) -> advanced::HighlightedSource {
-        let language = self
-            .language
-            .or_else(|| {
-                self.name
-                    .as_deref()
-                    .and_then(arborium::detect_language)
-                    .map(str::to_string)
-            })
-            .or_else(|| arborium::detect_language(&self.source).map(str::to_string));
-
-        let Some(language) = language else {
-            return advanced::HighlightedSource::plaintext(
-                self.source,
-                "could not detect language",
-            );
-        };
-
-        let mut highlighter = arborium::Highlighter::new();
-        match highlighter.highlight_spans(&language, &self.source) {
-            Ok(spans) => advanced::HighlightedSource::from_owned_parts(
-                self.source,
-                Some(language),
-                normalize_spans(spans),
-                None,
-            ),
-            Err(error) => advanced::HighlightedSource::plaintext(self.source, error.to_string()),
-        }
+        let mut highlighter = advanced::IncrementalHighlighter::new();
+        highlighter.highlight(
+            &self.source,
+            None,
+            self.language.as_deref(),
+            self.filename.as_deref(),
+        )
     }
 }
 
 #[cfg(feature = "runtime")]
-struct RawHighlightSpan {
-    start: u32,
-    end: u32,
-    tag: Option<&'static str>,
-    pattern_index: u32,
+pub(crate) struct RawHighlightSpan {
+    pub(crate) start: u32,
+    pub(crate) end: u32,
+    pub(crate) tag: Option<&'static str>,
+    pub(crate) pattern_index: u32,
 }
 
 #[cfg(feature = "runtime")]
@@ -264,10 +316,12 @@ impl From<Span> for RawHighlightSpan {
 }
 
 #[cfg(feature = "runtime")]
-fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<advanced::HighlightSpan> {
+pub(crate) fn normalize_spans(
+    spans: impl IntoIterator<Item = RawHighlightSpan>,
+) -> Vec<advanced::HighlightSpan> {
     let mut deduped: HashMap<(u32, u32), RawHighlightSpan> = HashMap::new();
 
-    for span in spans.into_iter().map(RawHighlightSpan::from) {
+    for span in spans.into_iter() {
         let key = (span.start, span.end);
         if let Some(existing) = deduped.get(&key) {
             let should_replace = match (span.tag.is_some(), existing.tag.is_some()) {
@@ -287,7 +341,8 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<advanced::Highl
         .into_values()
         .filter_map(|span| {
             Some(advanced::HighlightSpan::new(
-                span.start, span.end, span.tag?,
+                span.start..span.end,
+                span.tag?,
             ))
         })
         .collect();
@@ -310,6 +365,7 @@ fn normalize_spans(spans: impl IntoIterator<Item = Span>) -> Vec<advanced::Highl
 }
 
 #[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 impl From<SourceCode> for advanced::HighlightedSource {
     fn from(code: SourceCode) -> Self {
         code.highlight()
@@ -317,6 +373,14 @@ impl From<SourceCode> for advanced::HighlightedSource {
 }
 
 /// Props for [`Code()`].
+///
+/// ```rust
+/// use dioxus_code::{CodeProps, Theme, code};
+/// let _props = CodeProps {
+///     src: code!("/snippets/demo.rs"),
+///     theme: Theme::TOKYO_NIGHT.into(),
+/// };
+/// ```
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeProps {
     /// Source to render.
@@ -332,6 +396,17 @@ pub struct CodeProps {
 /// Pair the `code!` macro for compile-time parsing, or `SourceCode` for
 /// runtime parsing with the `runtime` feature. The component injects its own
 /// stylesheet plus the selected theme's stylesheet.
+///
+/// ```rust
+/// use dioxus::prelude::*;
+/// use dioxus_code::{Code, Theme, code};
+///
+/// fn _example() -> Element {
+///     rsx! {
+///         Code { src: code!("/snippets/demo.rs"), theme: Theme::TOKYO_NIGHT }
+///     }
+/// }
+/// ```
 #[component]
 pub fn Code(props: CodeProps) -> Element {
     let source = &props.src;
@@ -351,7 +426,7 @@ pub fn Code(props: CodeProps) -> Element {
                 for segment in segments {
                     if let Some(tag) = segment.tag() {
                         advanced::TokenSpan {
-                            text: segment.text().to_string(),
+                            text: segment.text(),
                             tag,
                         }
                     } else {
@@ -407,9 +482,10 @@ mod tests {
 
     #[cfg(feature = "runtime")]
     #[test]
-    fn runtime_name_detection_highlights() {
-        let tree: advanced::HighlightedSource =
-            SourceCode::new("fn main() {}").with_name("main.rs").into();
+    fn runtime_filename_detection_highlights() {
+        let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}")
+            .with_filename("main.rs")
+            .into();
         assert_eq!(tree.language(), Some("rust"));
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
