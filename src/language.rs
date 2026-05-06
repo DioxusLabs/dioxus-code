@@ -5,8 +5,6 @@
 //! `dioxus-code`, so the enum only ever exposes variants whose grammar is
 //! actually compiled into this build.
 
-use dioxus::core::SuperFrom;
-
 macro_rules! define_languages {
     (
         $(
@@ -301,22 +299,4 @@ define_languages! {
     Zig => "zig",
     #[cfg(feature = "lang-zsh")]
     Zsh => "zsh",
-}
-
-#[doc(hidden)]
-pub struct OptionLanguageFromStrMarker;
-
-impl<'a> SuperFrom<&'a str, OptionLanguageFromStrMarker> for Option<Language> {
-    fn super_from(slug: &'a str) -> Self {
-        Language::from_slug(slug)
-    }
-}
-
-#[doc(hidden)]
-pub struct OptionLanguageFromStringMarker;
-
-impl SuperFrom<String, OptionLanguageFromStringMarker> for Option<Language> {
-    fn super_from(slug: String) -> Self {
-        Language::from_slug(&slug)
-    }
 }

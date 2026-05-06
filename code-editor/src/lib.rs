@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 pub use dioxus_code::Language;
 #[cfg(test)]
 use dioxus_code::Theme;
-use dioxus_code::advanced::{Buffer, CodeThemeStyles, TokenSpan};
+use dioxus_code::advanced::{Buffer, CodeThemeStyles, HighlightError, TokenSpan};
 #[cfg(test)]
 use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
 use dioxus_code::{CodeTheme, SourceCode};
@@ -121,7 +121,13 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                 }
                 if buffer.source() != props.value {
                     let result = match edit {
-                        Some(edit) => buffer.edit(edit, props.value.clone()),
+                        Some(edit) => match buffer.edit(edit, props.value.clone()) {
+                            Ok(()) => Ok(()),
+                            Err(HighlightError::InvalidEdit { .. }) => {
+                                buffer.replace(props.value.clone())
+                            }
+                            Err(error) => Err(error),
+                        },
                         None => buffer.replace(props.value.clone()),
                     };
                     let _ = result;

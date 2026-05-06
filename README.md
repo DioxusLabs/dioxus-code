@@ -73,7 +73,7 @@ rsx! {
 # ;
 ```
 
-Language can be set explicitly with the same [`CodeOptions`] builder used by [`code!`], or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
+Language must be set explicitly with the same [`CodeOptions`] builder used by [`code!`]. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
 
 ## Editor
 

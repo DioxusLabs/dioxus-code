@@ -98,6 +98,25 @@ fn main() {
     }
 
     generated.push_str(
+        r#"    /// Every syntax theme, in declaration order.
+    ///
+    /// ```rust
+    /// use dioxus_code::Theme;
+    /// assert!(Theme::ALL.contains(&Theme::TOKYO_NIGHT));
+    /// ```
+    pub const ALL: &'static [Theme] = &[
+"#,
+    );
+    for theme in &themes {
+        generated.push_str(&format!("        Self::{},\n", theme.const_name));
+    }
+    generated.push_str(
+        r#"    ];
+
+"#,
+    );
+
+    generated.push_str(
         r#"}
 "#,
     );

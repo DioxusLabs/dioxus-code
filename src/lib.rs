@@ -236,9 +236,9 @@ impl SourceCode {
     /// use dioxus_code::SourceCode;
     /// let _src = SourceCode::new("fn main() {}");
     /// ```
-    pub fn new(source: impl Into<String>) -> Self {
+    pub fn new(source: impl ToString) -> Self {
         Self {
-            source: source.into(),
+            source: source.to_string(),
             options: CodeOptions::new(),
         }
     }
@@ -496,7 +496,7 @@ mod tests {
 
     #[cfg(feature = "runtime")]
     #[test]
-    fn runtime_raw_string_uses_arborium_detection_fallback() {
+    fn runtime_raw_string_without_language_returns_typed_error() {
         let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}").into();
         assert_eq!(tree.language(), None);
         assert!(tree.spans().is_empty());
