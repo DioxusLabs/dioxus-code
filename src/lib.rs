@@ -273,12 +273,15 @@ impl SourceCode {
     }
 
     fn highlight(self) -> advanced::HighlightedSource {
-        let mut highlighter = advanced::IncrementalHighlighter::new();
-        highlighter.highlight(
-            &self.source,
-            None,
-            self.options.language().map(|language| language.slug()),
-        )
+        let language = self
+            .options
+            .language();
+        match language {
+            Some(language) => advanced::Buffer::new(language, self.source).highlighted(),
+            None => {
+                advanced::HighlightedSource::plaintext(self.source, "could not detect language")
+            }
+        }
     }
 }
 
@@ -399,7 +402,7 @@ pub fn Code(props: CodeProps) -> Element {
     let source = &props.src;
     let segments = source.trimmed_segments();
     let class = format!("dxc {}", props.theme.classes());
-    let language = source.language().unwrap_or("text");
+    let language = source.language().map(Language::slug).unwrap_or("text");
     let error = source.error();
 
     rsx! {
@@ -444,7 +447,7 @@ mod tests {
         assert_eq!(
             advanced::HighlightedSource::from_static_parts(
                 "<script>alert(1)</script>",
-                "text",
+                Language::Rust,
                 &[]
             )
             .segments(),
@@ -457,7 +460,8 @@ mod tests {
 
     #[test]
     fn highlighted_lines_preserve_trailing_empty_line() {
-        let source = advanced::HighlightedSource::from_static_parts("let x = 1;\n", "rust", &[]);
+        let source =
+            advanced::HighlightedSource::from_static_parts("let x = 1;\n", Language::Rust, &[]);
         let lines = source.lines();
         assert_eq!(lines.len(), 2);
         assert_eq!(
@@ -490,7 +494,7 @@ mod tests {
         let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}")
             .with_options(CodeOptions::builder().with_language(Language::Rust))
             .into();
-        assert_eq!(tree.language(), Some("rust"));
+        assert_eq!(tree.language(), Some(Language::Rust));
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
         }));

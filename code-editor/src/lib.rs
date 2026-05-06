@@ -6,7 +6,7 @@ use dioxus_code::CodeTheme;
 pub use dioxus_code::Language;
 #[cfg(test)]
 use dioxus_code::Theme;
-use dioxus_code::advanced::{CodeThemeStyles, IncrementalHighlighter, TokenSpan};
+use dioxus_code::advanced::{Buffer, CodeThemeStyles, TokenSpan};
 #[cfg(test)]
 use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
 use std::{cell::RefCell, rc::Rc};
@@ -28,7 +28,7 @@ pub const CODE_EDITOR_CSS: Asset = asset!("/assets/dioxus-code-editor.css");
 /// use dioxus_code_editor::{CodeEditorProps, Language};
 /// let _props = CodeEditorProps::builder()
 ///     .value("fn main() {}")
-///     .language(Some(Language::Rust))
+///     .language(Language::Rust)
 ///     .theme(CodeTheme::fixed(Theme::TOKYO_NIGHT))
 ///     .build();
 /// ```
@@ -39,10 +39,10 @@ pub struct CodeEditorProps {
     pub value: String,
     /// Tree-sitter grammar used for syntax highlighting.
     ///
-    /// Pass a [`Language`] variant directly, or use [`Language::from_slug`] for
-    /// custom Arborium slugs. When unset, the grammar is inferred from the source.
-    #[props(into, default)]
-    pub language: Option<Language>,
+    /// Pass a [`Language`] variant directly. Use [`Language::from_slug`] to
+    /// turn a runtime slug into a variant. Defaults to [`Language::Rust`].
+    #[props(default = Language::Rust)]
+    pub language: Language,
     /// Syntax theme selection shared with [`dioxus-code`].
     ///
     /// [`dioxus-code`]: https://docs.rs/dioxus-code/latest/dioxus_code/
@@ -96,19 +96,32 @@ pub struct CodeEditorProps {
 /// ```
 #[component]
 pub fn CodeEditor(props: CodeEditorProps) -> Element {
-    let highlighter = use_hook(|| Rc::new(RefCell::new(IncrementalHighlighter::new())));
+    let buffer = use_hook({
+        let value = props.value.clone();
+        let language = props.language;
+        move || Rc::new(RefCell::new(Buffer::new(language, value)))
+    });
     let edit_tracker = use_hook(|| {
         Rc::new(RefCell::new(edit_capture::InputEditTracker::new(
             props.value.clone(),
         )))
     });
 
-    let language = props.language.as_ref().map(Language::slug);
     let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
-    let source = highlighter
-        .borrow_mut()
-        .highlight(&props.value, edit, language);
-    let lines = source.lines();
+    let snapshot = {
+        let mut buffer = buffer.borrow_mut();
+        if buffer.language() != props.language {
+            buffer.set_language(props.language);
+        }
+        if buffer.source() != props.value {
+            match edit {
+                Some(edit) => buffer.edit(edit, props.value.clone()),
+                None => buffer.replace(props.value.clone()),
+            }
+        }
+        buffer.highlighted()
+    };
+    let lines = snapshot.lines();
     let line_count = lines.len();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
     let textarea_value = props.value.clone();
@@ -211,7 +224,7 @@ mod tests {
 
     #[test]
     fn lines_preserve_trailing_empty_line() {
-        let source = HighlightedSource::from_static_parts("let x = 1;\n", "rust", &[]);
+        let source = HighlightedSource::from_static_parts("let x = 1;\n", Language::Rust, &[]);
         let lines = source.lines();
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], vec![HighlightSegment::new("let x = 1;", None)]);

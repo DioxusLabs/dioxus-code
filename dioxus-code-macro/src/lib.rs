@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use macro_string::MacroString;
 use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::{Expr, LitStr, Token, parse_macro_input};
@@ -194,114 +194,125 @@ fn unsupported_language_arg(expr: &Expr) -> syn::Error {
     )
 }
 
+const LANGUAGE_VARIANTS: &[(&str, &str)] = &[
+    ("Rust", "rust"),
+    ("Ada", "ada"),
+    ("Agda", "agda"),
+    ("Asciidoc", "asciidoc"),
+    ("Asm", "asm"),
+    ("Awk", "awk"),
+    ("Bash", "bash"),
+    ("Batch", "batch"),
+    ("C", "c"),
+    ("CSharp", "c-sharp"),
+    ("Caddy", "caddy"),
+    ("Capnp", "capnp"),
+    ("Cedar", "cedar"),
+    ("CedarSchema", "cedarschema"),
+    ("Clojure", "clojure"),
+    ("CMake", "cmake"),
+    ("Cobol", "cobol"),
+    ("CommonLisp", "commonlisp"),
+    ("Cpp", "cpp"),
+    ("Css", "css"),
+    ("D", "d"),
+    ("Dart", "dart"),
+    ("DeviceTree", "devicetree"),
+    ("Diff", "diff"),
+    ("Dockerfile", "dockerfile"),
+    ("Dot", "dot"),
+    ("Elisp", "elisp"),
+    ("Elixir", "elixir"),
+    ("Elm", "elm"),
+    ("Erlang", "erlang"),
+    ("Fish", "fish"),
+    ("FSharp", "fsharp"),
+    ("Gleam", "gleam"),
+    ("Glsl", "glsl"),
+    ("Go", "go"),
+    ("GraphQL", "graphql"),
+    ("Groovy", "groovy"),
+    ("Haskell", "haskell"),
+    ("Hcl", "hcl"),
+    ("Hlsl", "hlsl"),
+    ("Html", "html"),
+    ("Idris", "idris"),
+    ("Ini", "ini"),
+    ("Java", "java"),
+    ("JavaScript", "javascript"),
+    ("Jinja2", "jinja2"),
+    ("Jq", "jq"),
+    ("Json", "json"),
+    ("Julia", "julia"),
+    ("Kotlin", "kotlin"),
+    ("Lean", "lean"),
+    ("Lua", "lua"),
+    ("Markdown", "markdown"),
+    ("Matlab", "matlab"),
+    ("Meson", "meson"),
+    ("Nginx", "nginx"),
+    ("Ninja", "ninja"),
+    ("Nix", "nix"),
+    ("ObjectiveC", "objc"),
+    ("OCaml", "ocaml"),
+    ("Perl", "perl"),
+    ("Php", "php"),
+    ("PostScript", "postscript"),
+    ("PowerShell", "powershell"),
+    ("Prolog", "prolog"),
+    ("Python", "python"),
+    ("Query", "query"),
+    ("R", "r"),
+    ("Rego", "rego"),
+    ("Rescript", "rescript"),
+    ("Ron", "ron"),
+    ("Ruby", "ruby"),
+    ("Scala", "scala"),
+    ("Scheme", "scheme"),
+    ("Scss", "scss"),
+    ("Solidity", "solidity"),
+    ("Sparql", "sparql"),
+    ("Sql", "sql"),
+    ("SshConfig", "ssh-config"),
+    ("Starlark", "starlark"),
+    ("Styx", "styx"),
+    ("Svelte", "svelte"),
+    ("Swift", "swift"),
+    ("Textproto", "textproto"),
+    ("Thrift", "thrift"),
+    ("TlaPlus", "tlaplus"),
+    ("Toml", "toml"),
+    ("Tsx", "tsx"),
+    ("TypeScript", "typescript"),
+    ("Typst", "typst"),
+    ("Uiua", "uiua"),
+    ("VisualBasic", "vb"),
+    ("Verilog", "verilog"),
+    ("Vhdl", "vhdl"),
+    ("Vim", "vim"),
+    ("Vue", "vue"),
+    ("Wit", "wit"),
+    ("X86Asm", "x86asm"),
+    ("Xml", "xml"),
+    ("Yaml", "yaml"),
+    ("Yuri", "yuri"),
+    ("Zig", "zig"),
+    ("Zsh", "zsh"),
+];
+
 fn language_slug_from_path(path: &syn::ExprPath) -> Option<&'static str> {
     let variant = path.path.segments.last()?.ident.to_string();
-    match variant.as_str() {
-        "Rust" => Some("rust"),
-        "Ada" => Some("ada"),
-        "Agda" => Some("agda"),
-        "Asciidoc" => Some("asciidoc"),
-        "Asm" => Some("asm"),
-        "Awk" => Some("awk"),
-        "Bash" => Some("bash"),
-        "Batch" => Some("batch"),
-        "C" => Some("c"),
-        "CSharp" => Some("c-sharp"),
-        "Caddy" => Some("caddy"),
-        "Capnp" => Some("capnp"),
-        "Cedar" => Some("cedar"),
-        "CedarSchema" => Some("cedarschema"),
-        "Clojure" => Some("clojure"),
-        "CMake" => Some("cmake"),
-        "Cobol" => Some("cobol"),
-        "CommonLisp" => Some("commonlisp"),
-        "Cpp" => Some("cpp"),
-        "Css" => Some("css"),
-        "D" => Some("d"),
-        "Dart" => Some("dart"),
-        "DeviceTree" => Some("devicetree"),
-        "Diff" => Some("diff"),
-        "Dockerfile" => Some("dockerfile"),
-        "Dot" => Some("dot"),
-        "Elisp" => Some("elisp"),
-        "Elixir" => Some("elixir"),
-        "Elm" => Some("elm"),
-        "Erlang" => Some("erlang"),
-        "Fish" => Some("fish"),
-        "FSharp" => Some("fsharp"),
-        "Gleam" => Some("gleam"),
-        "Glsl" => Some("glsl"),
-        "Go" => Some("go"),
-        "GraphQL" => Some("graphql"),
-        "Groovy" => Some("groovy"),
-        "Haskell" => Some("haskell"),
-        "Hcl" => Some("hcl"),
-        "Hlsl" => Some("hlsl"),
-        "Html" => Some("html"),
-        "Idris" => Some("idris"),
-        "Ini" => Some("ini"),
-        "Java" => Some("java"),
-        "JavaScript" => Some("javascript"),
-        "Jinja2" => Some("jinja2"),
-        "Jq" => Some("jq"),
-        "Json" => Some("json"),
-        "Julia" => Some("julia"),
-        "Kotlin" => Some("kotlin"),
-        "Lean" => Some("lean"),
-        "Lua" => Some("lua"),
-        "Markdown" => Some("markdown"),
-        "Matlab" => Some("matlab"),
-        "Meson" => Some("meson"),
-        "Nginx" => Some("nginx"),
-        "Ninja" => Some("ninja"),
-        "Nix" => Some("nix"),
-        "ObjectiveC" => Some("objc"),
-        "OCaml" => Some("ocaml"),
-        "Perl" => Some("perl"),
-        "Php" => Some("php"),
-        "PostScript" => Some("postscript"),
-        "PowerShell" => Some("powershell"),
-        "Prolog" => Some("prolog"),
-        "Python" => Some("python"),
-        "Query" => Some("query"),
-        "R" => Some("r"),
-        "Rego" => Some("rego"),
-        "Rescript" => Some("rescript"),
-        "Ron" => Some("ron"),
-        "Ruby" => Some("ruby"),
-        "Scala" => Some("scala"),
-        "Scheme" => Some("scheme"),
-        "Scss" => Some("scss"),
-        "Solidity" => Some("solidity"),
-        "Sparql" => Some("sparql"),
-        "Sql" => Some("sql"),
-        "SshConfig" => Some("ssh-config"),
-        "Starlark" => Some("starlark"),
-        "Styx" => Some("styx"),
-        "Svelte" => Some("svelte"),
-        "Swift" => Some("swift"),
-        "Textproto" => Some("textproto"),
-        "Thrift" => Some("thrift"),
-        "TlaPlus" => Some("tlaplus"),
-        "Toml" => Some("toml"),
-        "Tsx" => Some("tsx"),
-        "TypeScript" => Some("typescript"),
-        "Typst" => Some("typst"),
-        "Uiua" => Some("uiua"),
-        "VisualBasic" => Some("vb"),
-        "Verilog" => Some("verilog"),
-        "Vhdl" => Some("vhdl"),
-        "Vim" => Some("vim"),
-        "Vue" => Some("vue"),
-        "Wit" => Some("wit"),
-        "X86Asm" => Some("x86asm"),
-        "Xml" => Some("xml"),
-        "Yaml" => Some("yaml"),
-        "Yuri" => Some("yuri"),
-        "Zig" => Some("zig"),
-        "Zsh" => Some("zsh"),
-        _ => None,
-    }
+    LANGUAGE_VARIANTS
+        .iter()
+        .find(|(name, _)| *name == variant)
+        .map(|(_, slug)| *slug)
+}
+
+fn language_variant_for_slug(slug: &str) -> Option<&'static str> {
+    LANGUAGE_VARIANTS
+        .iter()
+        .find(|(_, s)| *s == slug)
+        .map(|(name, _)| *name)
 }
 
 fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
@@ -337,7 +348,13 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         .highlight_spans(&language, &source)
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
 
-    let language_lit = LitStr::new(&language, Span::call_site());
+    let Some(variant) = language_variant_for_slug(&language) else {
+        let message = format!("language `{language}` has no `Language` variant");
+        return Ok(quote! {{
+            compile_error!(#message);
+        }});
+    };
+    let variant_ident = Ident::new(variant, Span::call_site());
     let absolute_lit = LitStr::new(&absolute_path.to_string_lossy(), Span::call_site());
     let spans = normalize_spans(spans).into_iter().map(|span| {
         let start = span.start;
@@ -352,7 +369,11 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     Ok(quote! {{
         const SOURCE: &str = include_str!(#absolute_lit);
         static SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#spans),*];
-        #crate_path::advanced::HighlightedSource::from_static_parts(SOURCE, #language_lit, SPANS)
+        #crate_path::advanced::HighlightedSource::from_static_parts(
+            SOURCE,
+            #crate_path::Language::#variant_ident,
+            SPANS,
+        )
     }})
 }
 

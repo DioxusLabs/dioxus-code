@@ -81,7 +81,7 @@ Language can be set explicitly with the same [`CodeOptions`] builder used by [`c
 
 ```rust
 # use dioxus::prelude::*;
-use dioxus_code_editor::CodeEditor;
+use dioxus_code_editor::{CodeEditor, Language};
 use dioxus_code::Theme;
 
 # fn editor() -> Element {
@@ -90,7 +90,7 @@ let mut source = use_signal(|| String::new());
 rsx! {
     CodeEditor {
         value: source(),
-        language: "rust",
+        language: Language::Rust,
         theme: Theme::TOKYO_NIGHT,
         oninput: move |value| source.set(value),
     }

@@ -5,9 +5,10 @@
 //! components such as `dioxus-code-editor`.
 //!
 //! ```rust
+//! use dioxus_code::Language;
 //! use dioxus_code::advanced::{HighlightSpan, HighlightedSource};
 //! static SPANS: &[HighlightSpan] = &[HighlightSpan::new(0..2, "k")];
-//! let src = HighlightedSource::from_static_parts("fn main() {}", "rust", SPANS);
+//! let src = HighlightedSource::from_static_parts("fn main() {}", Language::Rust, SPANS);
 //! assert_eq!(src.spans().len(), 1);
 //! ```
 
@@ -17,14 +18,15 @@ use std::{borrow::Cow, ops::Range};
 /// A highlighted source string with metadata and token spans.
 ///
 /// ```rust
+/// use dioxus_code::Language;
 /// use dioxus_code::advanced::HighlightedSource;
-/// let src = HighlightedSource::from_static_parts("let x = 1;", "rust", &[]);
+/// let src = HighlightedSource::from_static_parts("let x = 1;", Language::Rust, &[]);
 /// assert_eq!(src.source(), "let x = 1;");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HighlightedSource {
     source: Cow<'static, str>,
-    language: Option<Cow<'static, str>>,
+    language: Option<Language>,
     spans: Cow<'static, [HighlightSpan]>,
     error: Option<Cow<'static, str>>,
 }
@@ -33,13 +35,13 @@ impl HighlightedSource {
     #[cfg(feature = "runtime")]
     pub(crate) fn from_owned_parts(
         source: String,
-        language: Option<String>,
+        language: Option<Language>,
         spans: Vec<HighlightSpan>,
         error: Option<String>,
     ) -> Self {
         Self {
             source: Cow::Owned(source),
-            language: language.map(Cow::Owned),
+            language,
             spans: Cow::Owned(spans),
             error: error.map(Cow::Owned),
         }
@@ -50,18 +52,19 @@ impl HighlightedSource {
     /// This is mainly useful for compile-time highlighters and macro output.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("let x = 1;", "rust", &[]);
-    /// assert_eq!(src.language(), Some("rust"));
+    /// let src = HighlightedSource::from_static_parts("let x = 1;", Language::Rust, &[]);
+    /// assert_eq!(src.language(), Some(Language::Rust));
     /// ```
     pub const fn from_static_parts(
         source: &'static str,
-        language: &'static str,
+        language: Language,
         spans: &'static [HighlightSpan],
     ) -> Self {
         Self {
             source: Cow::Borrowed(source),
-            language: Some(Cow::Borrowed(language)),
+            language: Some(language),
             spans: Cow::Borrowed(spans),
             error: None,
         }
@@ -83,30 +86,33 @@ impl HighlightedSource {
     /// The raw source text.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("hello", "text", &[]);
+    /// let src = HighlightedSource::from_static_parts("hello", Language::Rust, &[]);
     /// assert_eq!(src.source(), "hello");
     /// ```
     pub fn source(&self) -> &str {
         self.source.as_ref()
     }
 
-    /// The detected or explicitly set language slug, if any.
+    /// The detected or explicitly set language, if any.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("", "rust", &[]);
-    /// assert_eq!(src.language(), Some("rust"));
+    /// let src = HighlightedSource::from_static_parts("", Language::Rust, &[]);
+    /// assert_eq!(src.language(), Some(Language::Rust));
     /// ```
-    pub fn language(&self) -> Option<&str> {
-        self.language.as_deref()
+    pub const fn language(&self) -> Option<Language> {
+        self.language
     }
 
     /// The highlighting error, if parsing fell back to plaintext.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("", "rust", &[]);
+    /// let src = HighlightedSource::from_static_parts("", Language::Rust, &[]);
     /// assert_eq!(src.error(), None);
     /// ```
     pub fn error(&self) -> Option<&str> {
@@ -116,8 +122,9 @@ impl HighlightedSource {
     /// The highlight spans covering the source.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("", "rust", &[]);
+    /// let src = HighlightedSource::from_static_parts("", Language::Rust, &[]);
     /// assert!(src.spans().is_empty());
     /// ```
     pub fn spans(&self) -> &[HighlightSpan] {
@@ -127,8 +134,9 @@ impl HighlightedSource {
     /// Split the source into renderable highlighted segments.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("hello", "text", &[]);
+    /// let src = HighlightedSource::from_static_parts("hello", Language::Rust, &[]);
     /// assert_eq!(src.segments().len(), 1);
     /// ```
     pub fn segments(&self) -> Vec<HighlightSegment<'_>> {
@@ -145,8 +153,9 @@ impl HighlightedSource {
     /// numbers and input rows aligned with the original source text.
     ///
     /// ```rust
+    /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("a\nb", "text", &[]);
+    /// let src = HighlightedSource::from_static_parts("a\nb", Language::Rust, &[]);
     /// assert_eq!(src.lines().len(), 2);
     /// ```
     pub fn lines(&self) -> Vec<Vec<HighlightSegment<'_>>> {
@@ -410,194 +419,236 @@ pub fn TokenSpan(props: TokenSpanProps) -> Element {
     }
 }
 
-/// Persistent syntax highlighter that re-uses tree-sitter parse trees across edits.
+/// A live `(text, grammar)` pair you can edit, reparse, and snapshot.
 ///
-/// `IncrementalHighlighter` keeps a parser, the most recently parsed tree, and
-/// the previous source between calls. Each call to [`highlight`](Self::highlight)
-/// can take a [`SourceEdit`] describing the bytes that changed; tree-sitter then
-/// patches the cached tree and re-parses, reusing unmodified subtrees.
-///
-/// Pass `None` for the edit when the change is unknown (or when this is the
-/// first parse). The previous tree is then dropped and the source is parsed
-/// from scratch.
+/// `Buffer` owns the source string, the parse tree, and the highlight spans as
+/// a single coherent unit. [`edit`](Self::edit) applies an incremental edit
+/// (reusing the cached parse tree); [`replace`](Self::replace) swaps the source
+/// wholesale; [`set_language`](Self::set_language) switches grammars and
+/// reparses. After any mutation, [`source`](Self::source),
+/// [`spans`](Self::spans), and [`lines`](Self::lines) reflect the new state.
 ///
 /// Available with the `runtime` feature. Hold one per editor instance (e.g.
-/// inside `use_hook`). Languages without an incremental grammar mapping fall
-/// back to the batch [`SourceCode`] path.
+/// inside `use_hook`). If the incremental parser or query fails to initialize,
+/// highlighting falls back to the batch [`arborium::Highlighter`] path.
 ///
 /// ```rust
-/// use dioxus_code::advanced::IncrementalHighlighter;
-/// let mut hl = IncrementalHighlighter::new();
-/// let src = hl.highlight("fn main() {}", None, Some("rust"));
-/// assert_eq!(src.language(), Some("rust"));
+/// use dioxus_code::Language;
+/// use dioxus_code::advanced::Buffer;
+/// let buffer = Buffer::new(Language::Rust, "fn main() {}");
+/// assert_eq!(buffer.language(), Language::Rust);
+/// assert!(!buffer.spans().is_empty());
 /// ```
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
-pub struct IncrementalHighlighter {
+pub struct Buffer {
     parser: arborium_tree_sitter::Parser,
     cursor: arborium_tree_sitter::QueryCursor,
-    grammar: Option<GrammarSlot>,
+    language: Language,
+    incremental: Option<IncrementalGrammar>,
     tree: Option<arborium_tree_sitter::Tree>,
-    last_source: String,
-    last_spans: Vec<HighlightSpan>,
+    source: String,
+    spans: Vec<HighlightSpan>,
+    error: Option<String>,
 }
 
 #[cfg(feature = "runtime")]
-struct GrammarSlot {
-    slug: String,
+struct IncrementalGrammar {
     query: arborium_tree_sitter::Query,
 }
 
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
-impl Default for IncrementalHighlighter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[cfg(feature = "runtime")]
-#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
-impl IncrementalHighlighter {
-    /// Create a highlighter with no grammar loaded yet.
+impl Buffer {
+    /// Create a buffer for `language`, parse `source`, and collect spans.
     ///
     /// ```rust
-    /// use dioxus_code::advanced::IncrementalHighlighter;
-    /// let _hl = IncrementalHighlighter::new();
+    /// use dioxus_code::Language;
+    /// use dioxus_code::advanced::Buffer;
+    /// let buffer = Buffer::new(Language::Rust, "fn main() {}");
+    /// assert_eq!(buffer.source(), "fn main() {}");
     /// ```
-    pub fn new() -> Self {
-        Self {
+    pub fn new(language: Language, source: impl Into<String>) -> Self {
+        let mut buffer = Self {
             parser: arborium_tree_sitter::Parser::new(),
             cursor: arborium_tree_sitter::QueryCursor::new(),
-            grammar: None,
+            language,
+            incremental: None,
             tree: None,
-            last_source: String::new(),
-            last_spans: Vec::new(),
-        }
+            source: String::new(),
+            spans: Vec::new(),
+            error: None,
+        };
+        buffer.install_grammar(language);
+        buffer.replace(source);
+        buffer
     }
 
-    /// Highlight `source`, reusing the previous parse tree when possible.
+    /// Replace the source wholesale and reparse from scratch.
     ///
-    /// `language` is an explicit Arborium slug such as `"rust"`. If empty or
-    /// unrecognized, the language is detected from the source content itself.
-    ///
-    /// Pass `Some(edit)` when the caller knows precisely which bytes changed
-    /// (for example, captured from a contenteditable's `beforeinput` event).
-    /// Pass `None` for a one-shot parse or when the edit is unknown — the
-    /// previous tree is then discarded and `source` is parsed from scratch.
+    /// Use this when the new text is unrelated to the old (e.g. loading a
+    /// different file). For keystroke-level edits, prefer [`edit`](Self::edit)
+    /// — it reuses the cached parse tree.
     ///
     /// ```rust
-    /// use dioxus_code::advanced::IncrementalHighlighter;
-    /// let mut hl = IncrementalHighlighter::new();
-    /// let src = hl.highlight("fn main() {}", None, Some("rust"));
-    /// assert!(!src.spans().is_empty());
+    /// use dioxus_code::Language;
+    /// use dioxus_code::advanced::Buffer;
+    /// let mut buffer = Buffer::new(Language::Rust, "fn old() {}");
+    /// buffer.replace("fn new() {}");
+    /// assert_eq!(buffer.source(), "fn new() {}");
     /// ```
-    pub fn highlight(
-        &mut self,
-        source: &str,
-        edit: Option<SourceEdit>,
-        language: Option<&str>,
-    ) -> HighlightedSource {
-        let slug = language
-            .map(str::to_string)
-            .or_else(|| arborium::detect_language(source).map(str::to_string));
-
-        let Some(slug) = slug else {
-            self.reset();
-            return HighlightedSource::plaintext(source.to_owned(), "could not detect language");
-        };
-
-        let Some((language_fn, highlights_query)) = grammar_for(&slug) else {
-            self.reset();
-            return batch_highlight_via_arborium(source, &slug);
-        };
-
-        let language_changed = self.grammar.as_ref().is_none_or(|g| g.slug != slug);
-        if language_changed {
-            let language: arborium_tree_sitter::Language = language_fn.into();
-            if self.parser.set_language(&language).is_err() {
-                self.reset();
-                return HighlightedSource::plaintext(
-                    source.to_owned(),
-                    format!("failed to load grammar for {slug}"),
-                );
-            }
-            let query = match arborium_tree_sitter::Query::new(&language, highlights_query) {
-                Ok(query) => query,
-                Err(error) => {
-                    self.reset();
-                    return HighlightedSource::plaintext(source.to_owned(), error.to_string());
-                }
-            };
-            self.grammar = Some(GrammarSlot {
-                slug: slug.clone(),
-                query,
-            });
-            self.tree = None;
-            self.last_source.clear();
-            self.last_spans.clear();
-        } else if self.last_source == source && self.tree.is_some() && edit.is_none() {
-            return HighlightedSource::from_owned_parts(
-                source.to_owned(),
-                Some(slug),
-                self.last_spans.clone(),
-                None,
-            );
-        }
-
-        // Apply the supplied edit to the cached tree so tree-sitter can reuse
-        // unmodified subtrees. Without an edit (or without a tree), we drop
-        // any cached tree and let the parser do a full parse.
-        match (edit, self.tree.as_mut()) {
-            (Some(edit), Some(tree)) => {
-                if let Some(input_edit) = edit.into_input_edit(&self.last_source, source) {
-                    tree.edit(&input_edit);
-                } else {
-                    self.tree = None;
-                }
-            }
-            (None, _) => self.tree = None,
-            _ => {}
-        }
-
-        let new_tree = match self.parser.parse(source, self.tree.as_ref()) {
-            Some(tree) => tree,
-            None => {
-                self.reset();
-                return HighlightedSource::plaintext(source.to_owned(), "tree-sitter parse failed");
-            }
-        };
-
-        let grammar = self.grammar.as_ref().expect("grammar set above");
-        let spans = collect_spans(&grammar.query, &mut self.cursor, &new_tree, source);
-
-        self.tree = Some(new_tree);
-        self.last_source.clear();
-        self.last_source.push_str(source);
-        self.last_spans = spans.clone();
-
-        HighlightedSource::from_owned_parts(source.to_owned(), Some(slug), spans, None)
-    }
-
-    fn reset(&mut self) {
-        self.grammar = None;
+    pub fn replace(&mut self, source: impl Into<String>) {
+        self.source = source.into();
         self.tree = None;
-        self.last_source.clear();
-        self.last_spans.clear();
+        self.reparse();
     }
-}
 
-#[cfg(feature = "runtime")]
-fn batch_highlight_via_arborium(source: &str, slug: &str) -> HighlightedSource {
-    let mut highlighter = arborium::Highlighter::new();
-    match highlighter.highlight_spans(slug, source) {
-        Ok(spans) => HighlightedSource::from_owned_parts(
-            source.to_owned(),
-            Some(slug.to_owned()),
-            normalize_spans(spans.into_iter().map(RawHighlightSpan::from)),
-            None,
-        ),
-        Err(error) => HighlightedSource::plaintext(source.to_owned(), error.to_string()),
+    /// Apply an incremental edit and reparse, reusing the cached parse tree.
+    ///
+    /// `new_source` must be the full text *after* the edit. `edit` describes
+    /// the byte range that changed — its `start_byte` / `old_end_byte` index
+    /// into the buffer's previous source, and `new_end_byte` indexes into
+    /// `new_source`. If the edit is malformed, the cached tree is dropped and
+    /// the new source is parsed from scratch.
+    ///
+    /// ```rust
+    /// use dioxus_code::Language;
+    /// use dioxus_code::advanced::{Buffer, SourceEdit};
+    /// let mut buffer = Buffer::new(Language::Rust, "fn main() { 1 }");
+    /// buffer.edit(
+    ///     SourceEdit { start_byte: 12, old_end_byte: 13, new_end_byte: 14 },
+    ///     "fn main() { 22 }",
+    /// );
+    /// assert_eq!(buffer.source(), "fn main() { 22 }");
+    /// ```
+    pub fn edit(&mut self, edit: SourceEdit, new_source: impl Into<String>) {
+        let new_source: String = new_source.into();
+        if let (Some(_), Some(tree)) = (&self.incremental, self.tree.as_mut()) {
+            match edit.into_input_edit(&self.source, &new_source) {
+                Some(input_edit) => tree.edit(&input_edit),
+                None => self.tree = None,
+            }
+        } else {
+            self.tree = None;
+        }
+        self.source = new_source;
+        self.reparse();
+    }
+
+    /// Switch grammars and reparse the current source.
+    ///
+    /// No-op when the new language matches the current one.
+    ///
+    /// ```rust
+    /// use dioxus_code::Language;
+    /// use dioxus_code::advanced::Buffer;
+    /// let mut buffer = Buffer::new(Language::Rust, "fn main() {}");
+    /// buffer.set_language(Language::Rust);
+    /// assert_eq!(buffer.language(), Language::Rust);
+    /// ```
+    pub fn set_language(&mut self, language: Language) {
+        if self.language == language {
+            return;
+        }
+        self.install_grammar(language);
+        self.tree = None;
+        self.reparse();
+    }
+
+    /// The current source text.
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// The grammar this buffer is parsing with.
+    pub const fn language(&self) -> Language {
+        self.language
+    }
+
+    /// Latest grammar-load or parse error, if the last reparse failed.
+    ///
+    /// `Some` means [`spans`](Self::spans) is empty and the source should be
+    /// rendered as plaintext. The buffer remains usable — the next edit or
+    /// language switch may recover.
+    pub fn error(&self) -> Option<&str> {
+        self.error.as_deref()
+    }
+
+    /// Highlight spans covering the current source.
+    pub fn spans(&self) -> &[HighlightSpan] {
+        &self.spans
+    }
+
+    /// Split the source into renderable highlighted segments.
+    pub fn segments(&self) -> Vec<HighlightSegment<'_>> {
+        highlighted_segments(&self.source, &self.spans)
+    }
+
+    /// Split the source into highlighted lines, preserving trailing empty lines.
+    pub fn lines(&self) -> Vec<Vec<HighlightSegment<'_>>> {
+        highlighted_lines(&self.source, &self.spans)
+    }
+
+    /// Snapshot the buffer as an immutable [`HighlightedSource`].
+    ///
+    /// Useful for handing off to [`Code()`](crate::Code()) or any consumer
+    /// that takes the frozen snapshot type.
+    pub fn highlighted(&self) -> HighlightedSource {
+        HighlightedSource::from_owned_parts(
+            self.source.clone(),
+            Some(self.language),
+            self.spans.clone(),
+            self.error.clone(),
+        )
+    }
+
+    fn install_grammar(&mut self, language: Language) {
+        self.language = language;
+        let (language_fn, highlights_query) = grammar_for(language);
+        let ts_language: arborium_tree_sitter::Language = language_fn.into();
+        self.incremental = if self.parser.set_language(&ts_language).is_err() {
+            self.error = Some(format!("failed to load grammar for {}", language.slug()));
+            None
+        } else {
+            match arborium_tree_sitter::Query::new(&ts_language, highlights_query) {
+                Ok(query) => Some(IncrementalGrammar { query }),
+                Err(error) => {
+                    self.error = Some(error.to_string());
+                    None
+                }
+            }
+        };
+    }
+
+    fn reparse(&mut self) {
+        match &self.incremental {
+            Some(grammar) => match self.parser.parse(&self.source, self.tree.as_ref()) {
+                Some(tree) => {
+                    self.spans =
+                        collect_spans(&grammar.query, &mut self.cursor, &tree, &self.source);
+                    self.tree = Some(tree);
+                    self.error = None;
+                }
+                None => {
+                    self.tree = None;
+                    self.spans.clear();
+                    self.error = Some("tree-sitter parse failed".to_owned());
+                }
+            },
+            None => {
+                let mut highlighter = arborium::Highlighter::new();
+                match highlighter.highlight_spans(self.language.slug(), &self.source) {
+                    Ok(spans) => {
+                        self.spans = normalize_spans(spans.into_iter().map(RawHighlightSpan::from));
+                        self.error = None;
+                    }
+                    Err(error) => {
+                        self.spans.clear();
+                        self.error = Some(error.to_string());
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -634,536 +685,533 @@ fn collect_spans(
 }
 
 #[cfg(feature = "runtime")]
-fn grammar_for(slug: &str) -> Option<(arborium_tree_sitter::LanguageFn, &'static str)> {
+fn grammar_for(language: Language) -> (arborium_tree_sitter::LanguageFn, &'static str) {
     // Rust is bundled with the `runtime` feature; everything else is opt-in via
     // its `lang-*` cargo feature (or the `all-languages` umbrella).
-    match slug {
-        "rust" => Some((
+    match language {
+        Language::Rust => (
             arborium::lang_rust::language(),
             arborium::lang_rust::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ada")]
-        "ada" => Some((
+        Language::Ada => (
             arborium::lang_ada::language(),
             arborium::lang_ada::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-agda")]
-        "agda" => Some((
+        Language::Agda => (
             arborium::lang_agda::language(),
             arborium::lang_agda::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-asciidoc")]
-        "asciidoc" => Some((
+        Language::Asciidoc => (
             arborium::lang_asciidoc::language(),
             arborium::lang_asciidoc::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-asm")]
-        "asm" => Some((
+        Language::Asm => (
             arborium::lang_asm::language(),
             arborium::lang_asm::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-awk")]
-        "awk" => Some((
+        Language::Awk => (
             arborium::lang_awk::language(),
             arborium::lang_awk::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-bash")]
-        "bash" => Some((
+        Language::Bash => (
             arborium::lang_bash::language(),
             arborium::lang_bash::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-batch")]
-        "batch" => Some((
+        Language::Batch => (
             arborium::lang_batch::language(),
             arborium::lang_batch::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-c")]
-        "c" => Some((
+        Language::C => (
             arborium::lang_c::language(),
             arborium::lang_c::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-c-sharp")]
-        "c-sharp" => Some((
+        Language::CSharp => (
             arborium::lang_c_sharp::language(),
             arborium::lang_c_sharp::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-caddy")]
-        "caddy" => Some((
+        Language::Caddy => (
             arborium::lang_caddy::language(),
             arborium::lang_caddy::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-capnp")]
-        "capnp" => Some((
+        Language::Capnp => (
             arborium::lang_capnp::language(),
             arborium::lang_capnp::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-cedar")]
-        "cedar" => Some((
+        Language::Cedar => (
             arborium::lang_cedar::language(),
             arborium::lang_cedar::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-cedarschema")]
-        "cedarschema" => Some((
+        Language::CedarSchema => (
             arborium::lang_cedarschema::language(),
             arborium::lang_cedarschema::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-clojure")]
-        "clojure" => Some((
+        Language::Clojure => (
             arborium::lang_clojure::language(),
             arborium::lang_clojure::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-cmake")]
-        "cmake" => Some((
+        Language::CMake => (
             arborium::lang_cmake::language(),
             arborium::lang_cmake::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-cobol")]
-        "cobol" => Some((
+        Language::Cobol => (
             arborium::lang_cobol::language(),
             arborium::lang_cobol::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-commonlisp")]
-        "commonlisp" => Some((
+        Language::CommonLisp => (
             arborium::lang_commonlisp::language(),
             arborium::lang_commonlisp::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-cpp")]
-        "cpp" => Some((
+        Language::Cpp => (
             arborium::lang_cpp::language(),
             &arborium::lang_cpp::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-css")]
-        "css" => Some((
+        Language::Css => (
             arborium::lang_css::language(),
             arborium::lang_css::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-d")]
-        "d" => Some((
+        Language::D => (
             arborium::lang_d::language(),
             arborium::lang_d::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-dart")]
-        "dart" => Some((
+        Language::Dart => (
             arborium::lang_dart::language(),
             arborium::lang_dart::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-devicetree")]
-        "devicetree" => Some((
+        Language::DeviceTree => (
             arborium::lang_devicetree::language(),
             arborium::lang_devicetree::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-diff")]
-        "diff" => Some((
+        Language::Diff => (
             arborium::lang_diff::language(),
             arborium::lang_diff::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-dockerfile")]
-        "dockerfile" => Some((
+        Language::Dockerfile => (
             arborium::lang_dockerfile::language(),
             arborium::lang_dockerfile::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-dot")]
-        "dot" => Some((
+        Language::Dot => (
             arborium::lang_dot::language(),
             arborium::lang_dot::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-elisp")]
-        "elisp" => Some((
+        Language::Elisp => (
             arborium::lang_elisp::language(),
             arborium::lang_elisp::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-elixir")]
-        "elixir" => Some((
+        Language::Elixir => (
             arborium::lang_elixir::language(),
             arborium::lang_elixir::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-elm")]
-        "elm" => Some((
+        Language::Elm => (
             arborium::lang_elm::language(),
             arborium::lang_elm::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-erlang")]
-        "erlang" => Some((
+        Language::Erlang => (
             arborium::lang_erlang::language(),
             arborium::lang_erlang::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-fish")]
-        "fish" => Some((
+        Language::Fish => (
             arborium::lang_fish::language(),
             arborium::lang_fish::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-fsharp")]
-        "fsharp" => Some((
+        Language::FSharp => (
             arborium::lang_fsharp::language(),
             arborium::lang_fsharp::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-gleam")]
-        "gleam" => Some((
+        Language::Gleam => (
             arborium::lang_gleam::language(),
             arborium::lang_gleam::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-glsl")]
-        "glsl" => Some((
+        Language::Glsl => (
             arborium::lang_glsl::language(),
             &arborium::lang_glsl::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-go")]
-        "go" => Some((
+        Language::Go => (
             arborium::lang_go::language(),
             arborium::lang_go::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-graphql")]
-        "graphql" => Some((
+        Language::GraphQL => (
             arborium::lang_graphql::language(),
             arborium::lang_graphql::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-groovy")]
-        "groovy" => Some((
+        Language::Groovy => (
             arborium::lang_groovy::language(),
             arborium::lang_groovy::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-haskell")]
-        "haskell" => Some((
+        Language::Haskell => (
             arborium::lang_haskell::language(),
             arborium::lang_haskell::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-hcl")]
-        "hcl" => Some((
+        Language::Hcl => (
             arborium::lang_hcl::language(),
             arborium::lang_hcl::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-hlsl")]
-        "hlsl" => Some((
+        Language::Hlsl => (
             arborium::lang_hlsl::language(),
             &arborium::lang_hlsl::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-html")]
-        "html" => Some((
+        Language::Html => (
             arborium::lang_html::language(),
             arborium::lang_html::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-idris")]
-        "idris" => Some((
+        Language::Idris => (
             arborium::lang_idris::language(),
             arborium::lang_idris::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ini")]
-        "ini" => Some((
+        Language::Ini => (
             arborium::lang_ini::language(),
             arborium::lang_ini::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-java")]
-        "java" => Some((
+        Language::Java => (
             arborium::lang_java::language(),
             arborium::lang_java::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-javascript")]
-        "javascript" => Some((
+        Language::JavaScript => (
             arborium::lang_javascript::language(),
             arborium::lang_javascript::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-jinja2")]
-        "jinja2" => Some((
+        Language::Jinja2 => (
             arborium::lang_jinja2::language(),
             arborium::lang_jinja2::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-jq")]
-        "jq" => Some((
+        Language::Jq => (
             arborium::lang_jq::language(),
             arborium::lang_jq::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-json")]
-        "json" => Some((
+        Language::Json => (
             arborium::lang_json::language(),
             arborium::lang_json::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-julia")]
-        "julia" => Some((
+        Language::Julia => (
             arborium::lang_julia::language(),
             arborium::lang_julia::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-kotlin")]
-        "kotlin" => Some((
+        Language::Kotlin => (
             arborium::lang_kotlin::language(),
             arborium::lang_kotlin::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-lean")]
-        "lean" => Some((
+        Language::Lean => (
             arborium::lang_lean::language(),
             arborium::lang_lean::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-lua")]
-        "lua" => Some((
+        Language::Lua => (
             arborium::lang_lua::language(),
             arborium::lang_lua::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-markdown")]
-        "markdown" => Some((
+        Language::Markdown => (
             arborium::lang_markdown::language(),
             arborium::lang_markdown::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-matlab")]
-        "matlab" => Some((
+        Language::Matlab => (
             arborium::lang_matlab::language(),
             arborium::lang_matlab::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-meson")]
-        "meson" => Some((
+        Language::Meson => (
             arborium::lang_meson::language(),
             arborium::lang_meson::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-nginx")]
-        "nginx" => Some((
+        Language::Nginx => (
             arborium::lang_nginx::language(),
             arborium::lang_nginx::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ninja")]
-        "ninja" => Some((
+        Language::Ninja => (
             arborium::lang_ninja::language(),
             arborium::lang_ninja::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-nix")]
-        "nix" => Some((
+        Language::Nix => (
             arborium::lang_nix::language(),
             arborium::lang_nix::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-objc")]
-        "objc" => Some((
+        Language::ObjectiveC => (
             arborium::lang_objc::language(),
             &arborium::lang_objc::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ocaml")]
-        "ocaml" => Some((
+        Language::OCaml => (
             arborium::lang_ocaml::language(),
             arborium::lang_ocaml::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-perl")]
-        "perl" => Some((
+        Language::Perl => (
             arborium::lang_perl::language(),
             arborium::lang_perl::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-php")]
-        "php" => Some((
+        Language::Php => (
             arborium::lang_php::language(),
             arborium::lang_php::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-postscript")]
-        "postscript" => Some((
+        Language::PostScript => (
             arborium::lang_postscript::language(),
             arborium::lang_postscript::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-powershell")]
-        "powershell" => Some((
+        Language::PowerShell => (
             arborium::lang_powershell::language(),
             arborium::lang_powershell::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-prolog")]
-        "prolog" => Some((
+        Language::Prolog => (
             arborium::lang_prolog::language(),
             arborium::lang_prolog::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-python")]
-        "python" => Some((
+        Language::Python => (
             arborium::lang_python::language(),
             arborium::lang_python::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-query")]
-        "query" => Some((
+        Language::Query => (
             arborium::lang_query::language(),
             arborium::lang_query::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-r")]
-        "r" => Some((
+        Language::R => (
             arborium::lang_r::language(),
             arborium::lang_r::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-rego")]
-        "rego" => Some((
+        Language::Rego => (
             arborium::lang_rego::language(),
             arborium::lang_rego::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-rescript")]
-        "rescript" => Some((
+        Language::Rescript => (
             arborium::lang_rescript::language(),
             arborium::lang_rescript::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ron")]
-        "ron" => Some((
+        Language::Ron => (
             arborium::lang_ron::language(),
             arborium::lang_ron::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ruby")]
-        "ruby" => Some((
+        Language::Ruby => (
             arborium::lang_ruby::language(),
             arborium::lang_ruby::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-scala")]
-        "scala" => Some((
+        Language::Scala => (
             arborium::lang_scala::language(),
             arborium::lang_scala::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-scheme")]
-        "scheme" => Some((
+        Language::Scheme => (
             arborium::lang_scheme::language(),
             arborium::lang_scheme::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-scss")]
-        "scss" => Some((
+        Language::Scss => (
             arborium::lang_scss::language(),
             &arborium::lang_scss::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-solidity")]
-        "solidity" => Some((
+        Language::Solidity => (
             arborium::lang_solidity::language(),
             arborium::lang_solidity::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-sparql")]
-        "sparql" => Some((
+        Language::Sparql => (
             arborium::lang_sparql::language(),
             arborium::lang_sparql::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-sql")]
-        "sql" => Some((
+        Language::Sql => (
             arborium::lang_sql::language(),
             arborium::lang_sql::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-ssh-config")]
-        "ssh-config" => Some((
+        Language::SshConfig => (
             arborium::lang_ssh_config::language(),
             arborium::lang_ssh_config::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-starlark")]
-        "starlark" => Some((
+        Language::Starlark => (
             arborium::lang_starlark::language(),
             arborium::lang_starlark::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-styx")]
-        "styx" => Some((
+        Language::Styx => (
             arborium::lang_styx::language(),
             arborium::lang_styx::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-svelte")]
-        "svelte" => Some((
+        Language::Svelte => (
             arborium::lang_svelte::language(),
             &arborium::lang_svelte::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-swift")]
-        "swift" => Some((
+        Language::Swift => (
             arborium::lang_swift::language(),
             arborium::lang_swift::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-textproto")]
-        "textproto" => Some((
+        Language::Textproto => (
             arborium::lang_textproto::language(),
             arborium::lang_textproto::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-thrift")]
-        "thrift" => Some((
+        Language::Thrift => (
             arborium::lang_thrift::language(),
             arborium::lang_thrift::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-tlaplus")]
-        "tlaplus" => Some((
+        Language::TlaPlus => (
             arborium::lang_tlaplus::language(),
             arborium::lang_tlaplus::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-toml")]
-        "toml" => Some((
+        Language::Toml => (
             arborium::lang_toml::language(),
             arborium::lang_toml::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-tsx")]
-        "tsx" => Some((
+        Language::Tsx => (
             arborium::lang_tsx::language(),
             &arborium::lang_tsx::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-typescript")]
-        "typescript" => Some((
+        Language::TypeScript => (
             arborium::lang_typescript::language(),
             &arborium::lang_typescript::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-typst")]
-        "typst" => Some((
+        Language::Typst => (
             arborium::lang_typst::language(),
             arborium::lang_typst::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-uiua")]
-        "uiua" => Some((
+        Language::Uiua => (
             arborium::lang_uiua::language(),
             arborium::lang_uiua::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-vb")]
-        "vb" => Some((
+        Language::VisualBasic => (
             arborium::lang_vb::language(),
             arborium::lang_vb::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-verilog")]
-        "verilog" => Some((
+        Language::Verilog => (
             arborium::lang_verilog::language(),
             arborium::lang_verilog::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-vhdl")]
-        "vhdl" => Some((
+        Language::Vhdl => (
             arborium::lang_vhdl::language(),
             arborium::lang_vhdl::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-vim")]
-        "vim" => Some((
+        Language::Vim => (
             arborium::lang_vim::language(),
             arborium::lang_vim::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-vue")]
-        "vue" => Some((
+        Language::Vue => (
             arborium::lang_vue::language(),
             &arborium::lang_vue::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-wit")]
-        "wit" => Some((
+        Language::Wit => (
             arborium::lang_wit::language(),
             arborium::lang_wit::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-x86asm")]
-        "x86asm" => Some((
+        Language::X86Asm => (
             arborium::lang_x86asm::language(),
             arborium::lang_x86asm::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-xml")]
-        "xml" => Some((
+        Language::Xml => (
             arborium::lang_xml::language(),
             arborium::lang_xml::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-yaml")]
-        "yaml" => Some((
+        Language::Yaml => (
             arborium::lang_yaml::language(),
             arborium::lang_yaml::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-yuri")]
-        "yuri" => Some((
+        Language::Yuri => (
             arborium::lang_yuri::language(),
             arborium::lang_yuri::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-zig")]
-        "zig" => Some((
+        Language::Zig => (
             arborium::lang_zig::language(),
             arborium::lang_zig::HIGHLIGHTS_QUERY,
-        )),
+        ),
         #[cfg(feature = "lang-zsh")]
-        "zsh" => Some((
+        Language::Zsh => (
             arborium::lang_zsh::language(),
             arborium::lang_zsh::HIGHLIGHTS_QUERY,
-        )),
-        _ => None,
+        ),
     }
 }
 
 /// A byte-range edit description used to drive incremental highlighting.
 ///
 /// Build one from a real edit signal (for example a contenteditable
-/// `beforeinput` event) and pass it to [`IncrementalHighlighter::highlight`].
-/// The three byte offsets are relative to the source strings supplied across
-/// successive calls: `start_byte` and `old_end_byte` index into the source
-/// passed to the *previous* `highlight` call, while `new_end_byte` indexes
-/// into the source passed to the *current* call.
+/// `beforeinput` event) and pass it to [`Buffer::edit`]. `start_byte` and
+/// `old_end_byte` index into the buffer's previous source, while
+/// `new_end_byte` indexes into the new source supplied alongside the edit.
 ///
 /// ```rust
 /// use dioxus_code::advanced::SourceEdit;
@@ -1263,113 +1311,98 @@ pub fn CodeThemeStyles(theme: CodeTheme) -> Element {
 }
 
 #[cfg(all(test, feature = "runtime"))]
-mod incremental_tests {
+mod buffer_tests {
     use super::*;
 
-    fn keyword_ranges(source: &str, hl: &HighlightedSource) -> Vec<(u32, u32, &'static str)> {
-        let _ = source;
-        hl.spans()
+    fn span_ranges(spans: &[HighlightSpan]) -> Vec<(u32, u32, &'static str)> {
+        spans
             .iter()
             .map(|s| (s.start(), s.end(), s.tag()))
             .collect()
     }
 
-    #[test]
-    fn first_parse_matches_batch_path() {
-        let mut hl = IncrementalHighlighter::new();
-        let source = "fn main() { let x = 1; }";
-        let inc = hl.highlight(source, None, Some("rust"));
-        let batch: HighlightedSource = SourceCode::new(source.to_owned())
-            .with_language(Language::Rust)
+    fn batch_spans(source: &str, language: Language) -> Vec<HighlightSpan> {
+        let snapshot: HighlightedSource = SourceCode::new(source.to_owned())
+            .with_language(language)
             .into();
-
-        assert_eq!(inc.language(), Some("rust"));
-        assert_eq!(inc.error(), None);
-        assert_eq!(keyword_ranges(source, &inc), keyword_ranges(source, &batch));
+        snapshot.spans().to_vec()
     }
 
     #[test]
-    fn incremental_edit_with_explicit_source_edit() {
-        let mut hl = IncrementalHighlighter::new();
-        let first = "fn main() { let x = 1; }";
-        let _ = hl.highlight(first, None, Some("rust"));
+    fn new_matches_batch_path() {
+        let source = "fn main() { let x = 1; }";
+        let buffer = Buffer::new(Language::Rust, source);
 
-        // Insertion of a single byte "2" between the existing "1" and ";".
-        let second = "fn main() { let x = 12; }";
-        let edit = SourceEdit {
-            start_byte: 21,
-            old_end_byte: 21,
-            new_end_byte: 22,
-        };
-        let inc = hl.highlight(second, Some(edit), Some("rust"));
-        let batch: HighlightedSource = SourceCode::new(second.to_owned())
-            .with_language(Language::Rust)
-            .into();
+        assert_eq!(buffer.language(), Language::Rust);
+        assert_eq!(buffer.error(), None);
+        assert_eq!(
+            span_ranges(buffer.spans()),
+            span_ranges(&batch_spans(source, Language::Rust)),
+        );
+    }
 
-        assert_eq!(keyword_ranges(second, &inc), keyword_ranges(second, &batch));
+    #[test]
+    fn edit_with_explicit_source_edit() {
+        let mut buffer = Buffer::new(Language::Rust, "fn main() { let x = 1; }");
+        let updated = "fn main() { let x = 12; }";
+        buffer.edit(
+            SourceEdit {
+                start_byte: 21,
+                old_end_byte: 21,
+                new_end_byte: 22,
+            },
+            updated,
+        );
+
+        assert_eq!(buffer.source(), updated);
+        assert_eq!(
+            span_ranges(buffer.spans()),
+            span_ranges(&batch_spans(updated, Language::Rust)),
+        );
     }
 
     #[test]
     fn malformed_edit_falls_back_to_full_parse() {
-        let mut hl = IncrementalHighlighter::new();
-        let first = "fn main() { let x = 1; }";
-        let _ = hl.highlight(first, None, Some("rust"));
+        let mut buffer = Buffer::new(Language::Rust, "fn main() { let x = 1; }");
+        let updated = "fn main() { let x = 12; }";
+        buffer.edit(
+            // old_end_byte beyond the previous source — must not panic.
+            SourceEdit {
+                start_byte: 21,
+                old_end_byte: 999,
+                new_end_byte: 22,
+            },
+            updated,
+        );
 
-        // old_end_byte beyond the previous source — must not panic and must
-        // produce correct spans (full-parse fallback).
-        let second = "fn main() { let x = 12; }";
-        let edit = SourceEdit {
-            start_byte: 21,
-            old_end_byte: 999,
-            new_end_byte: 22,
-        };
-        let inc = hl.highlight(second, Some(edit), Some("rust"));
-        let batch: HighlightedSource = SourceCode::new(second.to_owned())
-            .with_language(Language::Rust)
-            .into();
-        assert_eq!(keyword_ranges(second, &inc), keyword_ranges(second, &batch));
-    }
-
-    #[test]
-    fn missing_edit_falls_back_to_full_parse() {
-        let mut hl = IncrementalHighlighter::new();
-        let _ = hl.highlight("fn main() { 1 }", None, Some("rust"));
-
-        let updated = "fn main() { 2 }";
-        let inc = hl.highlight(updated, None, Some("rust"));
-        let batch: HighlightedSource = SourceCode::new(updated.to_owned())
-            .with_language(Language::Rust)
-            .into();
         assert_eq!(
-            keyword_ranges(updated, &inc),
-            keyword_ranges(updated, &batch)
+            span_ranges(buffer.spans()),
+            span_ranges(&batch_spans(updated, Language::Rust)),
         );
     }
 
     #[test]
-    fn unchanged_source_returns_cached_spans() {
-        let mut hl = IncrementalHighlighter::new();
-        let source = "fn main() {}";
-        let first = hl.highlight(source, None, Some("rust"));
-        let second = hl.highlight(source, None, Some("rust"));
-        assert_eq!(first.spans(), second.spans());
+    fn replace_drops_cached_tree() {
+        let mut buffer = Buffer::new(Language::Rust, "fn main() { 1 }");
+        let updated = "fn main() { 2 }";
+        buffer.replace(updated);
+
+        assert_eq!(buffer.source(), updated);
+        assert_eq!(
+            span_ranges(buffer.spans()),
+            span_ranges(&batch_spans(updated, Language::Rust)),
+        );
     }
 
     #[test]
-    fn language_switch_resets_state() {
-        let mut hl = IncrementalHighlighter::new();
-        let _ = hl.highlight("fn main() {}", None, Some("rust"));
-        let result = hl.highlight("hello", None, Some("definitely-not-a-real-language"));
-        assert_eq!(result.source(), "hello");
+    fn set_language_reparses() {
+        let mut buffer = Buffer::new(Language::Rust, "fn main() {}");
+        let rust_spans = buffer.spans().to_vec();
 
-        let after = hl.highlight("fn x() {}", None, Some("rust"));
-        assert_eq!(after.language(), Some("rust"));
-        assert!(
-            after
-                .spans()
-                .iter()
-                .any(|s| { &after.source()[s.start() as usize..s.end() as usize] == "fn" })
-        );
+        // Re-set to the same language is a no-op but should still produce
+        // the same output.
+        buffer.set_language(Language::Rust);
+        assert_eq!(buffer.spans(), rust_spans.as_slice());
     }
 
     #[test]

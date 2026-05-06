@@ -54,7 +54,7 @@ macro_rules! define_languages {
             ];
 
             /// Arborium slug for this language.
-            pub const fn slug(&self) -> &'static str {
+            pub const fn slug(self) -> &'static str {
                 match self {
                     $(
                         $(#[$attr])*
@@ -78,6 +78,21 @@ macro_rules! define_languages {
             }
         }
     };
+}
+
+impl Language {
+    /// Best-effort detection from a path, filename, shebang, or file contents.
+    ///
+    /// Wraps [`arborium::detect_language`] and maps the resulting slug into a
+    /// [`Language`] variant, returning `None` when detection fails or the
+    /// detected language's grammar feature is disabled in this build.
+    ///
+    /// Available with the `runtime` feature.
+    #[cfg(feature = "runtime")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+    pub fn detect(input: &str) -> Option<Self> {
+        arborium::detect_language(input).and_then(Self::from_slug)
+    }
 }
 
 define_languages! {
