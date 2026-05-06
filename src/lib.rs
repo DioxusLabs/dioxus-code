@@ -4,10 +4,6 @@
 
 extern crate self as dioxus_code;
 
-#[cfg(feature = "runtime")]
-use arborium::advanced::Span;
-#[cfg(feature = "runtime")]
-use arborium_theme::tag_for_capture;
 use dioxus::prelude::*;
 #[cfg(feature = "runtime")]
 use std::collections::HashMap;
@@ -211,6 +207,7 @@ impl From<Theme> for CodeTheme {
 include!(concat!(env!("OUT_DIR"), "/theme_assets.rs"));
 
 pub mod advanced;
+pub use advanced::{HighlightError, HighlightQueryErrorKind};
 
 /// Source text to highlight at runtime.
 ///
@@ -272,15 +269,26 @@ impl SourceCode {
         self
     }
 
-    fn highlight(self) -> advanced::HighlightedSource {
-        let language = self
-            .options
-            .language();
+    /// Highlight this source, returning typed errors when runtime highlighting fails.
+    ///
+    /// Use `Into<HighlightedSource>` for the lossy rendering path that discards
+    /// the error and renders plaintext.
+    pub fn highlight(self) -> Result<advanced::HighlightedSource, HighlightError> {
+        let language = self.options.language();
         match language {
-            Some(language) => advanced::Buffer::new(language, self.source).highlighted(),
-            None => {
-                advanced::HighlightedSource::plaintext(self.source, "could not detect language")
+            Some(language) => {
+                advanced::Buffer::new(language, self.source).map(|buffer| buffer.highlighted())
             }
+            None => Err(HighlightError::LanguageDetectionFailed),
+        }
+    }
+
+    fn highlight_or_plaintext(self) -> advanced::HighlightedSource {
+        let source = self.source.clone();
+        let language = self.options.language();
+        match self.highlight() {
+            Ok(source) => source,
+            Err(_) => advanced::HighlightedSource::plaintext(source, language),
         }
     }
 }
@@ -291,18 +299,6 @@ pub(crate) struct RawHighlightSpan {
     pub(crate) end: u32,
     pub(crate) tag: Option<&'static str>,
     pub(crate) pattern_index: u32,
-}
-
-#[cfg(feature = "runtime")]
-impl From<Span> for RawHighlightSpan {
-    fn from(span: Span) -> Self {
-        Self {
-            start: span.start,
-            end: span.end,
-            tag: tag_for_capture(&span.capture),
-            pattern_index: span.pattern_index,
-        }
-    }
 }
 
 #[cfg(feature = "runtime")]
@@ -358,7 +354,7 @@ pub(crate) fn normalize_spans(
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 impl From<SourceCode> for advanced::HighlightedSource {
     fn from(code: SourceCode) -> Self {
-        code.highlight()
+        code.highlight_or_plaintext()
     }
 }
 
@@ -403,7 +399,6 @@ pub fn Code(props: CodeProps) -> Element {
     let segments = source.trimmed_segments();
     let class = format!("dxc {}", props.theme.classes());
     let language = source.language().map(Language::slug).unwrap_or("text");
-    let error = source.error();
 
     rsx! {
         advanced::CodeThemeStyles { theme: props.theme }
@@ -411,7 +406,6 @@ pub fn Code(props: CodeProps) -> Element {
         pre {
             class,
             "data-language": language,
-            "data-error": error,
             code {
                 for segment in segments {
                     if let Some(tag) = segment.tag() {
@@ -505,6 +499,10 @@ mod tests {
     fn runtime_raw_string_uses_arborium_detection_fallback() {
         let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}").into();
         assert_eq!(tree.language(), None);
-        assert_eq!(tree.error(), Some("could not detect language"));
+        assert!(tree.spans().is_empty());
+        assert_eq!(
+            SourceCode::new("fn main() {}").highlight(),
+            Err(HighlightError::LanguageDetectionFailed),
+        );
     }
 }

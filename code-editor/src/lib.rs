@@ -2,13 +2,13 @@
 #![warn(missing_docs)]
 
 use dioxus::prelude::*;
-use dioxus_code::CodeTheme;
 pub use dioxus_code::Language;
 #[cfg(test)]
 use dioxus_code::Theme;
 use dioxus_code::advanced::{Buffer, CodeThemeStyles, TokenSpan};
 #[cfg(test)]
 use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
+use dioxus_code::{CodeTheme, SourceCode};
 use std::{cell::RefCell, rc::Rc};
 
 mod edit_capture;
@@ -99,7 +99,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let buffer = use_hook({
         let value = props.value.clone();
         let language = props.language;
-        move || Rc::new(RefCell::new(Buffer::new(language, value)))
+        move || Rc::new(RefCell::new(Buffer::new(language, value).ok()))
     });
     let edit_tracker = use_hook(|| {
         Rc::new(RefCell::new(edit_capture::InputEditTracker::new(
@@ -109,17 +109,29 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
 
     let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
     let snapshot = {
-        let mut buffer = buffer.borrow_mut();
-        if buffer.language() != props.language {
-            buffer.set_language(props.language);
+        let mut buffer_slot = buffer.borrow_mut();
+        if buffer_slot.is_none() {
+            *buffer_slot = Buffer::new(props.language, props.value.clone()).ok();
         }
-        if buffer.source() != props.value {
-            match edit {
-                Some(edit) => buffer.edit(edit, props.value.clone()),
-                None => buffer.replace(props.value.clone()),
+
+        match buffer_slot.as_mut() {
+            Some(buffer) => {
+                if buffer.language() != props.language {
+                    let _ = buffer.set_language(props.language);
+                }
+                if buffer.source() != props.value {
+                    let result = match edit {
+                        Some(edit) => buffer.edit(edit, props.value.clone()),
+                        None => buffer.replace(props.value.clone()),
+                    };
+                    let _ = result;
+                }
+                buffer.highlighted()
             }
+            None => SourceCode::new(props.value.clone())
+                .with_language(props.language)
+                .into(),
         }
-        buffer.highlighted()
     };
     let lines = snapshot.lines();
     let line_count = lines.len();

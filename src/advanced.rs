@@ -13,7 +13,156 @@
 //! ```
 
 use super::*;
-use std::{borrow::Cow, ops::Range};
+use std::{borrow::Cow, fmt, ops::Range};
+
+/// A typed error produced while preparing runtime syntax highlighting.
+///
+/// These errors are recoverable for renderers: callers can surface the error
+/// and render the original source as plaintext.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum HighlightError {
+    /// No language could be detected and no explicit language was supplied.
+    LanguageDetectionFailed,
+    /// The tree-sitter parser rejected the selected grammar.
+    GrammarLoad {
+        /// The language whose grammar failed to load.
+        language: Language,
+        /// The parser's diagnostic message.
+        message: String,
+    },
+    /// The tree-sitter highlights query failed to compile.
+    Query {
+        /// The language whose query failed.
+        language: Language,
+        /// Zero-based query row where the error was reported.
+        row: usize,
+        /// Zero-based query column where the error was reported.
+        column: usize,
+        /// Byte offset where the error was reported.
+        offset: usize,
+        /// The query error kind.
+        kind: HighlightQueryErrorKind,
+        /// The query compiler's diagnostic message.
+        message: String,
+    },
+    /// Tree-sitter failed to parse the source.
+    Parse {
+        /// The language being parsed.
+        language: Language,
+    },
+}
+
+impl HighlightError {
+    #[cfg(feature = "runtime")]
+    fn grammar_load(language: Language, error: arborium_tree_sitter::LanguageError) -> Self {
+        Self::GrammarLoad {
+            language,
+            message: error.to_string(),
+        }
+    }
+
+    #[cfg(feature = "runtime")]
+    fn query(language: Language, error: arborium_tree_sitter::QueryError) -> Self {
+        Self::Query {
+            language,
+            row: error.row,
+            column: error.column,
+            offset: error.offset,
+            kind: error.kind.into(),
+            message: error.message,
+        }
+    }
+}
+
+impl fmt::Display for HighlightError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::LanguageDetectionFailed => write!(f, "could not detect language"),
+            Self::GrammarLoad { language, message } => {
+                write!(
+                    f,
+                    "failed to load grammar for {}: {}",
+                    language.slug(),
+                    message
+                )
+            }
+            Self::Query {
+                language,
+                row,
+                column,
+                kind,
+                message,
+                ..
+            } => {
+                write!(
+                    f,
+                    "query error for {} at {}:{} ({}): {}",
+                    language.slug(),
+                    row + 1,
+                    column + 1,
+                    kind,
+                    message
+                )
+            }
+            Self::Parse { language } => {
+                write!(f, "tree-sitter parse failed for {}", language.slug())
+            }
+        }
+    }
+}
+
+impl std::error::Error for HighlightError {}
+
+/// The category of a tree-sitter highlights query compilation error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum HighlightQueryErrorKind {
+    /// Invalid query syntax.
+    Syntax,
+    /// Invalid node type.
+    NodeType,
+    /// Invalid field name.
+    Field,
+    /// Invalid capture name.
+    Capture,
+    /// Invalid predicate.
+    Predicate,
+    /// Impossible query pattern structure.
+    Structure,
+    /// Query and grammar language mismatch.
+    Language,
+}
+
+impl fmt::Display for HighlightQueryErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let kind = match self {
+            Self::Syntax => "syntax",
+            Self::NodeType => "node type",
+            Self::Field => "field",
+            Self::Capture => "capture",
+            Self::Predicate => "predicate",
+            Self::Structure => "structure",
+            Self::Language => "language",
+        };
+        f.write_str(kind)
+    }
+}
+
+#[cfg(feature = "runtime")]
+impl From<arborium_tree_sitter::QueryErrorKind> for HighlightQueryErrorKind {
+    fn from(kind: arborium_tree_sitter::QueryErrorKind) -> Self {
+        match kind {
+            arborium_tree_sitter::QueryErrorKind::Syntax => Self::Syntax,
+            arborium_tree_sitter::QueryErrorKind::NodeType => Self::NodeType,
+            arborium_tree_sitter::QueryErrorKind::Field => Self::Field,
+            arborium_tree_sitter::QueryErrorKind::Capture => Self::Capture,
+            arborium_tree_sitter::QueryErrorKind::Predicate => Self::Predicate,
+            arborium_tree_sitter::QueryErrorKind::Structure => Self::Structure,
+            arborium_tree_sitter::QueryErrorKind::Language => Self::Language,
+        }
+    }
+}
 
 /// A highlighted source string with metadata and token spans.
 ///
@@ -28,7 +177,6 @@ pub struct HighlightedSource {
     source: Cow<'static, str>,
     language: Option<Language>,
     spans: Cow<'static, [HighlightSpan]>,
-    error: Option<Cow<'static, str>>,
 }
 
 impl HighlightedSource {
@@ -37,13 +185,11 @@ impl HighlightedSource {
         source: String,
         language: Option<Language>,
         spans: Vec<HighlightSpan>,
-        error: Option<String>,
     ) -> Self {
         Self {
             source: Cow::Owned(source),
             language,
             spans: Cow::Owned(spans),
-            error: error.map(Cow::Owned),
         }
     }
 
@@ -66,20 +212,18 @@ impl HighlightedSource {
             source: Cow::Borrowed(source),
             language: Some(language),
             spans: Cow::Borrowed(spans),
-            error: None,
         }
     }
 
     #[cfg(feature = "runtime")]
     pub(crate) fn plaintext(
         source: impl Into<Cow<'static, str>>,
-        error: impl Into<Cow<'static, str>>,
+        language: Option<Language>,
     ) -> Self {
         Self {
             source: source.into(),
-            language: None,
+            language,
             spans: Cow::Borrowed(&[]),
-            error: Some(error.into()),
         }
     }
 
@@ -105,18 +249,6 @@ impl HighlightedSource {
     /// ```
     pub const fn language(&self) -> Option<Language> {
         self.language
-    }
-
-    /// The highlighting error, if parsing fell back to plaintext.
-    ///
-    /// ```rust
-    /// use dioxus_code::Language;
-    /// use dioxus_code::advanced::HighlightedSource;
-    /// let src = HighlightedSource::from_static_parts("", Language::Rust, &[]);
-    /// assert_eq!(src.error(), None);
-    /// ```
-    pub fn error(&self) -> Option<&str> {
-        self.error.as_deref()
     }
 
     /// The highlight spans covering the source.
@@ -429,13 +561,13 @@ pub fn TokenSpan(props: TokenSpanProps) -> Element {
 /// [`spans`](Self::spans), and [`lines`](Self::lines) reflect the new state.
 ///
 /// Available with the `runtime` feature. Hold one per editor instance (e.g.
-/// inside `use_hook`). If the incremental parser or query fails to initialize,
-/// highlighting falls back to the batch [`arborium::Highlighter`] path.
+/// inside `use_hook`). Highlighting operations return [`HighlightError`] when
+/// grammar setup or parsing fails.
 ///
 /// ```rust
 /// use dioxus_code::Language;
 /// use dioxus_code::advanced::Buffer;
-/// let buffer = Buffer::new(Language::Rust, "fn main() {}");
+/// let buffer = Buffer::new(Language::Rust, "fn main() {}").expect("rust grammar loads");
 /// assert_eq!(buffer.language(), Language::Rust);
 /// assert!(!buffer.spans().is_empty());
 /// ```
@@ -449,7 +581,6 @@ pub struct Buffer {
     tree: Option<arborium_tree_sitter::Tree>,
     source: String,
     spans: Vec<HighlightSpan>,
-    error: Option<String>,
 }
 
 #[cfg(feature = "runtime")]
@@ -465,10 +596,10 @@ impl Buffer {
     /// ```rust
     /// use dioxus_code::Language;
     /// use dioxus_code::advanced::Buffer;
-    /// let buffer = Buffer::new(Language::Rust, "fn main() {}");
+    /// let buffer = Buffer::new(Language::Rust, "fn main() {}").expect("rust grammar loads");
     /// assert_eq!(buffer.source(), "fn main() {}");
     /// ```
-    pub fn new(language: Language, source: impl Into<String>) -> Self {
+    pub fn new(language: Language, source: impl Into<String>) -> Result<Self, HighlightError> {
         let mut buffer = Self {
             parser: arborium_tree_sitter::Parser::new(),
             cursor: arborium_tree_sitter::QueryCursor::new(),
@@ -477,11 +608,10 @@ impl Buffer {
             tree: None,
             source: String::new(),
             spans: Vec::new(),
-            error: None,
         };
-        buffer.install_grammar(language);
-        buffer.replace(source);
-        buffer
+        buffer.install_grammar(language)?;
+        buffer.replace(source)?;
+        Ok(buffer)
     }
 
     /// Replace the source wholesale and reparse from scratch.
@@ -493,14 +623,14 @@ impl Buffer {
     /// ```rust
     /// use dioxus_code::Language;
     /// use dioxus_code::advanced::Buffer;
-    /// let mut buffer = Buffer::new(Language::Rust, "fn old() {}");
-    /// buffer.replace("fn new() {}");
+    /// let mut buffer = Buffer::new(Language::Rust, "fn old() {}").expect("rust grammar loads");
+    /// buffer.replace("fn new() {}").expect("rust parses");
     /// assert_eq!(buffer.source(), "fn new() {}");
     /// ```
-    pub fn replace(&mut self, source: impl Into<String>) {
+    pub fn replace(&mut self, source: impl Into<String>) -> Result<(), HighlightError> {
         self.source = source.into();
         self.tree = None;
-        self.reparse();
+        self.reparse()
     }
 
     /// Apply an incremental edit and reparse, reusing the cached parse tree.
@@ -514,14 +644,18 @@ impl Buffer {
     /// ```rust
     /// use dioxus_code::Language;
     /// use dioxus_code::advanced::{Buffer, SourceEdit};
-    /// let mut buffer = Buffer::new(Language::Rust, "fn main() { 1 }");
+    /// let mut buffer = Buffer::new(Language::Rust, "fn main() { 1 }").expect("rust grammar loads");
     /// buffer.edit(
     ///     SourceEdit { start_byte: 12, old_end_byte: 13, new_end_byte: 14 },
     ///     "fn main() { 22 }",
-    /// );
+    /// ).expect("rust parses");
     /// assert_eq!(buffer.source(), "fn main() { 22 }");
     /// ```
-    pub fn edit(&mut self, edit: SourceEdit, new_source: impl Into<String>) {
+    pub fn edit(
+        &mut self,
+        edit: SourceEdit,
+        new_source: impl Into<String>,
+    ) -> Result<(), HighlightError> {
         let new_source: String = new_source.into();
         if let (Some(_), Some(tree)) = (&self.incremental, self.tree.as_mut()) {
             match edit.into_input_edit(&self.source, &new_source) {
@@ -532,7 +666,7 @@ impl Buffer {
             self.tree = None;
         }
         self.source = new_source;
-        self.reparse();
+        self.reparse()
     }
 
     /// Switch grammars and reparse the current source.
@@ -542,17 +676,17 @@ impl Buffer {
     /// ```rust
     /// use dioxus_code::Language;
     /// use dioxus_code::advanced::Buffer;
-    /// let mut buffer = Buffer::new(Language::Rust, "fn main() {}");
-    /// buffer.set_language(Language::Rust);
+    /// let mut buffer = Buffer::new(Language::Rust, "fn main() {}").expect("rust grammar loads");
+    /// buffer.set_language(Language::Rust).expect("rust grammar loads");
     /// assert_eq!(buffer.language(), Language::Rust);
     /// ```
-    pub fn set_language(&mut self, language: Language) {
+    pub fn set_language(&mut self, language: Language) -> Result<(), HighlightError> {
         if self.language == language {
-            return;
+            return Ok(());
         }
-        self.install_grammar(language);
+        self.install_grammar(language)?;
         self.tree = None;
-        self.reparse();
+        self.reparse()
     }
 
     /// The current source text.
@@ -563,15 +697,6 @@ impl Buffer {
     /// The grammar this buffer is parsing with.
     pub const fn language(&self) -> Language {
         self.language
-    }
-
-    /// Latest grammar-load or parse error, if the last reparse failed.
-    ///
-    /// `Some` means [`spans`](Self::spans) is empty and the source should be
-    /// rendered as plaintext. The buffer remains usable — the next edit or
-    /// language switch may recover.
-    pub fn error(&self) -> Option<&str> {
-        self.error.as_deref()
     }
 
     /// Highlight spans covering the current source.
@@ -598,56 +723,52 @@ impl Buffer {
             self.source.clone(),
             Some(self.language),
             self.spans.clone(),
-            self.error.clone(),
         )
     }
 
-    fn install_grammar(&mut self, language: Language) {
+    fn install_grammar(&mut self, language: Language) -> Result<(), HighlightError> {
         self.language = language;
         let (language_fn, highlights_query) = grammar_for(language);
         let ts_language: arborium_tree_sitter::Language = language_fn.into();
-        self.incremental = if self.parser.set_language(&ts_language).is_err() {
-            self.error = Some(format!("failed to load grammar for {}", language.slug()));
-            None
-        } else {
-            match arborium_tree_sitter::Query::new(&ts_language, highlights_query) {
-                Ok(query) => Some(IncrementalGrammar { query }),
-                Err(error) => {
-                    self.error = Some(error.to_string());
-                    None
-                }
+        if let Err(error) = self.parser.set_language(&ts_language) {
+            return self.fail(HighlightError::grammar_load(language, error));
+        }
+
+        match arborium_tree_sitter::Query::new(&ts_language, highlights_query) {
+            Ok(query) => {
+                self.incremental = Some(IncrementalGrammar { query });
+                Ok(())
             }
-        };
+            Err(error) => self.fail(HighlightError::query(language, error)),
+        }
     }
 
-    fn reparse(&mut self) {
-        match &self.incremental {
-            Some(grammar) => match self.parser.parse(&self.source, self.tree.as_ref()) {
-                Some(tree) => {
-                    self.spans =
-                        collect_spans(&grammar.query, &mut self.cursor, &tree, &self.source);
-                    self.tree = Some(tree);
-                    self.error = None;
-                }
-                None => {
-                    self.tree = None;
-                    self.spans.clear();
-                    self.error = Some("tree-sitter parse failed".to_owned());
-                }
-            },
-            None => {
-                let mut highlighter = arborium::Highlighter::new();
-                match highlighter.highlight_spans(self.language.slug(), &self.source) {
-                    Ok(spans) => {
-                        self.spans = normalize_spans(spans.into_iter().map(RawHighlightSpan::from));
-                        self.error = None;
-                    }
-                    Err(error) => {
-                        self.spans.clear();
-                        self.error = Some(error.to_string());
-                    }
-                }
+    fn fail<T>(&mut self, error: HighlightError) -> Result<T, HighlightError> {
+        self.incremental = None;
+        self.tree = None;
+        self.spans.clear();
+        Err(error)
+    }
+
+    fn reparse(&mut self) -> Result<(), HighlightError> {
+        let Some(grammar) = &self.incremental else {
+            self.tree = None;
+            self.spans.clear();
+            return Err(HighlightError::GrammarLoad {
+                language: self.language,
+                message: "grammar is not loaded".to_owned(),
+            });
+        };
+
+        match self.parser.parse(&self.source, self.tree.as_ref()) {
+            Some(tree) => {
+                self.spans = collect_spans(&grammar.query, &mut self.cursor, &tree, &self.source);
+                self.tree = Some(tree);
+                Ok(())
             }
+            None => self.fail(HighlightError::Parse {
+                language: self.language,
+            }),
         }
     }
 }
@@ -1331,10 +1452,9 @@ mod buffer_tests {
     #[test]
     fn new_matches_batch_path() {
         let source = "fn main() { let x = 1; }";
-        let buffer = Buffer::new(Language::Rust, source);
+        let buffer = Buffer::new(Language::Rust, source).unwrap();
 
         assert_eq!(buffer.language(), Language::Rust);
-        assert_eq!(buffer.error(), None);
         assert_eq!(
             span_ranges(buffer.spans()),
             span_ranges(&batch_spans(source, Language::Rust)),
@@ -1343,16 +1463,18 @@ mod buffer_tests {
 
     #[test]
     fn edit_with_explicit_source_edit() {
-        let mut buffer = Buffer::new(Language::Rust, "fn main() { let x = 1; }");
+        let mut buffer = Buffer::new(Language::Rust, "fn main() { let x = 1; }").unwrap();
         let updated = "fn main() { let x = 12; }";
-        buffer.edit(
-            SourceEdit {
-                start_byte: 21,
-                old_end_byte: 21,
-                new_end_byte: 22,
-            },
-            updated,
-        );
+        buffer
+            .edit(
+                SourceEdit {
+                    start_byte: 21,
+                    old_end_byte: 21,
+                    new_end_byte: 22,
+                },
+                updated,
+            )
+            .unwrap();
 
         assert_eq!(buffer.source(), updated);
         assert_eq!(
@@ -1363,17 +1485,19 @@ mod buffer_tests {
 
     #[test]
     fn malformed_edit_falls_back_to_full_parse() {
-        let mut buffer = Buffer::new(Language::Rust, "fn main() { let x = 1; }");
+        let mut buffer = Buffer::new(Language::Rust, "fn main() { let x = 1; }").unwrap();
         let updated = "fn main() { let x = 12; }";
-        buffer.edit(
-            // old_end_byte beyond the previous source — must not panic.
-            SourceEdit {
-                start_byte: 21,
-                old_end_byte: 999,
-                new_end_byte: 22,
-            },
-            updated,
-        );
+        buffer
+            .edit(
+                // old_end_byte beyond the previous source — must not panic.
+                SourceEdit {
+                    start_byte: 21,
+                    old_end_byte: 999,
+                    new_end_byte: 22,
+                },
+                updated,
+            )
+            .unwrap();
 
         assert_eq!(
             span_ranges(buffer.spans()),
@@ -1383,9 +1507,9 @@ mod buffer_tests {
 
     #[test]
     fn replace_drops_cached_tree() {
-        let mut buffer = Buffer::new(Language::Rust, "fn main() { 1 }");
+        let mut buffer = Buffer::new(Language::Rust, "fn main() { 1 }").unwrap();
         let updated = "fn main() { 2 }";
-        buffer.replace(updated);
+        buffer.replace(updated).unwrap();
 
         assert_eq!(buffer.source(), updated);
         assert_eq!(
@@ -1396,12 +1520,12 @@ mod buffer_tests {
 
     #[test]
     fn set_language_reparses() {
-        let mut buffer = Buffer::new(Language::Rust, "fn main() {}");
+        let mut buffer = Buffer::new(Language::Rust, "fn main() {}").unwrap();
         let rust_spans = buffer.spans().to_vec();
 
         // Re-set to the same language is a no-op but should still produce
         // the same output.
-        buffer.set_language(Language::Rust);
+        buffer.set_language(Language::Rust).unwrap();
         assert_eq!(buffer.spans(), rust_spans.as_slice());
     }
 

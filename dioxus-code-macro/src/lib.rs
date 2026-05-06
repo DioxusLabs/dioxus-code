@@ -9,8 +9,9 @@ use macro_string::MacroString;
 use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, quote_spanned};
 use syn::parse::{Parse, ParseStream};
+use syn::spanned::Spanned;
 use syn::{Expr, LitStr, Token, parse_macro_input};
 
 /// Compile-time syntax highlighting.
@@ -35,23 +36,25 @@ pub fn code(input: TokenStream) -> TokenStream {
 
 struct CodeInput {
     path: String,
-    options: CodeOptionsInput,
-}
-
-#[derive(Default)]
-struct CodeOptionsInput {
-    language: Option<String>,
+    options: Option<Expr>,
 }
 
 impl Parse for CodeInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let MacroString(path) = input.parse()?;
-        let mut options = CodeOptionsInput::default();
+        let mut options = None;
 
         if input.peek(Token![,]) {
             input.parse::<Token![,]>()?;
             if !input.is_empty() {
-                options = parse_code_options(input)?;
+                let expr: Expr = input.parse()?;
+                if input.peek(Token![,]) {
+                    input.parse::<Token![,]>()?;
+                }
+                if !input.is_empty() {
+                    return Err(input.error("unexpected tokens after code macro options"));
+                }
+                options = Some(expr);
             }
         }
 
@@ -59,114 +62,32 @@ impl Parse for CodeInput {
     }
 }
 
-fn parse_code_options(input: ParseStream<'_>) -> syn::Result<CodeOptionsInput> {
-    let expr = input.parse::<Expr>()?;
-    parse_optional_trailing_comma(input)?;
-    Ok(CodeOptionsInput {
-        language: extract_language(&expr)?,
-    })
-}
-
-fn parse_optional_trailing_comma(input: ParseStream<'_>) -> syn::Result<()> {
-    if input.peek(Token![,]) {
-        input.parse::<Token![,]>()?;
-    }
-    if input.is_empty() {
-        Ok(())
-    } else {
-        Err(input.error("unexpected tokens after code macro options"))
-    }
-}
-
-fn extract_language(expr: &Expr) -> syn::Result<Option<String>> {
-    match extract_language_setting(expr)? {
-        LanguageSetting::Unset => Ok(None),
-        LanguageSetting::Set(language) => Ok(language),
-    }
-}
-
-enum LanguageSetting {
-    Unset,
-    Set(Option<String>),
-}
-
-fn extract_language_setting(expr: &Expr) -> syn::Result<LanguageSetting> {
+fn try_extract_language(expr: &Expr) -> Option<String> {
     match expr {
-        Expr::Call(call) if is_code_options_constructor(call) => Ok(LanguageSetting::Unset),
-        Expr::Group(group) => extract_language_setting(&group.expr),
-        Expr::Paren(paren) => extract_language_setting(&paren.expr),
+        Expr::Group(group) => try_extract_language(&group.expr),
+        Expr::Paren(paren) => try_extract_language(&paren.expr),
         Expr::MethodCall(method) => {
-            let _ = extract_language_setting(&method.receiver)?;
-            if method.method != "with_language" {
-                return Err(syn::Error::new_spanned(
-                    &method.method,
-                    "unsupported code option; expected `with_language(...)`",
-                ));
+            if method.method == "with_language" && method.args.len() == 1 {
+                if let Some(slug) = try_parse_language_arg(method.args.first().unwrap()) {
+                    return Some(slug);
+                }
             }
-
-            if method.args.len() != 1 {
-                return Err(syn::Error::new_spanned(
-                    method,
-                    "`with_language` expects exactly one argument",
-                ));
-            }
-
-            Ok(LanguageSetting::Set(parse_language_arg(
-                method.args.first().expect("argument length checked"),
-            )?))
+            try_extract_language(&method.receiver)
         }
-        _ => Err(syn::Error::new_spanned(
-            expr,
-            "code macro options must be a `CodeOptions::builder()` chain",
-        )),
+        _ => None,
     }
 }
 
-fn is_code_options_constructor(call: &syn::ExprCall) -> bool {
-    if !call.args.is_empty() {
-        return false;
-    }
-
-    let Expr::Path(path) = call.func.as_ref() else {
-        return false;
-    };
-    let mut segments = path.path.segments.iter().rev();
-    let Some(method) = segments.next() else {
-        return false;
-    };
-    let Some(options) = segments.next() else {
-        return false;
-    };
-
-    (method.ident == "builder" || method.ident == "new") && options.ident == "CodeOptions"
-}
-
-fn parse_language_arg(expr: &Expr) -> syn::Result<Option<String>> {
+fn try_parse_language_arg(expr: &Expr) -> Option<String> {
     match expr {
-        Expr::Call(call) if is_some_call(call) => {
-            if call.args.len() != 1 {
-                return Err(syn::Error::new_spanned(
-                    call,
-                    "`Some` language options must contain one language",
-                ));
-            }
-            parse_language_arg(call.args.first().expect("argument length checked")).and_then(
-                |language| {
-                    language
-                        .ok_or_else(|| {
-                            syn::Error::new_spanned(call, "`Some(None)` is not a language option")
-                        })
-                        .map(Some)
-                },
-            )
+        Expr::Group(group) => try_parse_language_arg(&group.expr),
+        Expr::Paren(paren) => try_parse_language_arg(&paren.expr),
+        Expr::Call(call) if is_some_call(call) && call.args.len() == 1 => {
+            try_parse_language_arg(call.args.first().unwrap())
         }
-        Expr::Group(group) => parse_language_arg(&group.expr),
-        Expr::Paren(paren) => parse_language_arg(&paren.expr),
-        Expr::Path(path) if is_none_path(path) => Ok(None),
-        Expr::Path(path) => language_slug_from_path(path)
-            .map(|slug| Some(slug.to_string()))
-            .ok_or_else(|| unsupported_language_arg(expr)),
-        _ => Err(unsupported_language_arg(expr)),
+        Expr::Path(path) if is_none_path(path) => None,
+        Expr::Path(path) => language_slug_from_path(path).map(str::to_string),
+        _ => None,
     }
 }
 
@@ -185,13 +106,6 @@ fn is_none_path(path: &syn::ExprPath) -> bool {
         .segments
         .last()
         .is_some_and(|segment| segment.ident == "None")
-}
-
-fn unsupported_language_arg(expr: &Expr) -> syn::Error {
-    syn::Error::new_spanned(
-        expr,
-        "macro language must be a `Language` variant, `Some(Language::...)`, or `None`",
-    )
 }
 
 const LANGUAGE_VARIANTS: &[(&str, &str)] = &[
@@ -321,6 +235,15 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     let manifest_dir = PathBuf::from(manifest_dir);
     let macro_path = input.path;
     let absolute_path = resolve_manifest_path(&manifest_dir, &macro_path);
+    let crate_path = dioxus_code_crate_path()?;
+
+    let options_check = input.options.as_ref().map(|expr| {
+        quote_spanned! { expr.span() =>
+            const _: fn() = || {
+                let _: #crate_path::CodeOptions = #expr;
+            };
+        }
+    });
 
     let source = fs::read_to_string(&absolute_path).map_err(|error| {
         syn::Error::new(
@@ -329,16 +252,17 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         )
     })?;
 
-    let crate_path = dioxus_code_crate_path()?;
     let Some(language) = input
         .options
-        .language
+        .as_ref()
+        .and_then(try_extract_language)
         .or_else(|| arborium::detect_language(&macro_path).map(str::to_string))
     else {
         let message = format!(
             "could not detect language for `{macro_path}`; pass `CodeOptions::builder().with_language(Language::Rust)`"
         );
         return Ok(quote! {{
+            #options_check
             compile_error!(#message);
         }});
     };
@@ -351,6 +275,7 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     let Some(variant) = language_variant_for_slug(&language) else {
         let message = format!("language `{language}` has no `Language` variant");
         return Ok(quote! {{
+            #options_check
             compile_error!(#message);
         }});
     };
@@ -367,6 +292,7 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     });
 
     Ok(quote! {{
+        #options_check
         const SOURCE: &str = include_str!(#absolute_lit);
         static SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#spans),*];
         #crate_path::advanced::HighlightedSource::from_static_parts(
@@ -475,7 +401,7 @@ mod tests {
 
     fn language(expr: &str) -> Option<String> {
         let expr = syn::parse_str::<Expr>(expr).unwrap();
-        extract_language(&expr).unwrap()
+        try_extract_language(&expr)
     }
 
     #[test]
@@ -494,6 +420,15 @@ mod tests {
     fn extracts_none_language_option() {
         assert_eq!(
             language("CodeOptions::builder().with_language(None)").as_deref(),
+            None,
+        );
+    }
+
+    #[test]
+    fn unknown_method_chains_fall_back_silently() {
+        assert_eq!(language("CodeOptions::builder()").as_deref(), None);
+        assert_eq!(
+            language("CodeOptions::builder().with_themes(Language::Rust)").as_deref(),
             None,
         );
     }
