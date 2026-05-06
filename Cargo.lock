@@ -2393,7 +2393,10 @@ version = "0.0.1"
 dependencies = [
  "arborium",
  "arborium-theme",
+ "arborium-tree-sitter",
  "dioxus",
+ "dioxus-code",
+ "dioxus-code-editor",
  "dioxus-code-macro",
 ]
 
@@ -2406,7 +2409,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus-code-demo"
+name = "dioxus-code-docsite"
 version = "0.0.1"
 dependencies = [
  "dioxus",
@@ -2416,18 +2419,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus-code-dioxus-hello"
-version = "0.0.1"
-dependencies = [
- "dioxus",
-]
-
-[[package]]
 name = "dioxus-code-editor"
 version = "0.0.1"
 dependencies = [
  "dioxus",
  "dioxus-code",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "dioxus-code-editor-example"
+version = "0.0.1"
+dependencies = [
+ "dioxus",
+ "dioxus-code",
+ "dioxus-code-editor",
 ]
 
 [[package]]
@@ -2444,6 +2451,7 @@ version = "0.0.1"
 dependencies = [
  "arborium",
  "arborium-theme",
+ "dioxus-code",
  "macro-string",
  "proc-macro-crate 3.5.0",
  "proc-macro2",

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use dioxus_code::{Code, CodeTheme, SourceCode, Theme};
-use dioxus_code_editor::CodeEditor;
+use dioxus_code_editor::{CodeEditor, Language};
 
 mod components;
 #[cfg(not(feature = "server"))]
@@ -18,6 +18,20 @@ use components::separator::Separator;
 use components::toggle_group::{ToggleGroup, ToggleItem};
 
 const STARTER: &str = include_str!("../snippets/starter.rs");
+const HERO_COUNTER: &str = r#"use dioxus::prelude::*;
+
+#[component]
+pub fn Counter() -> Element {
+    let mut count = use_signal(|| 0);
+
+    rsx! {
+        button {
+            onclick: move |_| count += 1,
+            "count: {count}"
+        }
+    }
+}
+"#;
 const DOCS_INSTALL: &str = include_str!("../snippets/install.toml");
 const DOCS_RUNTIME: &str = include_str!("../snippets/runtime.rs");
 const DOCS_STATIC: &str = include_str!("../snippets/static_macro.rs");
@@ -25,17 +39,52 @@ const DOCS_STATIC: &str = include_str!("../snippets/static_macro.rs");
 const COMPONENTS_THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
 
 const DEMO_THEME_PAIRS: &[ThemePair] = &[
-    ThemePair::new(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK),
-    ThemePair::new(Theme::ALABASTER, Theme::ZENBURN),
-    ThemePair::new(Theme::AYU_LIGHT, Theme::AYU_DARK),
-    ThemePair::new(Theme::CATPPUCCIN_LATTE, Theme::CATPPUCCIN_MOCHA),
-    ThemePair::new(Theme::DAYFOX, Theme::TOKYO_NIGHT),
-    ThemePair::new(Theme::GRUVBOX_LIGHT, Theme::GRUVBOX_DARK),
-    ThemePair::new(Theme::LIGHT_OWL, Theme::DRACULA),
-    ThemePair::new(Theme::LUCIUS_LIGHT, Theme::COBALT2),
-    ThemePair::new(Theme::MELANGE_LIGHT, Theme::MELANGE_DARK),
-    ThemePair::new(Theme::RUSTDOC_LIGHT, Theme::RUSTDOC_AYU),
-    ThemePair::new(Theme::SOLARIZED_LIGHT, Theme::SOLARIZED_DARK),
+    ThemePair::new(
+        "github-light",
+        Theme::GITHUB_LIGHT,
+        "github-dark",
+        Theme::GITHUB_DARK,
+    ),
+    ThemePair::new("alabaster", Theme::ALABASTER, "zenburn", Theme::ZENBURN),
+    ThemePair::new("ayu-light", Theme::AYU_LIGHT, "ayu-dark", Theme::AYU_DARK),
+    ThemePair::new(
+        "catppuccin-latte",
+        Theme::CATPPUCCIN_LATTE,
+        "catppuccin-mocha",
+        Theme::CATPPUCCIN_MOCHA,
+    ),
+    ThemePair::new("dayfox", Theme::DAYFOX, "tokyo-night", Theme::TOKYO_NIGHT),
+    ThemePair::new(
+        "gruvbox-light",
+        Theme::GRUVBOX_LIGHT,
+        "gruvbox-dark",
+        Theme::GRUVBOX_DARK,
+    ),
+    ThemePair::new("light-owl", Theme::LIGHT_OWL, "dracula", Theme::DRACULA),
+    ThemePair::new(
+        "lucius-light",
+        Theme::LUCIUS_LIGHT,
+        "cobalt2",
+        Theme::COBALT2,
+    ),
+    ThemePair::new(
+        "melange-light",
+        Theme::MELANGE_LIGHT,
+        "melange-dark",
+        Theme::MELANGE_DARK,
+    ),
+    ThemePair::new(
+        "rustdoc-light",
+        Theme::RUSTDOC_LIGHT,
+        "rustdoc-ayu",
+        Theme::RUSTDOC_AYU,
+    ),
+    ThemePair::new(
+        "solarized-light",
+        Theme::SOLARIZED_LIGHT,
+        "solarized-dark",
+        Theme::SOLARIZED_DARK,
+    ),
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -65,13 +114,25 @@ impl Scheme {
 
 #[derive(Clone, Copy)]
 struct ThemePair {
+    light_name: &'static str,
     light: Theme,
+    dark_name: &'static str,
     dark: Theme,
 }
 
 impl ThemePair {
-    const fn new(light: Theme, dark: Theme) -> Self {
-        Self { light, dark }
+    const fn new(
+        light_name: &'static str,
+        light: Theme,
+        dark_name: &'static str,
+        dark: Theme,
+    ) -> Self {
+        Self {
+            light_name,
+            light,
+            dark_name,
+            dark,
+        }
     }
 
     fn code_theme(self, scheme: Scheme) -> CodeTheme {
@@ -84,14 +145,14 @@ impl ThemePair {
 
     fn display_name(self, scheme: Scheme) -> String {
         match scheme {
-            Scheme::System => format!("{} / {}", self.light.name(), self.dark.name()),
-            Scheme::Light => self.light.name().to_string(),
-            Scheme::Dark => self.dark.name().to_string(),
+            Scheme::System => self.option_name(),
+            Scheme::Light => self.light_name.to_string(),
+            Scheme::Dark => self.dark_name.to_string(),
         }
     }
 
     fn option_name(self) -> String {
-        format!("{} / {}", self.light.name(), self.dark.name())
+        format!("{} / {}", self.light_name, self.dark_name)
     }
 }
 
@@ -174,13 +235,13 @@ fn Home() -> Element {
     let active_theme_index = active_theme().min(theme_pairs.len() - 1);
     let active_theme_pair = theme_pairs[active_theme_index];
     let hero_theme = active_theme_pair.code_theme(scheme_value);
-    let hero_theme_name = active_theme_pair.display_name(scheme_value);
+    let hero_theme_label = active_theme_pair.display_name(scheme_value);
 
     rsx! {
         document::Link { rel: "stylesheet", href: APP_CSS }
         main { class: "site-shell",
             Header { scheme }
-            Hero { source: source(), theme: hero_theme, theme_name: hero_theme_name }
+            Hero { theme: hero_theme, theme_label: hero_theme_label }
             FeatureRowReceipt {}
             Playground { source, active_theme, scheme: scheme_value }
             Docs { scheme: scheme_value }
@@ -204,7 +265,7 @@ fn Header(scheme: Signal<Scheme>) -> Element {
                     index: 0usize,
                     value: "features".to_string(),
                     to: "#features",
-                    "Why"
+                    "Features"
                 }
                 NavbarItem {
                     index: 1usize,
@@ -455,7 +516,7 @@ fn IconExternal() -> Element {
 }
 
 #[component]
-fn Hero(source: String, theme: CodeTheme, theme_name: String) -> Element {
+fn Hero(theme: CodeTheme, theme_label: String) -> Element {
     rsx! {
         section { id: "top", class: "hero hero-terminal",
             div { class: "hero-terminal-grid",
@@ -464,7 +525,7 @@ fn Hero(source: String, theme: CodeTheme, theme_name: String) -> Element {
                         Badge { variant: BadgeVariant::Outline, "v0.1 · Dioxus 0.7" }
                     }
                     h1 { class: "hero-h1",
-                        "Code highlighter for Dioxus; Runtime or "
+                        "Code highlighter for Dioxus; runtime or "
                         em { "compile time" }
                         "."
                     }
@@ -499,10 +560,10 @@ fn Hero(source: String, theme: CodeTheme, theme_name: String) -> Element {
                 div { class: "hero-stage hero-stage-split",
                     div { class: "card-bar",
                         span { "src/counter.rs" }
-                        span { "{theme_name}" }
+                        span { "{theme_label}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: SourceCode::new(source).with_language("rust"), theme }
+                        Code { src: SourceCode::new(HERO_COUNTER).with_language(Language::Rust), theme }
                     }
                 }
             }
@@ -656,8 +717,7 @@ fn Playground(
                     }
                     CodeEditor {
                         value: source(),
-                        language: "rust",
-                        name: "source.rs",
+                        language: Language::Rust,
                         theme,
                         aria_label: "Rust source editor",
                         placeholder: "Type Rust code...",
@@ -672,9 +732,14 @@ fn Playground(
 
 #[component]
 fn Docs(scheme: Scheme) -> Element {
-    let theme_pair = ThemePair::new(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK);
+    let theme_pair = ThemePair::new(
+        "github-light",
+        Theme::GITHUB_LIGHT,
+        "github-dark",
+        Theme::GITHUB_DARK,
+    );
     let theme = theme_pair.code_theme(scheme);
-    let theme_name = theme_pair.display_name(scheme);
+    let theme_label = theme_pair.display_name(scheme);
     let steps = doc_step_data();
 
     rsx! {
@@ -697,7 +762,7 @@ fn Docs(scheme: Scheme) -> Element {
                             div { class: "docs-timeline-frame",
                                 div { class: "card-bar",
                                     span { "{step.file_name}" }
-                                    span { "{theme_name}" }
+                                    span { "{theme_label}" }
                                 }
                                 div { class: "card-code-body",
                                     Code {
@@ -721,7 +786,7 @@ struct DocStepData {
     title: &'static str,
     copy: &'static str,
     code: &'static str,
-    language: &'static str,
+    language: Language,
     file_name: &'static str,
 }
 
@@ -733,7 +798,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             title: "Add the dependency",
             copy: "Enable the runtime feature when source comes from user input, generated files, or network responses.",
             code: DOCS_INSTALL,
-            language: "toml",
+            language: Language::Toml,
             file_name: "Cargo.toml",
         },
         DocStepData {
@@ -742,7 +807,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             title: "SourceCode for live input",
             copy: "Pass any string through SourceCode. Provide a language hint when you already know it — Arborium handles tokenizing.",
             code: DOCS_RUNTIME,
-            language: "rust",
+            language: Language::Rust,
             file_name: "runtime.rs",
         },
         DocStepData {
@@ -751,7 +816,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             title: "code! for snippets in your repo",
             copy: "Use the macro for examples, docs, and any source checked in alongside your app. Highlight markup is generated at compile time.",
             code: DOCS_STATIC,
-            language: "rust",
+            language: Language::Rust,
             file_name: "static.rs",
         },
     ]
@@ -776,7 +841,7 @@ fn SiteFooter() -> Element {
                     }
                     div { class: "footer-col",
                         span { class: "card-eyebrow", "Project" }
-                        a { href: "#features", "Why" }
+                        a { href: "#features", "Features" }
                         a { href: "#playground", "Playground" }
                         a { href: "#docs", "Documentation" }
                     }

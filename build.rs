@@ -13,7 +13,7 @@ struct ThemeDef {
 
 struct ParsedTheme {
     const_name: &'static str,
-    name: String,
+    slug: String,
     css_file: String,
     system_light_css_file: String,
     system_dark_css_file: String,
@@ -43,6 +43,7 @@ struct SharedRules {
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rustc-check-cfg=cfg(docsrs)");
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let asset_dir = manifest_dir.join("assets/generated/arborium-themes");
@@ -52,8 +53,7 @@ fn main() {
     let mut shared_rules = SharedRules::default();
     let mut generated = String::from(
         r#"impl Theme {
-    /// Shared stylesheet for syntax token rules and CSS-only system theme selection.
-    pub const THEME_CSS: Asset = asset!("/assets/generated/arborium-themes/dioxus-code-theme.css");
+    const THEME_CSS: Asset = asset!("/assets/generated/arborium-themes/dioxus-code-theme.css");
 "#,
     );
 
@@ -72,28 +72,25 @@ fn main() {
         .unwrap();
 
         generated.push_str(&format!(
-            "    /// Stylesheet asset for the `{name}` theme.\n    pub const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
+            "    const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
             const_name = theme.const_name,
             css_file = theme.css_file,
-            name = theme.name,
         ));
         generated.push_str(&format!(
-            "    /// Stylesheet asset for the `{name}` theme's system light variables.\n    pub const {const_name}_SYSTEM_LIGHT_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
+            "    const {const_name}_SYSTEM_LIGHT_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
             const_name = theme.const_name,
             css_file = theme.system_light_css_file,
-            name = theme.name,
         ));
         generated.push_str(&format!(
-            "    /// Stylesheet asset for the `{name}` theme's system dark variables.\n    pub const {const_name}_SYSTEM_DARK_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
+            "    const {const_name}_SYSTEM_DARK_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
             const_name = theme.const_name,
             css_file = theme.system_dark_css_file,
-            name = theme.name,
         ));
 
         generated.push_str(&format!(
-            "    /// The `{name}` syntax theme.\n    pub const {const_name}: Self = Self {{ name: \"{name}\", class: \"{class}\", system_light_class: \"{system_light_class}\", system_dark_class: \"{system_dark_class}\", asset: Self::{const_name}_CSS, system_light_asset: Self::{const_name}_SYSTEM_LIGHT_CSS, system_dark_asset: Self::{const_name}_SYSTEM_DARK_CSS }};\n",
+            "    /// The `{slug}` syntax theme.\n    ///\n    /// ```rust\n    /// use dioxus_code::Theme;\n    /// let _theme = Theme::{const_name};\n    /// ```\n    pub const {const_name}: Self = Self {{ stylesheet: ThemeStylesheet {{ class: \"{class}\", asset: Self::{const_name}_CSS }}, system_light: ThemeStylesheet {{ class: \"{system_light_class}\", asset: Self::{const_name}_SYSTEM_LIGHT_CSS }}, system_dark: ThemeStylesheet {{ class: \"{system_dark_class}\", asset: Self::{const_name}_SYSTEM_DARK_CSS }} }};\n",
             const_name = theme.const_name,
-            name = theme.name,
+            slug = theme.slug,
             class = theme.class,
             system_light_class = theme.system_light_class,
             system_dark_class = theme.system_dark_class,
@@ -116,19 +113,19 @@ fn main() {
 }
 
 fn parse_theme(theme: ThemeDef) -> ParsedTheme {
-    let name = slug(&theme.theme.name);
-    let css_file = format!("{name}.css");
-    let system_light_css_file = format!("{name}-system-light.css");
-    let system_dark_css_file = format!("{name}-system-dark.css");
-    let class = format!("dxc-{name}");
-    let system_light_class = format!("dxc-system-light-{name}");
-    let system_dark_class = format!("dxc-system-dark-{name}");
+    let slug = slug(&theme.theme.name);
+    let css_file = format!("{slug}.css");
+    let system_light_css_file = format!("{slug}-system-light.css");
+    let system_dark_css_file = format!("{slug}-system-dark.css");
+    let class = format!("dxc-{slug}");
+    let system_light_class = format!("dxc-system-light-{slug}");
+    let system_dark_class = format!("dxc-system-dark-{slug}");
     let selector = format!(".{class}");
     let rules = parse_theme_rules(&theme.theme.to_css(&selector));
 
     ParsedTheme {
         const_name: theme.const_name,
-        name,
+        slug,
         css_file,
         system_light_css_file,
         system_dark_css_file,

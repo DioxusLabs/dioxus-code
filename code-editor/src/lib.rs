@@ -2,25 +2,50 @@
 #![warn(missing_docs)]
 
 use dioxus::prelude::*;
-use dioxus_code::{CodeSpan, CodeTheme, HighlightSpan, IntoTree, SourceCode, Theme};
+pub use dioxus_code::Language;
+#[cfg(test)]
+use dioxus_code::Theme;
+use dioxus_code::advanced::{Buffer, CodeThemeStyles, TokenSpan};
+#[cfg(test)]
+use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
+use dioxus_code::{CodeTheme, SourceCode};
 use std::{cell::RefCell, rc::Rc};
 
+mod edit_capture;
+
 /// Base stylesheet injected by [`CodeEditor`].
+///
+/// ```rust
+/// use dioxus_code_editor::CODE_EDITOR_CSS;
+/// let _href = CODE_EDITOR_CSS;
+/// ```
 pub const CODE_EDITOR_CSS: Asset = asset!("/assets/dioxus-code-editor.css");
 
 /// Props for [`CodeEditor`].
+///
+/// ```rust,no_run
+/// use dioxus_code::{CodeTheme, Theme};
+/// use dioxus_code_editor::{CodeEditorProps, Language};
+/// let _props = CodeEditorProps::builder()
+///     .value("fn main() {}")
+///     .language(Language::Rust)
+///     .theme(CodeTheme::fixed(Theme::TOKYO_NIGHT))
+///     .build();
+/// ```
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeEditorProps {
     /// The current editor contents.
     #[props(into)]
     pub value: String,
-    /// Optional Arborium language hint, for example `"rust"`.
-    #[props(into, default)]
-    pub language: String,
-    /// Optional file name used for language detection when `language` is empty.
-    #[props(into, default)]
-    pub name: String,
-    /// Syntax theme selection shared with `dioxus-code`.
+    /// Tree-sitter grammar used for syntax highlighting.
+    ///
+    /// Pass a [`Language`] variant directly. Use [`Language::from_slug`] to
+    /// turn a runtime slug into a variant. Defaults to [`Language::Rust`].
+    #[props(default = Language::Rust)]
+    pub language: Language,
+    /// Syntax theme selection shared with [`dioxus-code`].
+    ///
+    /// [`dioxus-code`]: https://docs.rs/dioxus-code/latest/dioxus_code/
     #[props(default, into)]
     pub theme: CodeTheme,
     /// Show a gutter with one-based line numbers.
@@ -29,13 +54,13 @@ pub struct CodeEditorProps {
     /// Disable editing while preserving syntax highlighting and text selection.
     #[props(default = false)]
     pub read_only: bool,
-    /// Forward spellcheck to the contenteditable input layer.
+    /// Forward spellcheck to the textarea input layer.
     #[props(default = false)]
     pub spellcheck: bool,
     /// Accessible label for the editor textbox.
     #[props(into, default = "Code editor")]
     pub aria_label: String,
-    /// Placeholder shown only while `value` is empty.
+    /// Placeholder shown only while [`CodeEditorProps::value`] is empty.
     #[props(into, default)]
     pub placeholder: String,
     /// Extra class names appended to the editor root.
@@ -48,40 +73,78 @@ pub struct CodeEditorProps {
 
 /// Editable syntax-highlighted code surface.
 ///
-/// The component is controlled by `value`; update that value from `oninput` to
-/// keep the highlight layer and editable layer in sync.
+/// The component is controlled by [`CodeEditorProps::value`]; update that value
+/// from [`CodeEditorProps::oninput`] to keep the highlight layer and editable
+/// layer in sync.
+///
+/// ```rust
+/// use dioxus::prelude::*;
+/// use dioxus_code::Theme;
+/// use dioxus_code_editor::{CodeEditor, Language};
+///
+/// fn _example() -> Element {
+///     let mut source = use_signal(String::new);
+///     rsx! {
+///         CodeEditor {
+///             value: source(),
+///             language: Language::Rust,
+///             theme: Theme::TOKYO_NIGHT,
+///             oninput: move |value| source.set(value),
+///         }
+///     }
+/// }
+/// ```
 #[component]
 pub fn CodeEditor(props: CodeEditorProps) -> Element {
-    let input_sync = use_hook(|| {
-        Rc::new(RefCell::new(InputSyncState {
-            rendered_value: props.value.clone(),
-            last_local_value: props.value.clone(),
-            version: 0,
-        }))
+    let buffer = use_hook({
+        let value = props.value.clone();
+        let language = props.language;
+        move || Rc::new(RefCell::new(Buffer::new(language, value).ok()))
+    });
+    let edit_tracker = use_hook(|| {
+        Rc::new(RefCell::new(edit_capture::InputEditTracker::new(
+            props.value.clone(),
+        )))
     });
 
-    let mut source_code = SourceCode::new(props.value.clone());
-    if !props.language.is_empty() {
-        source_code = source_code.with_language(props.language.clone());
-    }
-    if !props.name.is_empty() {
-        source_code = source_code.with_name(props.name.clone());
-    }
+    let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
+    let snapshot = {
+        let mut buffer_slot = buffer.borrow_mut();
+        if buffer_slot.is_none() {
+            *buffer_slot = Buffer::new(props.language, props.value.clone()).ok();
+        }
 
-    let tree = source_code.into_tree();
-    let lines = editor_lines(tree.source(), tree.spans());
+        match buffer_slot.as_mut() {
+            Some(buffer) => {
+                if buffer.language() != props.language {
+                    let _ = buffer.set_language(props.language);
+                }
+                if buffer.source() != props.value {
+                    let result = match edit {
+                        Some(edit) => buffer.edit(edit, props.value.clone()),
+                        None => buffer.replace(props.value.clone()),
+                    };
+                    let _ = result;
+                }
+                buffer.highlighted()
+            }
+            None => SourceCode::new(props.value.clone())
+                .with_language(props.language)
+                .into(),
+        }
+    };
+    let lines = snapshot.lines();
     let line_count = lines.len();
     let class = editor_class(props.theme, props.line_numbers, &props.class);
-    let (input_value, input_version) = synced_input_value(&input_sync, &props.value);
-    let contenteditable = if props.read_only {
-        "false"
-    } else {
-        "plaintext-only"
-    };
+    let textarea_value = props.value.clone();
     let readonly = props.read_only.then_some("true");
+    let input_attributes = edit_capture::use_input_edit_attributes(edit_tracker.clone(), {
+        let oninput = props.oninput;
+        move |value| oninput.call(value)
+    });
 
     rsx! {
-        EditorThemeStyles { theme: props.theme }
+        CodeThemeStyles { theme: props.theme }
         document::Stylesheet { href: CODE_EDITOR_CSS }
         div {
             class,
@@ -97,86 +160,34 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                     for line in lines {
                         div { class: "dxc-editor-line",
                             for segment in line {
-                                if let Some(tag) = segment.tag {
-                                    CodeSpan {
-                                        text: segment.text.to_string(),
+                                if let Some(tag) = segment.tag() {
+                                    TokenSpan {
+                                        text: segment.text(),
                                         tag,
                                     }
                                 } else {
-                                    span { "{segment.text}" }
+                                    span { "{segment.text()}" }
                                 }
                             }
                         }
                     }
                 }
-                div {
-                    key: "{input_version}",
+                textarea {
                     class: "dxc-editor-input",
-                    contenteditable,
+                    readonly: props.read_only,
                     spellcheck: props.spellcheck,
                     role: "textbox",
                     "aria-label": props.aria_label,
                     "aria-multiline": "true",
                     "aria-readonly": readonly,
-                    "data-placeholder": props.placeholder,
-                    oninput: move |event| {
-                        let value = event.value();
-                        input_sync.borrow_mut().last_local_value = value.clone();
-                        props.oninput.call(value);
-                    },
-                    "{input_value}"
+                    placeholder: props.placeholder,
+                    value: textarea_value,
+                    wrap: "off",
+                    ..input_attributes,
                 }
             }
         }
     }
-}
-
-#[component]
-fn EditorThemeStyles(theme: CodeTheme) -> Element {
-    let shared_theme_css = Theme::THEME_CSS;
-
-    match theme {
-        CodeTheme::Fixed(theme) => {
-            let theme_asset = theme.asset();
-            let theme_key = theme.name();
-
-            rsx! {
-                document::Stylesheet { href: shared_theme_css }
-                {rsx!{document::Stylesheet { key: "{theme_key}", href: theme_asset }}}
-            }
-        }
-        CodeTheme::System { light, dark } => {
-            let light_asset = light.system_light_asset();
-            let dark_asset = dark.system_dark_asset();
-            let light_key = format!("{}-system-light", light.name());
-            let dark_key = format!("{}-system-dark", dark.name());
-
-            rsx! {
-                document::Stylesheet { href: shared_theme_css }
-                {rsx!{document::Stylesheet { key: "{light_key}", href: light_asset }}}
-                {rsx!{document::Stylesheet { key: "{dark_key}", href: dark_asset }}}
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-struct InputSyncState {
-    rendered_value: String,
-    last_local_value: String,
-    version: usize,
-}
-
-fn synced_input_value(input_sync: &Rc<RefCell<InputSyncState>>, value: &str) -> (String, usize) {
-    let mut state = input_sync.borrow_mut();
-
-    if value != state.last_local_value {
-        state.last_local_value = value.to_string();
-        state.rendered_value = value.to_string();
-        state.version += 1;
-    }
-
-    (state.rendered_value.clone(), state.version)
 }
 
 fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &str) -> String {
@@ -189,97 +200,6 @@ fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &s
         class.push_str(extra_class);
     }
     class
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Segment<'a> {
-    text: &'a str,
-    tag: Option<&'static str>,
-}
-
-fn editor_lines<'a>(source: &'a str, spans: &[HighlightSpan]) -> Vec<Vec<Segment<'a>>> {
-    let mut lines = vec![Vec::new()];
-
-    for segment in segments(source, spans) {
-        push_line_segments(&mut lines, segment);
-    }
-
-    lines
-}
-
-fn segments<'a>(source: &'a str, spans: &[HighlightSpan]) -> Vec<Segment<'a>> {
-    if spans.is_empty() {
-        return vec![Segment {
-            text: source,
-            tag: None,
-        }];
-    }
-
-    let mut spans = spans.to_vec();
-    spans.sort_by(|a, b| a.start.cmp(&b.start).then_with(|| b.end.cmp(&a.end)));
-
-    let mut events = Vec::with_capacity(spans.len() * 2);
-    for (index, span) in spans.iter().enumerate() {
-        events.push((span.start, true, index));
-        events.push((span.end, false, index));
-    }
-    events.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-
-    let mut segments = Vec::new();
-    let mut last_pos = 0;
-    let mut stack: Vec<usize> = Vec::new();
-
-    for (pos, is_start, span_index) in events {
-        let pos = pos as usize;
-        if pos > last_pos && pos <= source.len() {
-            segments.push(Segment {
-                text: &source[last_pos..pos],
-                tag: stack.last().map(|&i| spans[i].tag),
-            });
-            last_pos = pos;
-        }
-
-        if is_start {
-            stack.push(span_index);
-        } else if let Some(index) = stack.iter().rposition(|&i| i == span_index) {
-            stack.remove(index);
-        }
-    }
-
-    if last_pos < source.len() {
-        segments.push(Segment {
-            text: &source[last_pos..],
-            tag: stack.last().map(|&i| spans[i].tag),
-        });
-    }
-
-    segments
-}
-
-fn push_line_segments<'a>(lines: &mut Vec<Vec<Segment<'a>>>, segment: Segment<'a>) {
-    let mut text = segment.text;
-
-    loop {
-        if let Some(newline) = text.find('\n') {
-            let before_newline = &text[..newline];
-            if !before_newline.is_empty() {
-                lines.last_mut().unwrap().push(Segment {
-                    text: before_newline,
-                    tag: segment.tag,
-                });
-            }
-            lines.push(Vec::new());
-            text = &text[newline + 1..];
-        } else {
-            if !text.is_empty() {
-                lines.last_mut().unwrap().push(Segment {
-                    text,
-                    tag: segment.tag,
-                });
-            }
-            break;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -316,59 +236,10 @@ mod tests {
 
     #[test]
     fn lines_preserve_trailing_empty_line() {
-        let lines = editor_lines("let x = 1;\n", &[]);
+        let source = HighlightedSource::from_static_parts("let x = 1;\n", Language::Rust, &[]);
+        let lines = source.lines();
         assert_eq!(lines.len(), 2);
-        assert_eq!(
-            lines[0],
-            vec![Segment {
-                text: "let x = 1;",
-                tag: None,
-            }]
-        );
+        assert_eq!(lines[0], vec![HighlightSegment::new("let x = 1;", None)]);
         assert!(lines[1].is_empty());
-    }
-
-    #[test]
-    fn local_input_echo_does_not_rewrite_editable_text() {
-        let input_sync = Rc::new(RefCell::new(InputSyncState {
-            rendered_value: "abc".to_string(),
-            last_local_value: "abc".to_string(),
-            version: 0,
-        }));
-
-        input_sync.borrow_mut().last_local_value = "abxc".to_string();
-
-        assert_eq!(
-            synced_input_value(&input_sync, "abxc"),
-            ("abc".to_string(), 0)
-        );
-    }
-
-    #[test]
-    fn external_value_change_resyncs_editable_text() {
-        let input_sync = Rc::new(RefCell::new(InputSyncState {
-            rendered_value: "abc".to_string(),
-            last_local_value: "abxc".to_string(),
-            version: 0,
-        }));
-
-        assert_eq!(
-            synced_input_value(&input_sync, "xyz"),
-            ("xyz".to_string(), 1)
-        );
-    }
-
-    #[test]
-    fn external_reset_to_rendered_value_still_forces_remount() {
-        let input_sync = Rc::new(RefCell::new(InputSyncState {
-            rendered_value: "abc".to_string(),
-            last_local_value: "abxc".to_string(),
-            version: 0,
-        }));
-
-        assert_eq!(
-            synced_input_value(&input_sync, "abc"),
-            ("abc".to_string(), 1)
-        );
     }
 }

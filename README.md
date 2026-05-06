@@ -21,8 +21,8 @@ A small Dioxus component for rendering source code with proper highlighting. Par
 
 Two ways to highlight:
 
-- **`code!()` macro** — parses at compile time. The runtime ships only the spans, no parser. Default.
-- **`SourceCode`** — parses at runtime. Opt in with the `runtime` feature when the source isn't known until the user types it.
+- **[`code!`] macro** — parses at compile time. The runtime ships only the spans, no parser. Default.
+- **[`SourceCode`]** — parses at runtime. Opt in with the `runtime` feature when the source isn't known until the user types it.
 
 ## Quick start
 
@@ -31,7 +31,7 @@ Two ways to highlight:
 dioxus-code = "0.1"
 ```
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use dioxus_code::{Code, Theme, code};
 
@@ -47,6 +47,7 @@ fn ReadMe() -> Element {
 ```
 
 The path is resolved from the consumer's `CARGO_MANIFEST_DIR`. `concat!` and `env!` work too.
+When the file extension is ambiguous, pass [`CodeOptions::builder`] with [`CodeOptions::with_language`].
 
 ## Runtime highlighting
 
@@ -57,59 +58,73 @@ For editor-style use cases where the source isn't known at compile time:
 dioxus-code = { version = "0.1", features = ["runtime"] }
 ```
 
-```rust,ignore
-use dioxus_code::{Code, SourceCode, Theme};
-
+```rust
+# use dioxus::prelude::*;
+use dioxus_code::{Code, CodeOptions, Language, SourceCode, Theme};
+# let user_input = String::new();
+# let _ =
 rsx! {
     Code {
-        src: SourceCode::new(user_input).with_language("rust"),
+        src: SourceCode::new(user_input)
+            .with_options(CodeOptions::builder().with_language(Language::Rust)),
         theme: Theme::GITHUB_LIGHT,
     }
 }
+# ;
 ```
 
-Language can be set explicitly, inferred from a filename via `with_name("main.rs")`, or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
+Language can be set explicitly with the same [`CodeOptions`] builder used by [`code!`], or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
 
 ## Editor
 
-`dioxus-code-editor` is a sibling crate that pairs the highlighter with a `contenteditable` input layer:
+[`dioxus-code-editor`] is a sibling crate that pairs the highlighter with a `contenteditable` input layer:
 
-```rust,ignore
-use dioxus_code_editor::CodeEditor;
+```rust
+# use dioxus::prelude::*;
+use dioxus_code_editor::{CodeEditor, Language};
 use dioxus_code::Theme;
 
+# fn editor() -> Element {
 let mut source = use_signal(|| String::new());
 
 rsx! {
     CodeEditor {
         value: source(),
-        language: "rust",
+        language: Language::Rust,
         theme: Theme::TOKYO_NIGHT,
         oninput: move |value| source.set(value),
     }
 }
+# }
 ```
 
-It is controlled — drive `value` from your own signal and update it inside `oninput`.
+It is controlled — drive [`CodeEditorProps::value`] from your own signal and update it inside [`CodeEditorProps::oninput`].
 
 ## Themes
 
-Thirty-odd built-ins, including Tokyo Night, Catppuccin (all four), Dracula, GitHub Light/Dark, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, the Rustdoc themes, and others. Each is exposed as a `Theme` constant and a CSS asset; pages with multiple themes render side-by-side without leaking styles.
+Thirty-odd built-ins, including Tokyo Night, Catppuccin (all four), Dracula, GitHub Light/Dark, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, the Rustdoc themes, and others. Each is exposed as a [`Theme`] constant; pages with multiple themes render side-by-side without leaking styles.
 
-```rust,ignore
-Code { src: code!("/example.rs"), theme: Theme::CATPPUCCIN_MOCHA }
+```rust
+# use dioxus::prelude::*;
+# use dioxus_code::{Code, Theme, code};
+# let _ = rsx! {
+Code { src: code!("/snippets/demo.rs"), theme: Theme::CATPPUCCIN_MOCHA }
+# };
 ```
 
-Use `CodeTheme::system` to select a light and dark theme with CSS media
+Use [`CodeTheme::system`] to select a light and dark theme with CSS media
 queries. This is JavaScript-free and works during SSR:
 
-```rust,ignore
+```rust
+# use dioxus::prelude::*;
 use dioxus_code::{Code, CodeTheme, Theme, code};
 
+# let _ = rsx! {
 Code {
-    src: code!("/example.rs"),
+    src: code!("/snippets/demo.rs"),
     theme: CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT),
 }
+# };
 ```
 
 ## Examples
@@ -124,10 +139,24 @@ dx serve --example dioxus-code-live-input  # textarea bound to runtime highlight
 
 | crate | purpose |
 |---|---|
-| `dioxus-code` | The `Code` component, themes, and runtime/macro entry points. |
-| `dioxus-code-editor` | Editable code surface built on `Code`. |
-| `dioxus-code-macro` | Implementation of `code!()`. Re-exported by `dioxus-code` under the `macro` feature. |
+| [`dioxus-code`] | The [`Code`] component, themes, and runtime/macro entry points. |
+| [`dioxus-code-editor`] | Editable code surface built on [`Code`]. |
+| [`dioxus-code-macro`] | Implementation of [`code!`]. Re-exported by [`dioxus-code`] under the `macro` feature. |
 
 ## License
 
 MIT. See the repository `LICENSE` file.
+
+[`code!`]: https://docs.rs/dioxus-code/latest/dioxus_code/macro.code.html
+[`Code`]: https://docs.rs/dioxus-code/latest/dioxus_code/fn.Code.html
+[`CodeEditorProps::oninput`]: https://docs.rs/dioxus-code-editor/latest/dioxus_code_editor/struct.CodeEditorProps.html#structfield.oninput
+[`CodeEditorProps::value`]: https://docs.rs/dioxus-code-editor/latest/dioxus_code_editor/struct.CodeEditorProps.html#structfield.value
+[`CodeOptions`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html
+[`CodeOptions::builder`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.builder
+[`CodeOptions::with_language`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.with_language
+[`CodeTheme::system`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeTheme.html#method.system
+[`dioxus-code`]: https://crates.io/crates/dioxus-code
+[`dioxus-code-editor`]: https://crates.io/crates/dioxus-code-editor
+[`dioxus-code-macro`]: https://crates.io/crates/dioxus-code-macro
+[`SourceCode`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.SourceCode.html
+[`Theme`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.Theme.html

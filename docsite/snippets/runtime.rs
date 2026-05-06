@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use dioxus_code::{Code, CodeTheme, SourceCode, Theme};
+use dioxus_code::{Code, CodeTheme, Language, SourceCode, Theme};
 
 fn main() {
     dioxus::launch(App);
@@ -11,7 +11,7 @@ fn App() -> Element {
 
     rsx! {
         Code {
-            src: SourceCode::new(source()).with_language("rust"),
+            src: SourceCode::new(source()).with_language(Language::Rust),
             theme: CodeTheme::system(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK),
         }
     }
