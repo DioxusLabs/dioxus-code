@@ -784,11 +784,7 @@ impl Buffer {
     /// Useful for handing off to [`Code()`](crate::Code()) or any consumer
     /// that takes the frozen snapshot type.
     pub fn highlighted(&self) -> HighlightedSource {
-        HighlightedSource::from_owned_parts(
-            self.source.clone(),
-            self.language,
-            self.spans.clone(),
-        )
+        HighlightedSource::from_owned_parts(self.source.clone(), self.language, self.spans.clone())
     }
 
     fn parser_for(
@@ -1381,8 +1377,8 @@ fn grammar_for(language: Language) -> (arborium_tree_sitter::LanguageFn, &'stati
 
 /// A byte-range edit description used to drive incremental highlighting.
 ///
-/// Build one from a real edit signal (for example a contenteditable
-/// `beforeinput` event) and pass it to [`Buffer::edit`]. `start_byte` and
+/// Build one from a real edit signal (for example a textarea `beforeinput`
+/// event) and pass it to [`Buffer::edit`]. `start_byte` and
 /// `old_end_byte` index into the buffer's previous source, while
 /// `new_end_byte` indexes into the new source supplied alongside the edit.
 ///

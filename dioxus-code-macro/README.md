@@ -19,7 +19,7 @@
 
 Implementation crate for the [`code!`] macro re-exported by [`dioxus-code`](https://crates.io/crates/dioxus-code) under its default `macro` feature. You usually depend on `dioxus-code` instead of pulling this in directly.
 
-The macro reads a source file at compile time, parses it with [`arborium`](https://crates.io/crates/arborium), and expands to a static span tree. The runtime binary ships only the spans — no parser.
+The macro reads a source file at compile time, parses it with [`arborium`](https://crates.io/crates/arborium), and expands to a static span tree that can be rendered by `dioxus-code`.
 
 ```rust
 use dioxus_code::code;

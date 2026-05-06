@@ -23,7 +23,7 @@ A controlled, syntax-highlighted code editor for Dioxus. Pairs an editable input
 
 ```toml
 [dependencies]
-dioxus-code-editor = 0.1.0"
+dioxus-code-editor = "0.1.0"
 ```
 
 ```rust
@@ -53,7 +53,7 @@ The component is controlled — drive [`CodeEditorProps::value`] from your own s
 | prop | description |
 |---|---|
 | [`CodeEditorProps::value`] | Current editor contents. |
-| [`CodeEditorProps::language`] | Tree-sitter grammar selection. Pass a [`Language`] variant (for example [`Language::Rust`]) or use [`Language::from_slug`] for custom slugs. |
+| [`CodeEditorProps::language`] | Syntax grammar selection. Pass a [`Language`] variant (for example [`Language::Rust`]) or use [`Language::from_slug`] for runtime slugs. |
 | [`CodeEditorProps::theme`] | Syntax theme selection shared with [`dioxus-code`](https://crates.io/crates/dioxus-code); accepts [`Theme`] or [`CodeTheme`]. |
 | [`CodeEditorProps::line_numbers`] | Show a one-based line gutter. Defaults to `true`. |
 | [`CodeEditorProps::read_only`] | Disable editing while preserving highlighting. |

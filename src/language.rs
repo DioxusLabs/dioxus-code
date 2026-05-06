@@ -2,8 +2,7 @@
 //!
 //! [`Language`] is a closed set of Arborium language slugs. Each named variant
 //! is gated by the same cargo feature as the corresponding grammar in
-//! `dioxus-code`, so the enum only ever exposes variants whose grammar is
-//! actually compiled into this build.
+//! `dioxus-code`, so the enum exposes the variants compiled into this build.
 
 macro_rules! define_languages {
     (
@@ -16,8 +15,8 @@ macro_rules! define_languages {
         ///
         /// Each variant maps to an Arborium language slug via
         /// [`Language::slug`]. Variants are gated by the same `lang-*` cargo
-        /// features as the grammar lookup table, so unsupported builds simply
-        /// don't expose those variants.
+        /// features as the grammar lookup table, so each build exposes the
+        /// variants enabled for that build.
         ///
         /// ```rust
         /// use dioxus_code::Language;

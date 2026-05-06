@@ -530,7 +530,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         "."
                     }
                     p { class: "hero-lede",
-                        "A drop-in component with two source modes — compile-time macro and runtime detection. No JS, no flash of unstyled code."
+                        "A drop-in component with two source modes: compile-time macro and runtime highlighting with explicit language selection."
                     }
                     div { class: "hero-terminal-block",
                         div { class: "hero-terminal-bar",
@@ -626,15 +626,15 @@ fn FeatureRowReceipt() -> Element {
                             span { class: "receipt-value", "OPT-IN" }
                         }
                         li { class: "receipt-item receipt-optional",
-                            span { class: "receipt-label", "Tree-sitter grammars" }
+                            span { class: "receipt-label", "Runtime grammars" }
                             span { class: "receipt-dots" }
                             span { class: "receipt-value", "+3.33 MiB" }
                         }
                     }
                     div { class: "receipt-rule double" }
                     div { class: "receipt-total",
-                        span { class: "receipt-total-label", "PARSER BYTES SHIPPED" }
-                        span { class: "receipt-total-value", "0" }
+                        span { class: "receipt-total-label", "COMPILE-TIME MODE" }
+                        span { class: "receipt-total-value", "STATIC" }
                     }
                 }
                 aside { class: "receipt-aside",
@@ -642,14 +642,14 @@ fn FeatureRowReceipt() -> Element {
                         span { class: "receipt-aside-num", "01" }
                         div {
                             h3 { class: "receipt-aside-title", "code!" }
-                            p { class: "receipt-aside-text", "Tokenizes during cargo build. The runtime gets pre-styled markup with no parser bytes." }
+                            p { class: "receipt-aside-text", "Tokenizes during cargo build and embeds highlighted spans for rendering." }
                         }
                     }
                     div { class: "receipt-aside-row",
                         span { class: "receipt-aside-num", "02" }
                         div {
                             h3 { class: "receipt-aside-title", "SourceCode" }
-                            p { class: "receipt-aside-text", "Pull it in when input is dynamic. Tree-sitter grammars detect language automatically." }
+                            p { class: "receipt-aside-text", "Pull it in when input is dynamic and pass the language your source uses." }
                         }
                     }
                     div { class: "receipt-aside-row",
