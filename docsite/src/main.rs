@@ -211,6 +211,20 @@ fn App() -> Element {
     }
 }
 
+/// Force the children to only render on the client
+#[component]
+fn ClientOnly(children: Element) -> Element {
+    let mut on_client = use_signal(|| false);
+
+    use_effect(move || on_client.set(true));
+
+    if on_client() {
+        children
+    } else {
+        rsx! {}
+    }
+}
+
 #[derive(Routable, Clone, PartialEq)]
 enum Route {
     #[route("/")]
@@ -715,13 +729,15 @@ fn Playground(
                             }
                         }
                     }
-                    CodeEditor {
-                        value: source(),
-                        language: Language::Rust,
-                        theme,
-                        aria_label: "Rust source editor",
-                        class: "playground-code-editor",
-                        oninput: move |value| source.set(value),
+                    ClientOnly {
+                        CodeEditor {
+                            value: source(),
+                            language: Language::Rust,
+                            theme,
+                            aria_label: "Rust source editor",
+                            class: "playground-code-editor",
+                            oninput: move |value| source.set(value),
+                        }
                     }
                 }
             }
