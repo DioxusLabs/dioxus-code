@@ -45,9 +45,14 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rustc-check-cfg=cfg(docsrs)");
 
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let asset_dir = manifest_dir.join("assets/generated/arborium-themes");
-    fs::create_dir_all(&asset_dir).unwrap();
+    let asset_dir = if env::var_os("DOCS_RS").is_some() {
+        None
+    } else {
+        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+        let asset_dir = manifest_dir.join("assets/generated/arborium-themes");
+        fs::create_dir_all(&asset_dir).unwrap();
+        Some(asset_dir)
+    };
 
     let themes: Vec<_> = themes().into_iter().map(parse_theme).collect();
     let mut shared_rules = SharedRules::default();
@@ -59,17 +64,19 @@ fn main() {
 
     for theme in &themes {
         shared_rules.insert(&theme.rules);
-        fs::write(asset_dir.join(&theme.css_file), fixed_theme_css(theme)).unwrap();
-        fs::write(
-            asset_dir.join(&theme.system_light_css_file),
-            system_slot_css(&theme.system_light_class, "light", &theme.rules),
-        )
-        .unwrap();
-        fs::write(
-            asset_dir.join(&theme.system_dark_css_file),
-            system_slot_css(&theme.system_dark_class, "dark", &theme.rules),
-        )
-        .unwrap();
+        if let Some(asset_dir) = &asset_dir {
+            fs::write(asset_dir.join(&theme.css_file), fixed_theme_css(theme)).unwrap();
+            fs::write(
+                asset_dir.join(&theme.system_light_css_file),
+                system_slot_css(&theme.system_light_class, "light", &theme.rules),
+            )
+            .unwrap();
+            fs::write(
+                asset_dir.join(&theme.system_dark_css_file),
+                system_slot_css(&theme.system_dark_class, "dark", &theme.rules),
+            )
+            .unwrap();
+        }
 
         generated.push_str(&format!(
             "    const {const_name}_CSS: Asset = asset!(\"/assets/generated/arborium-themes/{css_file}\");\n",
@@ -121,11 +128,13 @@ fn main() {
 "#,
     );
 
-    fs::write(
-        asset_dir.join("dioxus-code-theme.css"),
-        shared_theme_css(&shared_rules),
-    )
-    .unwrap();
+    if let Some(asset_dir) = &asset_dir {
+        fs::write(
+            asset_dir.join("dioxus-code-theme.css"),
+            shared_theme_css(&shared_rules),
+        )
+        .unwrap();
+    }
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     fs::write(out_dir.join("theme_assets.rs"), generated).unwrap();
