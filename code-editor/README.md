@@ -23,7 +23,7 @@ A controlled, syntax-highlighted code editor for Dioxus. Pairs an editable input
 
 ```toml
 [dependencies]
-dioxus-code-editor = "0.0.1"
+dioxus-code-editor = 0.1.0"
 ```
 
 ```rust
