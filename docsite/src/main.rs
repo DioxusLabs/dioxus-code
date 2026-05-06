@@ -720,7 +720,6 @@ fn Playground(
                         language: Language::Rust,
                         theme,
                         aria_label: "Rust source editor",
-                        placeholder: "Type Rust code...",
                         class: "playground-code-editor",
                         oninput: move |value| source.set(value),
                     }
