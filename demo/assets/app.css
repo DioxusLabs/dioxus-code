@@ -96,16 +96,15 @@ a {
 
 .brand-mark {
   align-items: center;
-  background: var(--ink);
-  border-radius: 8px;
-  color: var(--bg);
   display: inline-flex;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  font-weight: 600;
   height: 28px;
   justify-content: center;
   width: 28px;
+}
+
+.brand-mark img {
+  height: 100%;
+  width: 100%;
 }
 
 /* Theme toggle (uses ToggleGroup component) */
@@ -184,6 +183,7 @@ a {
 /* ============ Hero ============ */
 
 .hero {
+  box-sizing: border-box;
   margin: 0 auto;
   max-width: var(--max-width);
   padding: 32px 24px 56px;
@@ -193,6 +193,7 @@ a {
 .hero-terminal {
   display: flex;
   flex-direction: column;
+  min-height: calc(100svh - 60px);
 }
 
 .hero-eyebrow {
@@ -330,10 +331,6 @@ a {
 
 .hero-stage-split {
   align-self: end;
-}
-
-.hero-stage-split .card-code-body .dxc {
-  min-height: 460px;
 }
 
 /* Hero: Terminal install */
@@ -3418,89 +3415,6 @@ a {
   width: 1px;
 }
 
-/* ============ Demos ============ */
-
-.demos-card {
-  margin: 0 auto;
-  max-width: var(--max-width);
-  width: 100%;
-}
-
-.demos-card-content {
-  padding-top: 0;
-}
-
-.demo-tab-label {
-  align-items: center;
-  display: inline-flex;
-  gap: 10px;
-}
-
-.demo-pane {
-  display: grid;
-  gap: 22px;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr);
-  align-items: stretch;
-}
-
-.demo-pane-copy {
-  align-content: center;
-  display: grid;
-  gap: 12px;
-  padding: 4px 6px;
-}
-
-.demo-pane-title {
-  color: var(--ink);
-  font-family: Inter, sans-serif;
-  font-size: clamp(22px, 2vw, 30px);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  margin: 0;
-  max-width: 22ch;
-}
-
-.demo-pane-body {
-  color: var(--ink-soft);
-  font-family: Inter, sans-serif;
-  font-size: 15px;
-  line-height: 1.55;
-  margin: 0;
-  max-width: 56ch;
-}
-
-.demo-pane-frame {
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-inner);
-  display: flex;
-  flex-direction: column;
-  min-height: 460px;
-  overflow: hidden;
-}
-
-.demo-pane-frame .card-bar {
-  background: var(--card);
-  border-bottom: 1px solid var(--line);
-}
-
-.demo-pane-frame .card-code-body {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.demo-pane-frame .card-code-body .dxc {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  justify-content: center;
-  font-size: 14px;
-  line-height: 1.65;
-  padding: 22px 26px;
-}
-
 /* ============ Docs ============ */
 
 .docs-timeline {
@@ -3600,8 +3514,8 @@ a {
 /* ============ Footer ============ */
 
 .site-footer {
-  padding-top: 16px;
-  padding-bottom: 32px;
+  padding-top: 48px;
+  padding-bottom: 48px;
 }
 
 .card-footer {
@@ -3612,7 +3526,7 @@ a {
   color: var(--feature-text);
   margin: 0 auto;
   max-width: var(--max-width);
-  padding: 40px 40px 28px;
+  padding: 32px 40px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -3824,10 +3738,6 @@ a {
     margin: 0 auto;
   }
 
-  .demo-pane {
-    grid-template-columns: 1fr;
-  }
-
   .docs-timeline-step {
     grid-template-columns: 64px minmax(0, 1fr);
     gap: 18px;
@@ -3840,10 +3750,12 @@ a {
 
 @media (max-width: 720px) {
   .topbar {
-    align-items: start;
-    flex-direction: column;
     gap: 8px;
-    padding: 14px 18px;
+    padding: 0 18px;
+  }
+
+  .topbar .navbar > .navbar-item[href^="#"] {
+    display: none;
   }
 
   .topbar-tail {
@@ -3908,7 +3820,7 @@ a {
   }
 
   .card-footer {
-    padding: 28px 24px 22px;
+    padding: 24px;
   }
 }
 
