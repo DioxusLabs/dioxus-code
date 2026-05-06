@@ -46,6 +46,7 @@ jobs:
       features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-demo/web dioxus-code-live-input/web
 
   web-demo:
+    if: github.event_name == 'push'
     uses: ealmloff/dioxus-ci/.github/workflows/web-build.yml@main
     with:
       working-directory: demo

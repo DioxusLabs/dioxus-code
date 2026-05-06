@@ -31,7 +31,7 @@ Two ways to highlight:
 dioxus-code = "0.1"
 ```
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use dioxus_code::{Code, Theme, code};
 
@@ -57,7 +57,7 @@ For editor-style use cases where the source isn't known at compile time:
 dioxus-code = { version = "0.1", features = ["runtime"] }
 ```
 
-```rust
+```rust,ignore
 use dioxus_code::{Code, SourceCode, Theme};
 
 rsx! {
@@ -74,7 +74,7 @@ Language can be set explicitly, inferred from a filename via `with_name("main.rs
 
 `dioxus-code-editor` is a sibling crate that pairs the highlighter with a `contenteditable` input layer:
 
-```rust
+```rust,ignore
 use dioxus_code_editor::CodeEditor;
 use dioxus_code::Theme;
 
@@ -96,8 +96,20 @@ It is controlled — drive `value` from your own signal and update it inside `on
 
 Thirty-odd built-ins, including Tokyo Night, Catppuccin (all four), Dracula, GitHub Light/Dark, Gruvbox, Nord, One Dark, Rosé Pine, Solarized, the Rustdoc themes, and others. Each is exposed as a `Theme` constant and a CSS asset; pages with multiple themes render side-by-side without leaking styles.
 
-```rust
+```rust,ignore
 Code { src: code!("/example.rs"), theme: Theme::CATPPUCCIN_MOCHA }
+```
+
+Use `CodeTheme::system` to select a light and dark theme with CSS media
+queries. This is JavaScript-free and works during SSR:
+
+```rust,ignore
+use dioxus_code::{Code, CodeTheme, Theme, code};
+
+Code {
+    src: code!("/example.rs"),
+    theme: CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT),
+}
 ```
 
 ## Examples
