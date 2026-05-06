@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 #[derive(Copy, Clone, PartialEq, Default)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub enum BadgeVariant {
     #[default]
     Primary,

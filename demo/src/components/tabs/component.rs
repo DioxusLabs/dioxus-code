@@ -45,22 +45,13 @@ pub struct TabsProps {
 
 /// The variant of the tabs component.
 #[derive(Clone, Copy, PartialEq, Default)]
+#[allow(dead_code)]
 pub enum TabsVariant {
     /// The default variant.
     #[default]
     Default,
     /// The ghost variant.
     Ghost,
-}
-
-impl TabsVariant {
-    /// Convert the variant to a string for use in class names
-    fn to_class(self) -> &'static str {
-        match self {
-            TabsVariant::Default => "default",
-            TabsVariant::Ghost => "ghost",
-        }
-    }
 }
 
 #[component]
