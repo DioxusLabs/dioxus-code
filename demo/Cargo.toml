@@ -21,3 +21,27 @@ desktop = ["dioxus/desktop"]
 web = ["dioxus/web", "dioxus-primitives/web"]
 fullstack = ["dioxus/fullstack"]
 server = ["dioxus/server", "dioxus/fullstack"]
+
+[[example]]
+name = "snippet-starter"
+path = "snippets/starter.rs"
+
+[[example]]
+name = "snippet-demo"
+path = "snippets/demo.rs"
+
+[[example]]
+name = "snippet-runtime"
+path = "snippets/runtime.rs"
+
+[[example]]
+name = "snippet-static-macro"
+path = "snippets/static_macro.rs"
+
+[[example]]
+name = "snippet-example"
+path = "snippets/example.rs"
+
+[[example]]
+name = "snippet-palette"
+path = "snippets/palette.rs"

@@ -22,6 +22,8 @@
   color: var(--secondary-color-4);
   cursor: pointer;
   gap: 0.25rem;
+  text-transform: none;
+  letter-spacing: normal;
   transition: background-color 100ms ease-out;
 }
 
@@ -82,6 +84,8 @@
     var(--dark, var(--primary-color-7));
   opacity: 0;
   pointer-events: none;
+  text-transform: none;
+  letter-spacing: normal;
   transform-origin: top;
   will-change: transform, opacity;
 }

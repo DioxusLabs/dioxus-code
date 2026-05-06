@@ -1,6 +1,10 @@
 use dioxus::prelude::*;
 use dioxus_code::{Code, Theme, code};
 
+fn main() {
+    dioxus::launch(TokenPalette);
+}
+
 #[component]
 pub fn TokenPalette() -> Element {
     rsx! {

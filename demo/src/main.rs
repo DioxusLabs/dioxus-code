@@ -17,56 +17,19 @@ use components::select::{
 use components::separator::Separator;
 use components::toggle_group::{ToggleGroup, ToggleItem};
 
-const STARTER: &str = r##"use dioxus::prelude::*;
-use dioxus_code::{Code, Theme, code};
-
-fn main() {
-    dioxus::launch(App);
-}
-
-#[component]
-fn App() -> Element {
-    rsx! {
-        div { class: "app",
-            Code {
-                src: code!("/snippets/demo.rs"),
-                theme: Theme::RUSTDOC_AYU,
-            }
-        }
-    }
-}"##;
-
-const DOCS_INSTALL: &str = r#"dioxus-code = { version = "0.1", features = ["runtime"] }
-"#;
-
-const DOCS_RUNTIME: &str = r#"use dioxus_code::{Code, CodeTheme, SourceCode, Theme};
-
-rsx! {
-    Code {
-        src: SourceCode::new(source).with_language("rust"),
-        theme: CodeTheme::system(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT),
-    }
-}
-"#;
-
-const DOCS_STATIC: &str = r#"use dioxus_code::{Code, Theme, code};
-
-rsx! {
-    Code {
-        src: code!("/snippets/example.rs"),
-        theme: Theme::RUSTDOC_AYU,
-    }
-}
-"#;
+const STARTER: &str = include_str!("../snippets/starter.rs");
+const DOCS_INSTALL: &str = include_str!("../snippets/install.toml");
+const DOCS_RUNTIME: &str = include_str!("../snippets/runtime.rs");
+const DOCS_STATIC: &str = include_str!("../snippets/static_macro.rs");
 
 const COMPONENTS_THEME_CSS: Asset = asset!("/assets/dx-components-theme.css");
 
 const DEMO_THEME_PAIRS: &[ThemePair] = &[
+    ThemePair::new(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK),
     ThemePair::new(Theme::ALABASTER, Theme::ZENBURN),
     ThemePair::new(Theme::AYU_LIGHT, Theme::AYU_DARK),
     ThemePair::new(Theme::CATPPUCCIN_LATTE, Theme::CATPPUCCIN_MOCHA),
     ThemePair::new(Theme::DAYFOX, Theme::TOKYO_NIGHT),
-    ThemePair::new(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK),
     ThemePair::new(Theme::GRUVBOX_LIGHT, Theme::GRUVBOX_DARK),
     ThemePair::new(Theme::LIGHT_OWL, Theme::DRACULA),
     ThemePair::new(Theme::LUCIUS_LIGHT, Theme::COBALT2),
@@ -263,21 +226,24 @@ fn Header(scheme: Signal<Scheme>) -> Element {
                             value: "crates".to_string(),
                             to: "https://crates.io/crates/dioxus-code",
                             new_tab: true,
-                            "crates.io ↗"
+                            "crates.io"
+                            IconExternal {}
                         }
                         NavbarItem {
                             index: 1usize,
                             value: "docs".to_string(),
                             to: "https://docs.rs/dioxus-code",
                             new_tab: true,
-                            "docs.rs ↗"
+                            "docs.rs"
+                            IconExternal {}
                         }
                         NavbarItem {
                             index: 2usize,
                             value: "github".to_string(),
                             to: "https://github.com/ealmloff/dioxus-code",
                             new_tab: true,
-                            "GitHub ↗"
+                            "GitHub"
+                            IconExternal {}
                         }
                     }
                 }
@@ -467,6 +433,23 @@ fn IconMonitor() -> Element {
             "aria-hidden": "true",
             rect { x: "3", y: "4.5", width: "18", height: "12", rx: "2" }
             path { d: "M8.5 20h7M12 16.5V20" }
+        }
+    }
+}
+
+#[component]
+fn IconExternal() -> Element {
+    rsx! {
+        svg {
+            class: "external-icon",
+            width: "12",
+            height: "12",
+            view_box: "0 0 24 24",
+            fill: "currentColor",
+            stroke: "currentColor",
+            stroke_width: "0.25",
+            "aria-hidden": "true",
+            path { d: "M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h14v-7h2v7q0 .825-.587 1.413T19 21zm4.7-5.3l-1.4-1.4L17.6 5H14V3h7v7h-2V6.4z" }
         }
     }
 }
@@ -689,14 +672,10 @@ fn Playground(
 
 #[component]
 fn Docs(scheme: Scheme) -> Element {
-    let theme_pairs = [
-        ThemePair::new(Theme::MELANGE_LIGHT, Theme::MELANGE_DARK),
-        ThemePair::new(Theme::RUSTDOC_LIGHT, Theme::RUSTDOC_AYU),
-        ThemePair::new(Theme::GITHUB_LIGHT, Theme::TOKYO_NIGHT),
-    ];
+    let theme_pair = ThemePair::new(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK);
+    let theme = theme_pair.code_theme(scheme);
+    let theme_name = theme_pair.display_name(scheme);
     let steps = doc_step_data();
-    let themes = theme_pairs.map(|pair| pair.code_theme(scheme));
-    let theme_names = theme_pairs.map(|pair| pair.display_name(scheme));
 
     rsx! {
         section { id: "docs", class: "section",
@@ -706,7 +685,7 @@ fn Docs(scheme: Scheme) -> Element {
                 }
             }
             ol { class: "docs-timeline",
-                for (i, step) in steps.iter().enumerate() {
+                for step in steps.iter() {
                     li { class: "docs-timeline-step",
                         div { class: "docs-timeline-rail",
                             span { class: "docs-timeline-num", "{step.num}" }
@@ -718,12 +697,12 @@ fn Docs(scheme: Scheme) -> Element {
                             div { class: "docs-timeline-frame",
                                 div { class: "card-bar",
                                     span { "{step.file_name}" }
-                                    span { "{theme_names[i]}" }
+                                    span { "{theme_name}" }
                                 }
                                 div { class: "card-code-body",
                                     Code {
                                         src: SourceCode::new(step.code).with_language(step.language),
-                                        theme: themes[i],
+                                        theme,
                                     }
                                 }
                             }
@@ -786,7 +765,9 @@ fn SiteFooter() -> Element {
                 div { class: "footer-grid",
                     div { class: "footer-brand",
                         div { class: "footer-brand-row",
-                            span { class: "brand-mark", "dx" }
+                            span { class: "brand-mark",
+                                IconDioxus {}
+                            }
                             span { class: "footer-brand-name", "dioxus-code" }
                         }
                         p { class: "footer-tag",
@@ -801,14 +782,29 @@ fn SiteFooter() -> Element {
                     }
                     div { class: "footer-col",
                         span { class: "card-eyebrow", "Links" }
-                        a { href: "https://crates.io/crates/dioxus-code", "crates.io ↗" }
-                        a { href: "https://docs.rs/dioxus-code", "docs.rs ↗" }
-                        a { href: "https://github.com/", "GitHub ↗" }
+                        a { href: "https://crates.io/crates/dioxus-code",
+                            "crates.io"
+                            IconExternal {}
+                        }
+                        a { href: "https://docs.rs/dioxus-code",
+                            "docs.rs"
+                            IconExternal {}
+                        }
+                        a { href: "https://github.com/ealmloff/dioxus-code",
+                            "GitHub"
+                            IconExternal {}
+                        }
                     }
                     div { class: "footer-col",
                         span { class: "card-eyebrow", "Built on" }
-                        a { href: "https://dioxuslabs.com", "Dioxus 0.7 ↗" }
-                        a { href: "https://tree-sitter.github.io", "Tree-sitter ↗" }
+                        a { href: "https://tree-sitter.github.io",
+                            "Tree-sitter"
+                            IconExternal {}
+                        }
+                        a { href: "https://crates.io/crates/arborium",
+                            "Arborium"
+                            IconExternal {}
+                        }
                         span { class: "footer-meta", "MIT licensed" }
                     }
                 }
