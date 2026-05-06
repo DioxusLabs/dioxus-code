@@ -5,12 +5,13 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use macro_string::MacroString;
 use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
-use syn::{Expr, Ident, LitStr, Token, parse_macro_input};
+use syn::{Ident, LitStr, Token, parse_macro_input};
 
 /// Compile-time syntax highlighting.
 ///
@@ -30,13 +31,13 @@ pub fn code(input: TokenStream) -> TokenStream {
 }
 
 struct CodeInput {
-    path: Expr,
+    path: String,
     language: Option<LitStr>,
 }
 
 impl Parse for CodeInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let path = input.parse()?;
+        let MacroString(path) = input.parse()?;
         let mut language = None;
 
         if input.peek(Token![,]) {
@@ -62,7 +63,7 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
     let manifest_dir = PathBuf::from(manifest_dir);
-    let macro_path = eval_path_expr(&input.path)?;
+    let macro_path = input.path;
     let absolute_path = resolve_manifest_path(&manifest_dir, &macro_path);
 
     let source = fs::read_to_string(&absolute_path).map_err(|error| {
@@ -193,71 +194,14 @@ fn dioxus_code_crate_path() -> syn::Result<TokenStream2> {
 }
 
 fn resolve_manifest_path(manifest_dir: &Path, path: &str) -> PathBuf {
+    let path_buf = PathBuf::from(path);
+    if path_buf.is_absolute() && (path_buf.exists() || path_buf.starts_with(manifest_dir)) {
+        return path_buf;
+    }
+
     if let Some(stripped) = path.strip_prefix('/') {
         manifest_dir.join(stripped)
     } else {
         manifest_dir.join(path)
     }
-}
-
-fn eval_path_expr(expr: &Expr) -> syn::Result<String> {
-    match expr {
-        Expr::Lit(expr_lit) => {
-            if let syn::Lit::Str(lit) = &expr_lit.lit {
-                Ok(lit.value())
-            } else {
-                Err(syn::Error::new_spanned(
-                    expr,
-                    "path must be a string literal",
-                ))
-            }
-        }
-        Expr::Macro(expr_macro) => {
-            let Some(ident) = expr_macro.mac.path.get_ident() else {
-                return Err(syn::Error::new_spanned(
-                    expr,
-                    "only string literals, concat!, and env! are supported",
-                ));
-            };
-
-            match ident.to_string().as_str() {
-                "concat" => eval_concat(expr_macro.mac.tokens.clone()),
-                "env" => eval_env(expr_macro.mac.tokens.clone()),
-                _ => Err(syn::Error::new_spanned(
-                    expr,
-                    "only string literals, concat!, and env! are supported",
-                )),
-            }
-        }
-        _ => Err(syn::Error::new_spanned(
-            expr,
-            "only string literals, concat!, and env! are supported",
-        )),
-    }
-}
-
-fn eval_concat(tokens: TokenStream2) -> syn::Result<String> {
-    struct Args {
-        exprs: syn::punctuated::Punctuated<Expr, Token![,]>,
-    }
-
-    impl Parse for Args {
-        fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-            Ok(Self {
-                exprs: syn::punctuated::Punctuated::parse_terminated(input)?,
-            })
-        }
-    }
-
-    let args = syn::parse2::<Args>(tokens)?;
-    let mut value = String::new();
-    for expr in args.exprs {
-        value.push_str(&eval_path_expr(&expr)?);
-    }
-    Ok(value)
-}
-
-fn eval_env(tokens: TokenStream2) -> syn::Result<String> {
-    let lit = syn::parse2::<LitStr>(tokens)?;
-    env::var(lit.value()).map_err(|error| syn::Error::new(lit.span(), error.to_string()))
 }

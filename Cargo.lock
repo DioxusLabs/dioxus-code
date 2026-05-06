@@ -2444,6 +2444,7 @@ version = "0.0.1"
 dependencies = [
  "arborium",
  "arborium-theme",
+ "macro-string",
  "proc-macro-crate 3.5.0",
  "proc-macro2",
  "quote",
