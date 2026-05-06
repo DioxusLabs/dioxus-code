@@ -30,7 +30,4 @@ web-sys = { version = "0.3", features = [
 ] }
 
 [features]
-default = ["desktop"]
-desktop = ["dioxus/desktop", "dioxus/launch"]
-web = ["dioxus/web", "dioxus/launch"]
 all-languages = ["dioxus-code/all-languages"]

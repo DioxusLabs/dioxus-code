@@ -71,6 +71,11 @@ pub struct CodeEditorProps {
     pub oninput: EventHandler<String>,
 }
 
+struct EditorBuffer {
+    buffer: Option<Buffer>,
+    language: Language,
+}
+
 /// Editable syntax-highlighted code surface.
 ///
 /// The component is controlled by [`CodeEditorProps::value`]; update that value
@@ -96,10 +101,15 @@ pub struct CodeEditorProps {
 /// ```
 #[component]
 pub fn CodeEditor(props: CodeEditorProps) -> Element {
-    let buffer = use_hook({
+    let state = use_hook({
         let value = props.value.clone();
         let language = props.language;
-        move || Rc::new(RefCell::new(Buffer::new(language, value).ok()))
+        move || {
+            Rc::new(RefCell::new(EditorBuffer {
+                buffer: Buffer::new(language, value).ok(),
+                language,
+            }))
+        }
     });
     let edit_tracker = use_hook(|| {
         Rc::new(RefCell::new(edit_capture::InputEditTracker::new(
@@ -109,16 +119,14 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
 
     let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
     let snapshot = {
-        let mut buffer_slot = buffer.borrow_mut();
-        if buffer_slot.is_none() {
-            *buffer_slot = Buffer::new(props.language, props.value.clone()).ok();
+        let mut slot = state.borrow_mut();
+        if slot.language != props.language {
+            slot.buffer = Buffer::new(props.language, props.value.clone()).ok();
+            slot.language = props.language;
         }
 
-        match buffer_slot.as_mut() {
+        match slot.buffer.as_mut() {
             Some(buffer) => {
-                if buffer.language() != props.language {
-                    let _ = buffer.set_language(props.language);
-                }
                 if buffer.source() != props.value {
                     let result = match edit {
                         Some(edit) => match buffer.edit(edit, props.value.clone()) {
@@ -134,9 +142,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                 }
                 buffer.highlighted()
             }
-            None => SourceCode::new(props.value.clone())
-                .with_language(props.language)
-                .into(),
+            None => SourceCode::new(props.language, props.value.clone()).into(),
         }
     };
     let lines = snapshot.lines();

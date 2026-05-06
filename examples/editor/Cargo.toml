@@ -16,5 +16,5 @@ dioxus-code-editor = { workspace = true }
 
 [features]
 default = ["desktop"]
-desktop = ["dioxus/desktop", "dioxus-code-editor/desktop"]
-web = ["dioxus/web", "dioxus-code-editor/web"]
+desktop = ["dioxus/desktop"]
+web = ["dioxus/web"]

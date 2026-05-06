@@ -22,8 +22,6 @@ use std::{borrow::Cow, fmt, ops::Range};
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum HighlightError {
-    /// No explicit language was supplied.
-    LanguageDetectionFailed,
     /// The tree-sitter parser rejected the selected grammar.
     GrammarLoad {
         /// The language whose grammar failed to load.
@@ -94,7 +92,6 @@ impl HighlightError {
 impl fmt::Display for HighlightError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::LanguageDetectionFailed => write!(f, "no explicit language supplied"),
             Self::GrammarLoad { language, message } => {
                 write!(
                     f,
@@ -204,7 +201,7 @@ impl From<arborium_tree_sitter::QueryErrorKind> for HighlightQueryErrorKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HighlightedSource {
     source: Cow<'static, str>,
-    language: Option<Language>,
+    language: Language,
     spans: Cow<'static, [HighlightSpan]>,
 }
 
@@ -212,7 +209,7 @@ impl HighlightedSource {
     #[cfg(feature = "runtime")]
     pub(crate) fn from_owned_parts(
         source: String,
-        language: Option<Language>,
+        language: Language,
         spans: Vec<HighlightSpan>,
     ) -> Self {
         Self {
@@ -230,7 +227,7 @@ impl HighlightedSource {
     /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
     /// let src = HighlightedSource::from_static_parts("let x = 1;", Language::Rust, &[]);
-    /// assert_eq!(src.language(), Some(Language::Rust));
+    /// assert_eq!(src.language(), Language::Rust);
     /// ```
     pub const fn from_static_parts(
         source: &'static str,
@@ -239,16 +236,13 @@ impl HighlightedSource {
     ) -> Self {
         Self {
             source: Cow::Borrowed(source),
-            language: Some(language),
+            language,
             spans: Cow::Borrowed(spans),
         }
     }
 
     #[cfg(feature = "runtime")]
-    pub(crate) fn plaintext(
-        source: impl Into<Cow<'static, str>>,
-        language: Option<Language>,
-    ) -> Self {
+    pub(crate) fn plaintext(source: impl Into<Cow<'static, str>>, language: Language) -> Self {
         Self {
             source: source.into(),
             language,
@@ -274,9 +268,9 @@ impl HighlightedSource {
     /// use dioxus_code::Language;
     /// use dioxus_code::advanced::HighlightedSource;
     /// let src = HighlightedSource::from_static_parts("", Language::Rust, &[]);
-    /// assert_eq!(src.language(), Some(Language::Rust));
+    /// assert_eq!(src.language(), Language::Rust);
     /// ```
-    pub const fn language(&self) -> Option<Language> {
+    pub const fn language(&self) -> Language {
         self.language
     }
 
@@ -792,7 +786,7 @@ impl Buffer {
     pub fn highlighted(&self) -> HighlightedSource {
         HighlightedSource::from_owned_parts(
             self.source.clone(),
-            Some(self.language),
+            self.language,
             self.spans.clone(),
         )
     }
@@ -1509,9 +1503,7 @@ mod buffer_tests {
     }
 
     fn batch_spans(source: &str, language: Language) -> Vec<HighlightSpan> {
-        let snapshot: HighlightedSource = SourceCode::new(source.to_owned())
-            .with_language(language)
-            .into();
+        let snapshot: HighlightedSource = SourceCode::new(language, source.to_owned()).into();
         snapshot.spans().to_vec()
     }
 

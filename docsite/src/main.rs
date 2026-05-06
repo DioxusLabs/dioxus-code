@@ -563,7 +563,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         span { "{theme_label}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: SourceCode::new(HERO_COUNTER).with_language(Language::Rust), theme }
+                        Code { src: SourceCode::new(Language::Rust, HERO_COUNTER), theme }
                     }
                 }
             }
@@ -766,7 +766,7 @@ fn Docs(scheme: Scheme) -> Element {
                                 }
                                 div { class: "card-code-body",
                                     Code {
-                                        src: SourceCode::new(step.code).with_language(step.language),
+                                        src: SourceCode::new(step.language, step.code),
                                         theme,
                                     }
                                 }
