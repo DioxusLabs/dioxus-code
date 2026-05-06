@@ -193,9 +193,9 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                     "aria-multiline": "true",
                     "aria-readonly": readonly,
                     placeholder: props.placeholder,
-                    value: textarea_value,
                     wrap: "off",
                     ..input_attributes,
+                    "{textarea_value}"
                 }
             }
         }

@@ -26,8 +26,8 @@ fn App() -> Element {
                 textarea {
                     class: "code-input",
                     spellcheck: false,
-                    value: "{source}",
                     oninput: move |event| source.set(event.value()),
+                    "{source}"
                 }
             }
             section { class: "preview-pane",
