@@ -3396,11 +3396,6 @@ a {
   color: var(--editor-gutter-fg);
 }
 
-.playground-code-editor .dxc-editor-highlight,
-.playground-code-editor .dxc-editor-input {
-  overflow-x: auto;
-}
-
 .editor-meta {
   align-items: center;
   display: inline-flex;
