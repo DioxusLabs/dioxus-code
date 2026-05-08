@@ -15,13 +15,15 @@ const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 
 #[cfg(feature = "macro")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
-pub use dioxus_code_macro::code;
+pub use dioxus_code_macro::{code, code_str};
 
-/// Compile-time options for the [`code!`] macro.
+/// Compile-time options for the [`code!`] and [`code_str!`] macros.
 ///
-/// The [`code!`] macro reads this builder syntactically; pass
+/// Both macros read this builder syntactically; pass
 /// [`CodeOptions::builder`] with [`CodeOptions::with_language`] to override the
-/// language that would otherwise be inferred from the file extension.
+/// language that would otherwise be inferred from the file extension. For
+/// [`code_str!`] the language is required since there is no extension to
+/// infer from.
 ///
 /// ```rust
 /// use dioxus_code::{CodeOptions, Language, code};
@@ -472,6 +474,20 @@ mod tests {
         assert_eq!(tree.language(), Language::Rust);
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
+        }));
+    }
+
+    #[cfg(feature = "macro")]
+    #[test]
+    fn code_str_macro_highlights_inline_source() {
+        const TREE: advanced::HighlightedSource = code_str!(
+            "fn main() {}",
+            CodeOptions::builder().with_language(Language::Rust)
+        );
+        assert_eq!(TREE.language(), Language::Rust);
+        assert_eq!(TREE.source(), "fn main() {}");
+        assert!(TREE.spans().iter().any(|span| {
+            span.tag() == "k" && &TREE.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
     }
 }
