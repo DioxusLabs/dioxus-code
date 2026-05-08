@@ -18,4 +18,4 @@ concurrency:
 
 jobs:
   publish:
-    uses: ealmloff/dioxus-ci/.github/workflows/pages-publish.yml@main
+    uses: dioxuslabs/dioxus-ci/.github/workflows/pages-publish.yml@v0.1.0

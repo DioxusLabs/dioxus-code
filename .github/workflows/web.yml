@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    uses: ealmloff/dioxus-ci/.github/workflows/web-build.yml@main
+    uses: dioxuslabs/dioxus-ci/.github/workflows/web-build.yml@v0.1.0
     with:
       working-directory: docsite
       ssg: true
