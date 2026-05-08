@@ -22,7 +22,7 @@ categories = ["gui", "web-programming"]
 
 [workspace.dependencies]
 dioxus-code = { version = "0.1.1", path = "." }
-dioxus-code-editor = { version = "0.1.1", path = "code-editor", default-features = false }
+dioxus-code-editor = { version = "0.1.2", path = "code-editor", default-features = false }
 
 [package]
 name = "dioxus-code"
