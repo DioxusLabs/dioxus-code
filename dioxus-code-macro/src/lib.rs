@@ -334,14 +334,14 @@ fn expand_shared(
     };
     let variant_ident = Ident::new(variant, Span::call_site());
 
-    let source_decl = match origin_path {
+    let source_expr = match origin_path {
         Some(path) => {
             let path_lit = LitStr::new(&path.to_string_lossy(), Span::call_site());
-            quote! { const SOURCE: &str = include_str!(#path_lit); }
+            quote! { include_str!(#path_lit) }
         }
         None => {
             let source_lit = LitStr::new(&source, Span::call_site());
-            quote! { const SOURCE: &str = #source_lit; }
+            quote! { #source_lit }
         }
     };
 
@@ -356,8 +356,8 @@ fn expand_shared(
 
     Ok(quote! {{
         #options_check
-        #source_decl
-        static SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#span_tokens),*];
+        const SOURCE: &str = #source_expr;
+        const SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#span_tokens),*];
         #crate_path::advanced::HighlightedSource::from_static_parts(
             SOURCE,
             #crate_path::Language::#variant_ident,
