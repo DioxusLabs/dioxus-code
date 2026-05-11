@@ -22,6 +22,8 @@ use syn::{Expr, LitStr, Token, parse_macro_input};
 /// [`CodeOptions::builder`] with [`CodeOptions::with_language`] to name the
 /// language explicitly; otherwise it is inferred from the file extension.
 ///
+/// To highlight inline source instead of a file, use [`code_str!`].
+///
 /// [`CodeOptions::builder`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.builder
 /// [`CodeOptions::with_language`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.with_language
 #[proc_macro]
@@ -34,6 +36,28 @@ pub fn code(input: TokenStream) -> TokenStream {
     }
 }
 
+/// Compile-time syntax highlighting of an inline source string.
+///
+/// Parses a string literal containing source code with [`arborium`] and
+/// expands to the resulting span tree. Pass the source as a string literal,
+/// `concat!(...)`, `include_str!(...)`, or `env!(...)`. The language must be
+/// supplied via [`CodeOptions::builder`] with [`CodeOptions::with_language`]
+/// since there is no file extension to infer from.
+///
+/// To highlight a file on disk instead, use [`code!`].
+///
+/// [`CodeOptions::builder`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.builder
+/// [`CodeOptions::with_language`]: https://docs.rs/dioxus-code/latest/dioxus_code/struct.CodeOptions.html#method.with_language
+#[proc_macro]
+pub fn code_str(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as CodeStrInput);
+
+    match expand_code_str(input) {
+        Ok(tokens) => tokens.into(),
+        Err(error) => error.to_compile_error().into(),
+    }
+}
+
 struct CodeInput {
     path: String,
     options: Option<Expr>,
@@ -41,25 +65,45 @@ struct CodeInput {
 
 impl Parse for CodeInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let MacroString(path) = input.parse()?;
-        let mut options = None;
-
-        if input.peek(Token![,]) {
-            input.parse::<Token![,]>()?;
-            if !input.is_empty() {
-                let expr: Expr = input.parse()?;
-                if input.peek(Token![,]) {
-                    input.parse::<Token![,]>()?;
-                }
-                if !input.is_empty() {
-                    return Err(input.error("unexpected tokens after code macro options"));
-                }
-                options = Some(expr);
-            }
-        }
-
+        let (path, options) = parse_string_and_options(input, "code macro")?;
         Ok(Self { path, options })
     }
+}
+
+struct CodeStrInput {
+    source: String,
+    options: Option<Expr>,
+}
+
+impl Parse for CodeStrInput {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let (source, options) = parse_string_and_options(input, "code_str macro")?;
+        Ok(Self { source, options })
+    }
+}
+
+fn parse_string_and_options(
+    input: ParseStream<'_>,
+    macro_label: &str,
+) -> syn::Result<(String, Option<Expr>)> {
+    let MacroString(value) = input.parse()?;
+    let mut options = None;
+
+    if input.peek(Token![,]) {
+        input.parse::<Token![,]>()?;
+        if !input.is_empty() {
+            let expr: Expr = input.parse()?;
+            if input.peek(Token![,]) {
+                input.parse::<Token![,]>()?;
+            }
+            if !input.is_empty() {
+                return Err(input.error(format!("unexpected tokens after {macro_label} options")));
+            }
+            options = Some(expr);
+        }
+    }
+
+    Ok((value, options))
 }
 
 fn try_extract_language(expr: &Expr) -> Option<String> {
@@ -233,19 +277,7 @@ fn language_variant_for_slug(slug: &str) -> Option<&'static str> {
 fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
-    let manifest_dir = PathBuf::from(manifest_dir);
-    let macro_path = input.path;
-    let absolute_path = resolve_manifest_path(&manifest_dir, &macro_path);
-    let crate_path = dioxus_code_crate_path()?;
-
-    let options_check = input.options.as_ref().map(|expr| {
-        quote_spanned! { expr.span() =>
-            const _: fn() = || {
-                let _: #crate_path::CodeOptions = #expr;
-            };
-        }
-    });
-
+    let absolute_path = resolve_manifest_path(&PathBuf::from(manifest_dir), &input.path);
     let source = fs::read_to_string(&absolute_path).map_err(|error| {
         syn::Error::new(
             Span::call_site(),
@@ -253,15 +285,35 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         )
     })?;
 
-    let Some(language) = input
-        .options
-        .as_ref()
-        .and_then(try_extract_language)
-        .or_else(|| arborium::detect_language(&macro_path).map(str::to_string))
-    else {
-        let message = format!(
-            "could not detect language for `{macro_path}`; pass `CodeOptions::builder().with_language(Language::Rust)`"
-        );
+    expand_shared(input.options, source, Some(absolute_path))
+}
+
+fn expand_code_str(input: CodeStrInput) -> syn::Result<TokenStream2> {
+    expand_shared(input.options, input.source, None)
+}
+
+fn expand_shared(
+    options: Option<Expr>,
+    source: String,
+    origin_path: Option<PathBuf>,
+) -> syn::Result<TokenStream2> {
+    let crate_path = dioxus_code_crate_path()?;
+    let options_check = options_check_tokens(&crate_path, options.as_ref());
+
+    let Some(language) = options.as_ref().and_then(try_extract_language).or_else(|| {
+        origin_path
+            .as_ref()
+            .and_then(|path| arborium::detect_language(&path.to_string_lossy()).map(str::to_string))
+    }) else {
+        let message = match origin_path.as_ref() {
+            Some(path) => format!(
+                "could not detect language for `{}`; pass `CodeOptions::builder().with_language(Language::Rust)`",
+                path.display()
+            ),
+            None => String::from(
+                "could not determine language for `code_str!`; pass `CodeOptions::builder().with_language(Language::Rust)`",
+            ),
+        };
         return Ok(quote! {{
             #options_check
             compile_error!(#message);
@@ -281,12 +333,22 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         }});
     };
     let variant_ident = Ident::new(variant, Span::call_site());
-    let absolute_lit = LitStr::new(&absolute_path.to_string_lossy(), Span::call_site());
-    let spans = normalize_spans(spans).into_iter().map(|span| {
+
+    let source_expr = match origin_path {
+        Some(path) => {
+            let path_lit = LitStr::new(&path.to_string_lossy(), Span::call_site());
+            quote! { include_str!(#path_lit) }
+        }
+        None => {
+            let source_lit = LitStr::new(&source, Span::call_site());
+            quote! { #source_lit }
+        }
+    };
+
+    let span_tokens = normalize_spans(spans).into_iter().map(|span| {
         let start = span.start;
         let end = span.end;
         let tag = LitStr::new(span.tag, Span::call_site());
-
         quote! {
             #crate_path::advanced::HighlightSpan::new(#start..#end, #tag)
         }
@@ -294,14 +356,24 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
 
     Ok(quote! {{
         #options_check
-        const SOURCE: &str = include_str!(#absolute_lit);
-        static SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#spans),*];
+        const SOURCE: &str = #source_expr;
+        const SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#span_tokens),*];
         #crate_path::advanced::HighlightedSource::from_static_parts(
             SOURCE,
             #crate_path::Language::#variant_ident,
             SPANS,
         )
     }})
+}
+
+fn options_check_tokens(crate_path: &TokenStream2, options: Option<&Expr>) -> Option<TokenStream2> {
+    options.map(|expr| {
+        quote_spanned! { expr.span() =>
+            const _: fn() = || {
+                let _: #crate_path::CodeOptions = #expr;
+            };
+        }
+    })
 }
 
 struct NormalizedSpan {
