@@ -277,13 +277,7 @@ fn language_variant_for_slug(slug: &str) -> Option<&'static str> {
 fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
-    let manifest_dir = PathBuf::from(manifest_dir);
-    let macro_path = input.path;
-    let absolute_path = resolve_manifest_path(&manifest_dir, &macro_path);
-    let crate_path = dioxus_code_crate_path()?;
-
-    let options_check = options_check_tokens(&crate_path, input.options.as_ref());
-
+    let absolute_path = resolve_manifest_path(&PathBuf::from(manifest_dir), &input.path);
     let source = fs::read_to_string(&absolute_path).map_err(|error| {
         syn::Error::new(
             Span::call_site(),
@@ -291,75 +285,47 @@ fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
         )
     })?;
 
-    let Some(language) = input
-        .options
-        .as_ref()
-        .and_then(try_extract_language)
-        .or_else(|| arborium::detect_language(&macro_path).map(str::to_string))
-    else {
-        let message = format!(
-            "could not detect language for `{macro_path}`; pass `CodeOptions::builder().with_language(Language::Rust)`"
-        );
-        return Ok(quote! {{
-            #options_check
-            compile_error!(#message);
-        }});
-    };
-
-    let absolute_lit = LitStr::new(&absolute_path.to_string_lossy(), Span::call_site());
-    let source_decl = quote! { const SOURCE: &str = include_str!(#absolute_lit); };
-
-    expand_highlighted_source(&crate_path, options_check, source_decl, &language, &source)
+    expand_shared(input.options, source, Some(absolute_path))
 }
 
 fn expand_code_str(input: CodeStrInput) -> syn::Result<TokenStream2> {
-    let crate_path = dioxus_code_crate_path()?;
-    let options_check = options_check_tokens(&crate_path, input.options.as_ref());
+    expand_shared(input.options, input.source, None)
+}
 
-    let Some(language) = input.options.as_ref().and_then(try_extract_language) else {
-        let message =
-            "could not determine language for `code_str!`; pass `CodeOptions::builder().with_language(Language::Rust)`";
+fn expand_shared(
+    options: Option<Expr>,
+    source: String,
+    origin_path: Option<PathBuf>,
+) -> syn::Result<TokenStream2> {
+    let crate_path = dioxus_code_crate_path()?;
+    let options_check = options_check_tokens(&crate_path, options.as_ref());
+
+    let Some(language) = options.as_ref().and_then(try_extract_language).or_else(|| {
+        origin_path
+            .as_ref()
+            .and_then(|path| arborium::detect_language(&path.to_string_lossy()).map(str::to_string))
+    }) else {
+        let message = match origin_path.as_ref() {
+            Some(path) => format!(
+                "could not detect language for `{}`; pass `CodeOptions::builder().with_language(Language::Rust)`",
+                path.display()
+            ),
+            None => String::from(
+                "could not determine language for `code_str!`; pass `CodeOptions::builder().with_language(Language::Rust)`",
+            ),
+        };
         return Ok(quote! {{
             #options_check
             compile_error!(#message);
         }});
     };
 
-    let source_lit = LitStr::new(&input.source, Span::call_site());
-    let source_decl = quote! { const SOURCE: &str = #source_lit; };
-
-    expand_highlighted_source(
-        &crate_path,
-        options_check,
-        source_decl,
-        &language,
-        &input.source,
-    )
-}
-
-fn options_check_tokens(crate_path: &TokenStream2, options: Option<&Expr>) -> Option<TokenStream2> {
-    options.map(|expr| {
-        quote_spanned! { expr.span() =>
-            const _: fn() = || {
-                let _: #crate_path::CodeOptions = #expr;
-            };
-        }
-    })
-}
-
-fn expand_highlighted_source(
-    crate_path: &TokenStream2,
-    options_check: Option<TokenStream2>,
-    source_decl: TokenStream2,
-    language: &str,
-    source: &str,
-) -> syn::Result<TokenStream2> {
     let mut highlighter = arborium::Highlighter::new();
     let spans = highlighter
-        .highlight_spans(language, source)
+        .highlight_spans(&language, &source)
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
 
-    let Some(variant) = language_variant_for_slug(language) else {
+    let Some(variant) = language_variant_for_slug(&language) else {
         let message = format!("language `{language}` has no `Language` variant");
         return Ok(quote! {{
             #options_check
@@ -367,11 +333,22 @@ fn expand_highlighted_source(
         }});
     };
     let variant_ident = Ident::new(variant, Span::call_site());
+
+    let source_decl = match origin_path {
+        Some(path) => {
+            let path_lit = LitStr::new(&path.to_string_lossy(), Span::call_site());
+            quote! { const SOURCE: &str = include_str!(#path_lit); }
+        }
+        None => {
+            let source_lit = LitStr::new(&source, Span::call_site());
+            quote! { const SOURCE: &str = #source_lit; }
+        }
+    };
+
     let span_tokens = normalize_spans(spans).into_iter().map(|span| {
         let start = span.start;
         let end = span.end;
         let tag = LitStr::new(span.tag, Span::call_site());
-
         quote! {
             #crate_path::advanced::HighlightSpan::new(#start..#end, #tag)
         }
@@ -387,6 +364,16 @@ fn expand_highlighted_source(
             SPANS,
         )
     }})
+}
+
+fn options_check_tokens(crate_path: &TokenStream2, options: Option<&Expr>) -> Option<TokenStream2> {
+    options.map(|expr| {
+        quote_spanned! { expr.span() =>
+            const _: fn() = || {
+                let _: #crate_path::CodeOptions = #expr;
+            };
+        }
+    })
 }
 
 struct NormalizedSpan {
