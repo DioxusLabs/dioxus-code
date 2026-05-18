@@ -50,6 +50,18 @@ let _tree = code!(
 );
 ```
 
+## Inline source detection
+
+With the `detection` feature enabled, `code_str!` can infer the language from
+inline source contents when no explicit language is provided. The detected
+language still needs its matching `lang-*` feature or `all-languages` enabled.
+
+```rust
+use dioxus_code::code_str;
+
+let _tree = code_str!("fn main() { println!(\"hi\"); }");
+```
+
 ## License
 
 MIT.

@@ -44,7 +44,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = ["macro"]
 macro = ["dep:dioxus-code-macro", "dioxus-code-macro/lang-rust"]
 runtime = ["arborium/lang-rust", "dep:arborium-tree-sitter"]
-detection = ["runtime", "dep:betlang"]
+detection = ["runtime", "dep:betlang", "dioxus-code-macro?/detection"]
 all-languages = [
     "runtime",
     "arborium/all-languages",

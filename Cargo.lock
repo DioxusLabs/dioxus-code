@@ -2461,6 +2461,7 @@ version = "0.1.1"
 dependencies = [
  "arborium",
  "arborium-theme",
+ "betlang",
  "dioxus-code",
  "macro-string",
  "proc-macro-crate 3.5.0",

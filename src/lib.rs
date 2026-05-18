@@ -514,4 +514,16 @@ mod tests {
             span.tag() == "k" && &TREE.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
     }
+
+    #[cfg(all(feature = "macro", feature = "detection"))]
+    #[test]
+    fn code_str_macro_detects_inline_source() {
+        const TREE: advanced::HighlightedSource = code_str!("fn main() { println!(\"hi\"); }");
+
+        assert_eq!(TREE.language(), Language::Rust);
+        assert_eq!(TREE.source(), "fn main() { println!(\"hi\"); }");
+        assert!(TREE.spans().iter().any(|span| {
+            span.tag() == "k" && &TREE.source()[span.start() as usize..span.end() as usize] == "fn"
+        }));
+    }
 }

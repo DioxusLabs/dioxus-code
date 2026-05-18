@@ -864,7 +864,7 @@ fn collect_spans(
 fn resolve_language(language: Language, _source: &str) -> Result<Language, HighlightError> {
     #[cfg(feature = "detection")]
     if language == Language::Auto {
-        return Language::detect(_source).ok_or(HighlightError::LanguageDetectionFailed);
+        return Language::detect_source(_source).ok_or(HighlightError::LanguageDetectionFailed);
     }
 
     Ok(language)
@@ -1532,6 +1532,61 @@ mod buffer_tests {
             span_ranges(buffer.spans()),
             span_ranges(&batch_spans(source, Language::Rust)),
         );
+    }
+
+    #[cfg(all(feature = "detection", feature = "lang-markdown"))]
+    #[test]
+    fn auto_detection_uses_source_content_not_path_suffix() {
+        let source = r#"# Betlang Fixture
+
+This Markdown file gives the detector a document-shaped source example.
+
+## Languages
+
+- Rust
+- Python
+- JavaScript
+
+```rust
+fn main() {
+    println!("hello");
+}
+```
+
+The surrounding prose and headings should make this look like Markdown rather
+than the fenced source language.
+
+main.rs"#;
+        let buffer = Buffer::new(Language::Auto, source).unwrap();
+
+        assert_eq!(buffer.language(), Language::Markdown);
+    }
+
+    #[cfg(all(feature = "detection", feature = "lang-c-sharp"))]
+    #[test]
+    fn auto_detection_maps_betlang_csharp_variant() {
+        let source = r#"using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Betlang.Fixtures
+{
+    public sealed class Program
+    {
+        public static void Main(string[] args)
+        {
+            var names = new List<string> { "Ada", "Grace", "Linus" };
+            foreach (var name in names.Where(value => value.Length > 0))
+            {
+                Console.WriteLine($"Hello, {name}");
+            }
+        }
+    }
+}
+"#;
+        let buffer = Buffer::new(Language::Auto, source).unwrap();
+
+        assert_eq!(buffer.language(), Language::CSharp);
     }
 
     #[test]
