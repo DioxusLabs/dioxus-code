@@ -47,6 +47,9 @@ macro = ["dep:dioxus-code-macro", "dioxus-code-macro/lang-rust"]
 runtime = [
     "arborium/lang-rust",
     "dep:arborium-tree-sitter",
+]
+detection = [
+    "runtime",
     "dep:betlang",
 ]
 all-languages = [

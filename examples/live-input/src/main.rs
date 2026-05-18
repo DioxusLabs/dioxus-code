@@ -36,7 +36,7 @@ fn App() -> Element {
                     span { "runtime" }
                 }
                 Code {
-                    src: SourceCode::new(source()).with_language(Language::Rust),
+                    src: SourceCode::builder(source()).with_language(Language::Rust),
                     theme: Theme::TOKYO_NIGHT,
                 }
             }

@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 dioxus = { version = "0.7.0" }
-dioxus-code = { workspace = true, features = ["all-languages"] }
+dioxus-code = { workspace = true, features = ["all-languages", "detection"] }
 dioxus-code-editor = { workspace = true }
 
 [features]

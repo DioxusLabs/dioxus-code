@@ -544,7 +544,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         "."
                     }
                     p { class: "hero-lede",
-                        "A drop-in component with two source modes — compile-time macro and runtime detection. No JS, no flash of unstyled code."
+                        "A drop-in component with two source modes: compile-time macro and runtime highlighting with explicit language selection."
                     }
                     div { class: "hero-terminal-block",
                         div { class: "hero-terminal-bar",
@@ -577,7 +577,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         span { "{theme_label}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: SourceCode::new(HERO_COUNTER).with_language(Language::Rust), theme }
+                        Code { src: SourceCode::builder(HERO_COUNTER).with_language(Language::Rust), theme }
                     }
                 }
             }
@@ -663,7 +663,7 @@ fn FeatureRowReceipt() -> Element {
                         span { class: "receipt-aside-num", "02" }
                         div {
                             h3 { class: "receipt-aside-title", "SourceCode" }
-                            p { class: "receipt-aside-text", "Pull it in when input is dynamic. Tree-sitter grammars detect language automatically." }
+                            p { class: "receipt-aside-text", "Pull it in when input is dynamic. Pass the language you want to highlight." }
                         }
                     }
                     div { class: "receipt-aside-row",
@@ -785,7 +785,7 @@ fn Docs(scheme: Scheme) -> Element {
                                 }
                                 div { class: "card-code-body",
                                     Code {
-                                        src: SourceCode::new(step.code).with_language(step.language),
+                                        src: SourceCode::builder(step.code).with_language(step.language),
                                         theme,
                                     }
                                 }

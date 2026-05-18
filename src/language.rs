@@ -1,11 +1,9 @@
 //! Tree-sitter grammar selection.
 //!
-//! [`Language`] is a closed set of Arborium language slugs. Each named variant
-//! is gated by the same cargo feature as the corresponding grammar in
-//! `dioxus-code`, so the enum only ever exposes variants whose grammar is
-//! actually compiled into this build.
-
-use dioxus::core::SuperFrom;
+//! [`Language`] is a closed set of language slugs. Grammar variants are gated
+//! by the same cargo feature as the corresponding grammar in `dioxus-code`, so
+//! the enum only ever exposes variants whose grammar is actually compiled into
+//! this build. [`Language::Auto`] is available with the `detection` feature.
 
 macro_rules! define_languages {
     (
@@ -16,10 +14,11 @@ macro_rules! define_languages {
     ) => {
         /// Tree-sitter grammar identifier.
         ///
-        /// Each variant maps to an Arborium language slug via
-        /// [`Language::slug`]. Variants are gated by the same `lang-*` cargo
-        /// features as the grammar lookup table, so unsupported builds simply
-        /// don't expose those variants.
+        /// Each variant maps to a language slug via [`Language::slug`].
+        /// Grammar variants are gated by the same `lang-*` cargo features as
+        /// the grammar lookup table, so unsupported builds simply don't expose
+        /// those variants. [`Language::Auto`] is available with the
+        /// `detection` feature.
         ///
         /// ```rust
         /// use dioxus_code::Language;
@@ -29,9 +28,12 @@ macro_rules! define_languages {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         #[non_exhaustive]
         pub enum Language {
+            /// Automatically detect the language from the source text.
+            #[cfg(feature = "detection")]
+            Auto,
             $(
                 $(#[$attr])*
-                #[doc = concat!("Arborium slug `\"", $slug, "\"`.")]
+                #[doc = concat!("Language slug `\"", $slug, "\"`.")]
                 $variant,
             )*
         }
@@ -47,15 +49,19 @@ macro_rules! define_languages {
             /// assert!(Language::ALL.contains(&Language::Rust));
             /// ```
             pub const ALL: &'static [Language] = &[
+                #[cfg(feature = "detection")]
+                Self::Auto,
                 $(
                     $(#[$attr])*
                     Self::$variant,
                 )*
             ];
 
-            /// Arborium slug for this language.
+            /// Stable slug for this language.
             pub const fn slug(self) -> &'static str {
                 match self {
+                    #[cfg(feature = "detection")]
+                    Self::Auto => "auto",
                     $(
                         $(#[$attr])*
                         Self::$variant => $slug,
@@ -63,12 +69,14 @@ macro_rules! define_languages {
                 }
             }
 
-            /// Parse an Arborium slug into a [`Language`].
+            /// Parse a language slug into a [`Language`].
             ///
             /// Returns `None` for unknown slugs and for slugs whose grammar
             /// feature is disabled in this build.
             pub fn from_slug(slug: &str) -> Option<Self> {
                 match slug {
+                    #[cfg(feature = "detection")]
+                    "auto" => Some(Self::Auto),
                     $(
                         $(#[$attr])*
                         $slug => Some(Self::$variant),
@@ -83,23 +91,40 @@ macro_rules! define_languages {
 impl Language {
     /// Best-effort detection from a path, filename, shebang, or file contents.
     ///
-    /// First uses Arborium's path and shebang detector, then falls back to
-    /// betlang source-language inference from source text. The
-    /// detected slug is mapped into a [`Language`] variant, returning `None`
-    /// when detection fails or the detected language's grammar feature is
-    /// disabled in this build.
+    /// Uses Arborium's path and shebang detector. With the `detection` feature
+    /// enabled, this also falls back to betlang source-language inference from
+    /// source text. The detected slug is mapped into a [`Language`] variant,
+    /// returning `None` when detection fails or the detected language's grammar
+    /// feature is disabled in this build.
     ///
     /// Available with the `runtime` feature.
     #[cfg(feature = "runtime")]
     #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
     pub fn detect(input: &str) -> Option<Self> {
-        arborium::detect_language(input)
-            .and_then(Self::from_slug)
-            .or_else(|| {
+        let detected = arborium::detect_language(input).and_then(Self::from_detected_slug);
+
+        #[cfg(feature = "detection")]
+        {
+            detected.or_else(|| {
                 betlang::detect(input)
                     .language()
-                    .and_then(|language| Self::from_slug(language.slug()))
+                    .and_then(|language| Self::from_detected_slug(language.slug()))
             })
+        }
+
+        #[cfg(not(feature = "detection"))]
+        {
+            detected
+        }
+    }
+
+    #[cfg(feature = "runtime")]
+    fn from_detected_slug(slug: &str) -> Option<Self> {
+        match Self::from_slug(slug) {
+            #[cfg(feature = "detection")]
+            Some(Self::Auto) => None,
+            language => language,
+        }
     }
 }
 
@@ -309,22 +334,4 @@ define_languages! {
     Zig => "zig",
     #[cfg(feature = "lang-zsh")]
     Zsh => "zsh",
-}
-
-#[doc(hidden)]
-pub struct OptionLanguageFromStrMarker;
-
-impl<'a> SuperFrom<&'a str, OptionLanguageFromStrMarker> for Option<Language> {
-    fn super_from(slug: &'a str) -> Self {
-        Language::from_slug(slug)
-    }
-}
-
-#[doc(hidden)]
-pub struct OptionLanguageFromStringMarker;
-
-impl SuperFrom<String, OptionLanguageFromStringMarker> for Option<Language> {
-    fn super_from(slug: String) -> Self {
-        Language::from_slug(&slug)
-    }
 }

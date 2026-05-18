@@ -128,7 +128,7 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
                 }
                 buffer.highlighted()
             }
-            None => SourceCode::new(props.value.clone())
+            None => SourceCode::builder(props.value.clone())
                 .with_language(props.language)
                 .into(),
         }

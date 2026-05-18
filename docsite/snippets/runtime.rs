@@ -11,7 +11,7 @@ fn App() -> Element {
 
     rsx! {
         Code {
-            src: SourceCode::new(source()).with_language(Language::Rust),
+            src: SourceCode::builder(source()).with_language(Language::Rust),
             theme: CodeTheme::system(Theme::GITHUB_LIGHT, Theme::GITHUB_DARK),
         }
     }

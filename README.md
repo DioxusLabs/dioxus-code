@@ -55,25 +55,27 @@ For editor-style use cases where the source isn't known at compile time:
 
 ```toml
 [dependencies]
-dioxus-code = { version = "0.1", features = ["runtime"] }
+dioxus-code = { version = "0.1", features = ["runtime", "detection"] }
 ```
 
 ```rust
+# #[cfg(feature = "detection")]
+# {
 # use dioxus::prelude::*;
-use dioxus_code::{Code, CodeOptions, Language, SourceCode, Theme};
+use dioxus_code::{Code, Language, SourceCode, Theme};
 # let user_input = String::new();
 # let _ =
 rsx! {
     Code {
-        src: SourceCode::new(user_input)
-            .with_options(CodeOptions::builder().with_language(Language::Rust)),
+        src: SourceCode::builder(user_input).with_language(Language::Auto),
         theme: Theme::GITHUB_LIGHT,
     }
 }
 # ;
+# }
 ```
 
-Language can be set explicitly with the same [`CodeOptions`] builder used by [`code!`], or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
+`Language::Auto` is available only with the `detection` feature. Without detection, pass a concrete language such as `Language::Rust`. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
 
 ## Editor
 

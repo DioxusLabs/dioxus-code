@@ -20,14 +20,13 @@ const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 pub use dioxus_code_macro::{code, code_str};
 
-/// Options shared by the [`code!`] and [`code_str!`] macros and runtime
-/// [`SourceCode`].
+/// Compile-time options for the [`code!`] and [`code_str!`] macros.
 ///
-/// The macros read this builder syntactically at compile time; pass
+/// Both macros read this builder syntactically; pass
 /// [`CodeOptions::builder`] with [`CodeOptions::with_language`] to override the
 /// language that would otherwise be inferred from the file extension. For
-/// [`code_str!`] the language is required since there is no extension to infer
-/// from. [`SourceCode`] consumes the same builder at runtime.
+/// [`code_str!`] the language is required since there is no extension to
+/// infer from.
 ///
 /// ```rust
 /// use dioxus_code::{CodeOptions, Language, code};
@@ -219,60 +218,72 @@ pub use advanced::{HighlightError, HighlightQueryErrorKind};
 /// Source text to highlight at runtime.
 ///
 /// Available with the `runtime` feature. Build one with [`SourceCode::new`],
-/// optionally annotate it with [`SourceCode::with_language`], then pass it to
-/// [`Code()`].
+/// or the source-first [`SourceCode::builder`], then pass it to [`Code()`].
 ///
 /// ```rust
 /// use dioxus_code::{Language, SourceCode};
-/// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
+/// let _src = SourceCode::new(Language::Rust, "fn main() {}");
 /// ```
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
-    options: CodeOptions,
+    language: Language,
+}
+
+/// Source-first builder for [`SourceCode`].
+///
+/// ```rust
+/// use dioxus_code::{Language, SourceCode};
+/// let _src = SourceCode::builder("fn main() {}").with_language(Language::Rust);
+/// ```
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceCodeBuilder {
+    source: String,
 }
 
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 impl SourceCode {
-    /// Wrap a raw source string with no language hint.
+    /// Wrap a raw source string with an explicit language.
     ///
     /// ```rust
-    /// use dioxus_code::SourceCode;
-    /// let _src = SourceCode::new("fn main() {}");
+    /// use dioxus_code::{Language, SourceCode};
+    /// let _src = SourceCode::new(Language::Rust, "fn main() {}");
     /// ```
-    pub fn new(source: impl Into<String>) -> Self {
+    pub fn new(language: Language, source: impl ToString) -> Self {
         Self {
-            source: source.into(),
-            options: CodeOptions::new(),
+            source: source.to_string(),
+            language,
         }
     }
 
-    /// Apply shared [`CodeOptions`].
+    /// Start a source-first builder.
     ///
     /// ```rust
-    /// use dioxus_code::{CodeOptions, Language, SourceCode};
-    /// let options = CodeOptions::builder().with_language(Language::Rust);
-    /// let _src = SourceCode::new("fn main() {}").with_options(options);
+    /// use dioxus_code::{Language, SourceCode};
+    /// let _src = SourceCode::builder("fn main() {}").with_language(Language::Rust);
     /// ```
-    pub fn with_options(mut self, options: CodeOptions) -> Self {
-        self.options = options;
-        self
+    pub fn builder(source: impl ToString) -> SourceCodeBuilder {
+        SourceCodeBuilder {
+            source: source.to_string(),
+        }
     }
 
-    /// Set the language explicitly.
+    /// Replace the language used to highlight this source.
     ///
     /// To set the language from a runtime slug, use [`Language::from_slug`]
     /// and pass the resulting variant.
     ///
     /// ```rust
     /// use dioxus_code::{Language, SourceCode};
-    /// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
+    /// let _src = SourceCode::new(Language::Rust, "fn main() {}").with_language(Language::Rust);
     /// ```
-    pub fn with_language(mut self, language: impl Into<Option<Language>>) -> Self {
-        self.options = self.options.with_language(language);
+    pub fn with_language(mut self, language: Language) -> Self {
+        self.language = language;
         self
     }
 
@@ -281,25 +292,30 @@ impl SourceCode {
     /// Use `Into<HighlightedSource>` for the lossy rendering path that discards
     /// the error and renders plaintext.
     pub fn highlight(self) -> Result<advanced::HighlightedSource, HighlightError> {
-        let language = self
-            .options
-            .language()
-            .or_else(|| Language::detect(&self.source));
-        match language {
-            Some(language) => {
-                advanced::Buffer::new(language, self.source).map(|buffer| buffer.highlighted())
-            }
-            None => Err(HighlightError::LanguageDetectionFailed),
-        }
+        advanced::Buffer::new(self.language, self.source).map(|buffer| buffer.highlighted())
     }
 
     fn highlight_or_plaintext(self) -> advanced::HighlightedSource {
+        let language = self.language;
         let source = self.source.clone();
-        let language = self.options.language();
         match self.highlight() {
             Ok(source) => source,
             Err(_) => advanced::HighlightedSource::plaintext(source, language),
         }
+    }
+}
+
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+impl SourceCodeBuilder {
+    /// Finish the builder with an explicit language.
+    ///
+    /// ```rust
+    /// use dioxus_code::{Language, SourceCode};
+    /// let _src = SourceCode::builder("fn main() {}").with_language(Language::Rust);
+    /// ```
+    pub fn with_language(self, language: Language) -> SourceCode {
+        SourceCode::new(language, self.source)
     }
 }
 
@@ -408,7 +424,7 @@ pub fn Code(props: CodeProps) -> Element {
     let source = &props.src;
     let segments = source.trimmed_segments();
     let class = format!("dxc {}", props.theme.classes());
-    let language = source.language().map(Language::slug).unwrap_or("text");
+    let language = source.language().slug();
 
     rsx! {
         advanced::CodeThemeStyles { theme: props.theme }
@@ -494,11 +510,10 @@ mod tests {
 
     #[cfg(feature = "runtime")]
     #[test]
-    fn runtime_code_options_highlights() {
-        let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}")
-            .with_options(CodeOptions::builder().with_language(Language::Rust))
-            .into();
-        assert_eq!(tree.language(), Some(Language::Rust));
+    fn runtime_source_code_highlights() {
+        let tree: advanced::HighlightedSource =
+            SourceCode::new(Language::Rust, "fn main() {}").into();
+        assert_eq!(tree.language(), Language::Rust);
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
@@ -506,13 +521,38 @@ mod tests {
 
     #[cfg(feature = "runtime")]
     #[test]
-    fn runtime_raw_string_detects_language_from_source() {
-        let tree: advanced::HighlightedSource =
-            SourceCode::new("use std::fmt;\nfn main() { println!(\"hi\"); }").into();
-        assert_eq!(tree.language(), Some(Language::Rust));
+    fn runtime_source_code_builder_highlights() {
+        let tree: advanced::HighlightedSource = SourceCode::builder("fn main() {}")
+            .with_language(Language::Rust)
+            .into();
+        assert_eq!(tree.language(), Language::Rust);
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
+    }
+
+    #[cfg(feature = "runtime")]
+    #[test]
+    fn language_detect_remains_available_with_runtime() {
+        assert_eq!(Language::detect("demo.rs"), Some(Language::Rust));
+    }
+
+    #[cfg(feature = "detection")]
+    #[test]
+    fn runtime_source_code_auto_language_highlights_detected_source() {
+        let tree: advanced::HighlightedSource = SourceCode::builder("fn main() {}")
+            .with_language(Language::Auto)
+            .into();
+        assert_eq!(tree.language(), Language::Rust);
+        assert!(tree.spans().iter().any(|span| {
+            span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
+        }));
+    }
+
+    #[cfg(feature = "detection")]
+    #[test]
+    fn auto_language_is_available_when_detection_enabled() {
+        assert!(Language::ALL.contains(&Language::Auto));
     }
 
     #[cfg(feature = "macro")]
@@ -522,7 +562,7 @@ mod tests {
             "fn main() {}",
             CodeOptions::builder().with_language(Language::Rust)
         );
-        assert_eq!(TREE.language(), Some(Language::Rust));
+        assert_eq!(TREE.language(), Language::Rust);
         assert_eq!(TREE.source(), "fn main() {}");
         assert!(TREE.spans().iter().any(|span| {
             span.tag() == "k" && &TREE.source()[span.start() as usize..span.end() as usize] == "fn"
