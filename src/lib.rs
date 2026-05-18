@@ -11,19 +11,23 @@ use std::collections::HashMap;
 mod language;
 pub use language::Language;
 
+#[cfg(all(feature = "runtime", target_family = "wasm"))]
+mod wasm_ctype;
+
 const CODE_CSS: Asset = asset!("/assets/dioxus-code.css");
 
 #[cfg(feature = "macro")]
 #[cfg_attr(docsrs, doc(cfg(feature = "macro")))]
 pub use dioxus_code_macro::{code, code_str};
 
-/// Compile-time options for the [`code!`] and [`code_str!`] macros.
+/// Options shared by the [`code!`] and [`code_str!`] macros and runtime
+/// [`SourceCode`].
 ///
-/// Both macros read this builder syntactically; pass
+/// The macros read this builder syntactically at compile time; pass
 /// [`CodeOptions::builder`] with [`CodeOptions::with_language`] to override the
 /// language that would otherwise be inferred from the file extension. For
-/// [`code_str!`] the language is required since there is no extension to
-/// infer from.
+/// [`code_str!`] the language is required since there is no extension to infer
+/// from. [`SourceCode`] consumes the same builder at runtime.
 ///
 /// ```rust
 /// use dioxus_code::{CodeOptions, Language, code};
@@ -215,47 +219,60 @@ pub use advanced::{HighlightError, HighlightQueryErrorKind};
 /// Source text to highlight at runtime.
 ///
 /// Available with the `runtime` feature. Build one with [`SourceCode::new`],
-/// then pass it to [`Code()`].
+/// optionally annotate it with [`SourceCode::with_language`], then pass it to
+/// [`Code()`].
 ///
 /// ```rust
 /// use dioxus_code::{Language, SourceCode};
-/// let _src = SourceCode::new(Language::Rust, "fn main() {}");
+/// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
 /// ```
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceCode {
     source: String,
-    language: Language,
+    options: CodeOptions,
 }
 
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 impl SourceCode {
-    /// Wrap a raw source string with an explicit language.
+    /// Wrap a raw source string with no language hint.
     ///
     /// ```rust
-    /// use dioxus_code::{Language, SourceCode};
-    /// let _src = SourceCode::new(Language::Rust, "fn main() {}");
+    /// use dioxus_code::SourceCode;
+    /// let _src = SourceCode::new("fn main() {}");
     /// ```
-    pub fn new(language: Language, source: impl ToString) -> Self {
+    pub fn new(source: impl Into<String>) -> Self {
         Self {
-            source: source.to_string(),
-            language,
+            source: source.into(),
+            options: CodeOptions::new(),
         }
     }
 
-    /// Replace the language used to highlight this source.
+    /// Apply shared [`CodeOptions`].
+    ///
+    /// ```rust
+    /// use dioxus_code::{CodeOptions, Language, SourceCode};
+    /// let options = CodeOptions::builder().with_language(Language::Rust);
+    /// let _src = SourceCode::new("fn main() {}").with_options(options);
+    /// ```
+    pub fn with_options(mut self, options: CodeOptions) -> Self {
+        self.options = options;
+        self
+    }
+
+    /// Set the language explicitly.
     ///
     /// To set the language from a runtime slug, use [`Language::from_slug`]
     /// and pass the resulting variant.
     ///
     /// ```rust
     /// use dioxus_code::{Language, SourceCode};
-    /// let _src = SourceCode::new(Language::Rust, "fn main() {}").with_language(Language::Rust);
+    /// let _src = SourceCode::new("fn main() {}").with_language(Language::Rust);
     /// ```
-    pub fn with_language(mut self, language: Language) -> Self {
-        self.language = language;
+    pub fn with_language(mut self, language: impl Into<Option<Language>>) -> Self {
+        self.options = self.options.with_language(language);
         self
     }
 
@@ -264,12 +281,21 @@ impl SourceCode {
     /// Use `Into<HighlightedSource>` for the lossy rendering path that discards
     /// the error and renders plaintext.
     pub fn highlight(self) -> Result<advanced::HighlightedSource, HighlightError> {
-        advanced::Buffer::new(self.language, self.source).map(|buffer| buffer.highlighted())
+        let language = self
+            .options
+            .language()
+            .or_else(|| Language::detect(&self.source));
+        match language {
+            Some(language) => {
+                advanced::Buffer::new(language, self.source).map(|buffer| buffer.highlighted())
+            }
+            None => Err(HighlightError::LanguageDetectionFailed),
+        }
     }
 
     fn highlight_or_plaintext(self) -> advanced::HighlightedSource {
-        let language = self.language;
         let source = self.source.clone();
+        let language = self.options.language();
         match self.highlight() {
             Ok(source) => source,
             Err(_) => advanced::HighlightedSource::plaintext(source, language),
@@ -382,7 +408,7 @@ pub fn Code(props: CodeProps) -> Element {
     let source = &props.src;
     let segments = source.trimmed_segments();
     let class = format!("dxc {}", props.theme.classes());
-    let language = source.language().slug();
+    let language = source.language().map(Language::slug).unwrap_or("text");
 
     rsx! {
         advanced::CodeThemeStyles { theme: props.theme }
@@ -468,10 +494,22 @@ mod tests {
 
     #[cfg(feature = "runtime")]
     #[test]
-    fn runtime_source_code_highlights() {
+    fn runtime_code_options_highlights() {
+        let tree: advanced::HighlightedSource = SourceCode::new("fn main() {}")
+            .with_options(CodeOptions::builder().with_language(Language::Rust))
+            .into();
+        assert_eq!(tree.language(), Some(Language::Rust));
+        assert!(tree.spans().iter().any(|span| {
+            span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
+        }));
+    }
+
+    #[cfg(feature = "runtime")]
+    #[test]
+    fn runtime_raw_string_detects_language_from_source() {
         let tree: advanced::HighlightedSource =
-            SourceCode::new(Language::Rust, "fn main() {}").into();
-        assert_eq!(tree.language(), Language::Rust);
+            SourceCode::new("use std::fmt;\nfn main() { println!(\"hi\"); }").into();
+        assert_eq!(tree.language(), Some(Language::Rust));
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
@@ -484,7 +522,7 @@ mod tests {
             "fn main() {}",
             CodeOptions::builder().with_language(Language::Rust)
         );
-        assert_eq!(TREE.language(), Language::Rust);
+        assert_eq!(TREE.language(), Some(Language::Rust));
         assert_eq!(TREE.source(), "fn main() {}");
         assert!(TREE.spans().iter().any(|span| {
             span.tag() == "k" && &TREE.source()[span.start() as usize..span.end() as usize] == "fn"

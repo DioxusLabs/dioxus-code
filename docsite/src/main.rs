@@ -544,7 +544,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         "."
                     }
                     p { class: "hero-lede",
-                        "A drop-in component with two source modes: compile-time macro and runtime highlighting with explicit language selection."
+                        "A drop-in component with two source modes — compile-time macro and runtime detection. No JS, no flash of unstyled code."
                     }
                     div { class: "hero-terminal-block",
                         div { class: "hero-terminal-bar",
@@ -577,7 +577,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         span { "{theme_label}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: SourceCode::new(Language::Rust, HERO_COUNTER), theme }
+                        Code { src: SourceCode::new(HERO_COUNTER).with_language(Language::Rust), theme }
                     }
                 }
             }
@@ -640,15 +640,15 @@ fn FeatureRowReceipt() -> Element {
                             span { class: "receipt-value", "OPT-IN" }
                         }
                         li { class: "receipt-item receipt-optional",
-                            span { class: "receipt-label", "Runtime grammars" }
+                            span { class: "receipt-label", "Tree-sitter grammars" }
                             span { class: "receipt-dots" }
                             span { class: "receipt-value", "+3.33 MiB" }
                         }
                     }
                     div { class: "receipt-rule double" }
                     div { class: "receipt-total",
-                        span { class: "receipt-total-label", "COMPILE-TIME MODE" }
-                        span { class: "receipt-total-value", "STATIC" }
+                        span { class: "receipt-total-label", "PARSER BYTES SHIPPED" }
+                        span { class: "receipt-total-value", "0" }
                     }
                 }
                 aside { class: "receipt-aside",
@@ -656,14 +656,14 @@ fn FeatureRowReceipt() -> Element {
                         span { class: "receipt-aside-num", "01" }
                         div {
                             h3 { class: "receipt-aside-title", "code!" }
-                            p { class: "receipt-aside-text", "Tokenizes during cargo build and embeds highlighted spans for rendering." }
+                            p { class: "receipt-aside-text", "Tokenizes during cargo build. The runtime gets pre-styled markup with no parser bytes." }
                         }
                     }
                     div { class: "receipt-aside-row",
                         span { class: "receipt-aside-num", "02" }
                         div {
                             h3 { class: "receipt-aside-title", "SourceCode" }
-                            p { class: "receipt-aside-text", "Pull it in when input is dynamic and pass the language your source uses." }
+                            p { class: "receipt-aside-text", "Pull it in when input is dynamic. Tree-sitter grammars detect language automatically." }
                         }
                     }
                     div { class: "receipt-aside-row",
@@ -690,6 +690,9 @@ fn Playground(
     let theme_pair = theme_pairs[active_idx()];
     let theme = theme_pair.code_theme(scheme);
     let value = use_memo(move || Some(active_idx()));
+    let language = Language::detect(&source()).unwrap_or(Language::Rust);
+    let language_label = language.slug();
+    let source_len = source().chars().count();
 
     rsx! {
         section { id: "playground", class: "section",
@@ -701,9 +704,9 @@ fn Playground(
             div { class: "playground-grid",
                 Card { class: "card-editor",
                     div { class: "card-bar",
-                        span { "source.rs" }
+                        span { "source" }
                         span { class: "editor-meta",
-                            span { "rust · " {format!("{} chars", source().chars().count())} }
+                            span { "{language_label} · {source_len} chars" }
                             span { class: "editor-meta-divider" }
                             Select::<usize> {
                                 value: Some(value.into()),
@@ -732,9 +735,10 @@ fn Playground(
                     ClientOnly {
                         CodeEditor {
                             value: source(),
-                            language: Language::Rust,
+                            language,
                             theme,
-                            aria_label: "Rust source editor",
+                            aria_label: "Source editor",
+                            placeholder: "Type code...",
                             class: "playground-code-editor",
                             oninput: move |value| source.set(value),
                         }
@@ -781,7 +785,7 @@ fn Docs(scheme: Scheme) -> Element {
                                 }
                                 div { class: "card-code-body",
                                     Code {
-                                        src: SourceCode::new(step.language, step.code),
+                                        src: SourceCode::new(step.code).with_language(step.language),
                                         theme,
                                     }
                                 }

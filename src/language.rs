@@ -2,7 +2,10 @@
 //!
 //! [`Language`] is a closed set of Arborium language slugs. Each named variant
 //! is gated by the same cargo feature as the corresponding grammar in
-//! `dioxus-code`, so the enum exposes the variants compiled into this build.
+//! `dioxus-code`, so the enum only ever exposes variants whose grammar is
+//! actually compiled into this build.
+
+use dioxus::core::SuperFrom;
 
 macro_rules! define_languages {
     (
@@ -15,8 +18,8 @@ macro_rules! define_languages {
         ///
         /// Each variant maps to an Arborium language slug via
         /// [`Language::slug`]. Variants are gated by the same `lang-*` cargo
-        /// features as the grammar lookup table, so each build exposes the
-        /// variants enabled for that build.
+        /// features as the grammar lookup table, so unsupported builds simply
+        /// don't expose those variants.
         ///
         /// ```rust
         /// use dioxus_code::Language;
@@ -80,15 +83,23 @@ macro_rules! define_languages {
 impl Language {
     /// Best-effort detection from a path, filename, shebang, or file contents.
     ///
-    /// Wraps [`arborium::detect_language`] and maps the resulting slug into a
-    /// [`Language`] variant, returning `None` when detection fails or the
-    /// detected language's grammar feature is disabled in this build.
+    /// First uses Arborium's path and shebang detector, then falls back to
+    /// betlang source-language inference from source text. The
+    /// detected slug is mapped into a [`Language`] variant, returning `None`
+    /// when detection fails or the detected language's grammar feature is
+    /// disabled in this build.
     ///
     /// Available with the `runtime` feature.
     #[cfg(feature = "runtime")]
     #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
     pub fn detect(input: &str) -> Option<Self> {
-        arborium::detect_language(input).and_then(Self::from_slug)
+        arborium::detect_language(input)
+            .and_then(Self::from_slug)
+            .or_else(|| {
+                betlang::detect(input)
+                    .language()
+                    .and_then(|language| Self::from_slug(language.slug()))
+            })
     }
 }
 
@@ -298,4 +309,22 @@ define_languages! {
     Zig => "zig",
     #[cfg(feature = "lang-zsh")]
     Zsh => "zsh",
+}
+
+#[doc(hidden)]
+pub struct OptionLanguageFromStrMarker;
+
+impl<'a> SuperFrom<&'a str, OptionLanguageFromStrMarker> for Option<Language> {
+    fn super_from(slug: &'a str) -> Self {
+        Language::from_slug(slug)
+    }
+}
+
+#[doc(hidden)]
+pub struct OptionLanguageFromStringMarker;
+
+impl SuperFrom<String, OptionLanguageFromStringMarker> for Option<Language> {
+    fn super_from(slug: String) -> Self {
+        Language::from_slug(&slug)
+    }
 }

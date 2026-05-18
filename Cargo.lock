@@ -1645,6 +1645,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "betlang"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9a5811a1a59386e19785588e5bb2384b7d543b4870acedd1c7a1cb177b13b7d"
+dependencies = [
+ "fearless_simd",
+]
+
+[[package]]
 name = "bit_field"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2394,6 +2403,7 @@ dependencies = [
  "arborium",
  "arborium-theme",
  "arborium-tree-sitter",
+ "betlang",
  "dioxus",
  "dioxus-code",
  "dioxus-code-editor",
@@ -3321,6 +3331,12 @@ checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
 ]
+
+[[package]]
+name = "fearless_simd"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76258897e51fd156ee03b6246ea53f3e0eb395d0b327e9961c4fc4c8b2fa151a"
 
 [[package]]
 name = "field-offset"

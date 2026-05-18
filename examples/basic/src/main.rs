@@ -15,7 +15,8 @@ fn App() -> Element {
                 theme: Theme::RUSTDOC_AYU,
             }
             Code {
-                src: SourceCode::new(Language::Rust, "fn main() {\n    println!(\"runtime\");\n}"),
+                src: SourceCode::new("fn main() {\n    println!(\"runtime\");\n}")
+                    .with_language(Language::Rust),
                 theme: Theme::GITHUB_LIGHT,
             }
         }

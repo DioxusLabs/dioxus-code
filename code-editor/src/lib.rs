@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 pub use dioxus_code::Language;
 #[cfg(test)]
 use dioxus_code::Theme;
-use dioxus_code::advanced::{Buffer, CodeThemeStyles, HighlightError, TokenSpan};
+use dioxus_code::advanced::{Buffer, CodeThemeStyles, TokenSpan};
 #[cfg(test)]
 use dioxus_code::advanced::{HighlightSegment, HighlightedSource};
 use dioxus_code::{CodeTheme, SourceCode};
@@ -71,11 +71,6 @@ pub struct CodeEditorProps {
     pub oninput: EventHandler<String>,
 }
 
-struct EditorBuffer {
-    buffer: Option<Buffer>,
-    language: Language,
-}
-
 /// Editable syntax-highlighted code surface.
 ///
 /// The component is controlled by [`CodeEditorProps::value`]; update that value
@@ -101,15 +96,10 @@ struct EditorBuffer {
 /// ```
 #[component]
 pub fn CodeEditor(props: CodeEditorProps) -> Element {
-    let state = use_hook({
+    let buffer = use_hook({
         let value = props.value.clone();
         let language = props.language;
-        move || {
-            Rc::new(RefCell::new(EditorBuffer {
-                buffer: Buffer::new(language, value).ok(),
-                language,
-            }))
-        }
+        move || Rc::new(RefCell::new(Buffer::new(language, value).ok()))
     });
     let edit_tracker = use_hook(|| {
         Rc::new(RefCell::new(edit_capture::InputEditTracker::new(
@@ -119,30 +109,28 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
 
     let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
     let snapshot = {
-        let mut slot = state.borrow_mut();
-        if slot.language != props.language {
-            slot.buffer = Buffer::new(props.language, props.value.clone()).ok();
-            slot.language = props.language;
+        let mut buffer_slot = buffer.borrow_mut();
+        if buffer_slot.is_none() {
+            *buffer_slot = Buffer::new(props.language, props.value.clone()).ok();
         }
 
-        match slot.buffer.as_mut() {
+        match buffer_slot.as_mut() {
             Some(buffer) => {
+                if buffer.language() != props.language {
+                    let _ = buffer.set_language(props.language);
+                }
                 if buffer.source() != props.value {
                     let result = match edit {
-                        Some(edit) => match buffer.edit(edit, props.value.clone()) {
-                            Ok(()) => Ok(()),
-                            Err(HighlightError::InvalidEdit { .. }) => {
-                                buffer.replace(props.value.clone())
-                            }
-                            Err(error) => Err(error),
-                        },
+                        Some(edit) => buffer.edit(edit, props.value.clone()),
                         None => buffer.replace(props.value.clone()),
                     };
                     let _ = result;
                 }
                 buffer.highlighted()
             }
-            None => SourceCode::new(props.language, props.value.clone()).into(),
+            None => SourceCode::new(props.value.clone())
+                .with_language(props.language)
+                .into(),
         }
     };
     let lines = snapshot.lines();

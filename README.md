@@ -21,8 +21,8 @@ A small Dioxus component for rendering source code with proper highlighting. Par
 
 Two ways to highlight:
 
-- **[`code!`] macro** — parses at compile time and embeds the highlighted spans. Default.
-- **[`SourceCode`]** — parses at runtime. Opt in with the `runtime` feature for dynamic source text.
+- **[`code!`] macro** — parses at compile time. The runtime ships only the spans, no parser. Default.
+- **[`SourceCode`]** — parses at runtime. Opt in with the `runtime` feature when the source isn't known until the user types it.
 
 ## Quick start
 
@@ -51,7 +51,7 @@ When the file extension is ambiguous, pass [`CodeOptions::builder`] with [`CodeO
 
 ## Runtime highlighting
 
-For editor-style use cases with dynamic source text:
+For editor-style use cases where the source isn't known at compile time:
 
 ```toml
 [dependencies]
@@ -60,23 +60,24 @@ dioxus-code = { version = "0.1", features = ["runtime"] }
 
 ```rust
 # use dioxus::prelude::*;
-use dioxus_code::{Code, Language, SourceCode, Theme};
+use dioxus_code::{Code, CodeOptions, Language, SourceCode, Theme};
 # let user_input = String::new();
 # let _ =
 rsx! {
     Code {
-        src: SourceCode::new(Language::Rust, user_input),
+        src: SourceCode::new(user_input)
+            .with_options(CodeOptions::builder().with_language(Language::Rust)),
         theme: Theme::GITHUB_LIGHT,
     }
 }
 # ;
 ```
 
-Pass a [`Language`] variant when building [`SourceCode`]. The `runtime` feature includes Rust; enable the matching `lang-*` feature, or `all-languages`, for additional grammars.
+Language can be set explicitly with the same [`CodeOptions`] builder used by [`code!`], or auto-detected from the source. The default `runtime` feature includes Rust; pass `lang-python`, `lang-toml`, or `all-languages` for the rest.
 
 ## Editor
 
-[`dioxus-code-editor`] is a sibling crate that pairs the highlighter with a textarea input layer:
+[`dioxus-code-editor`] is a sibling crate that pairs the highlighter with a `contenteditable` input layer:
 
 ```rust
 # use dioxus::prelude::*;
@@ -130,7 +131,7 @@ Code {
 
 ```sh
 dx serve --example dioxus-code-basic       # macro + runtime side by side
-dx serve --example dioxus-code-macro-only  # compile-time highlighted spans
+dx serve --example dioxus-code-macro-only  # compile-time only, no parser in the binary
 dx serve --example dioxus-code-live-input  # textarea bound to runtime highlighter
 ```
 

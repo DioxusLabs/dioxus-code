@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 dioxus = { version = "0.7.0", features = ["router"] }
-dioxus-code = { workspace = true, features = ["runtime", "lang-toml"] }
+dioxus-code = { workspace = true, features = ["all-languages"] }
 dioxus-code-editor = { workspace = true }
 dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false, features = ["router"] }
 

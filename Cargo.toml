@@ -23,6 +23,7 @@ categories = ["gui", "web-programming"]
 [workspace.dependencies]
 dioxus-code = { version = "0.1.1", path = "." }
 dioxus-code-editor = { version = "0.1.2", path = "code-editor", default-features = false }
+betlang = { version = "0.1.0" }
 
 [package]
 name = "dioxus-code"
@@ -43,7 +44,11 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = ["macro"]
 macro = ["dep:dioxus-code-macro", "dioxus-code-macro/lang-rust"]
-runtime = ["arborium/lang-rust", "dep:arborium-tree-sitter"]
+runtime = [
+    "arborium/lang-rust",
+    "dep:arborium-tree-sitter",
+    "dep:betlang",
+]
 all-languages = [
     "runtime",
     "arborium/all-languages",
@@ -260,6 +265,7 @@ arborium-theme = "2.16.0"
 arborium-tree-sitter = { version = "2.16.0", optional = true }
 dioxus = { version = "0.7.0", default-features = false, features = ["lib"] }
 dioxus-code-macro = { version = "0.1.0", path = "dioxus-code-macro", default-features = false, optional = true }
+betlang = { workspace = true, optional = true }
 
 [build-dependencies]
 arborium = { version = "2.16.0", default-features = false }
