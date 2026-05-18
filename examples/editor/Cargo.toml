@@ -11,10 +11,10 @@ publish = false
 
 [dependencies]
 dioxus = { version = "0.7.0" }
-dioxus-code = { workspace = true, features = ["all-languages", "detection"] }
+dioxus-code = { workspace = true, features = ["runtime"] }
 dioxus-code-editor = { workspace = true }
 
 [features]
 default = ["desktop"]
-desktop = ["dioxus/desktop", "dioxus-code-editor/desktop"]
-web = ["dioxus/web", "dioxus-code-editor/web"]
+desktop = ["dioxus/desktop"]
+web = ["dioxus/web"]

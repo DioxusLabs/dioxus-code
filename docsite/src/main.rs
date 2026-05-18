@@ -577,7 +577,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         span { "{theme_label}" }
                     }
                     div { class: "card-code-body",
-                        Code { src: SourceCode::builder(HERO_COUNTER).with_language(Language::Rust), theme }
+                        Code { src: SourceCode::new(Language::Rust, HERO_COUNTER), theme }
                     }
                 }
             }
@@ -640,15 +640,15 @@ fn FeatureRowReceipt() -> Element {
                             span { class: "receipt-value", "OPT-IN" }
                         }
                         li { class: "receipt-item receipt-optional",
-                            span { class: "receipt-label", "Tree-sitter grammars" }
+                            span { class: "receipt-label", "Runtime grammars" }
                             span { class: "receipt-dots" }
                             span { class: "receipt-value", "+3.33 MiB" }
                         }
                     }
                     div { class: "receipt-rule double" }
                     div { class: "receipt-total",
-                        span { class: "receipt-total-label", "PARSER BYTES SHIPPED" }
-                        span { class: "receipt-total-value", "0" }
+                        span { class: "receipt-total-label", "COMPILE-TIME MODE" }
+                        span { class: "receipt-total-value", "STATIC" }
                     }
                 }
                 aside { class: "receipt-aside",
@@ -656,14 +656,14 @@ fn FeatureRowReceipt() -> Element {
                         span { class: "receipt-aside-num", "01" }
                         div {
                             h3 { class: "receipt-aside-title", "code!" }
-                            p { class: "receipt-aside-text", "Tokenizes during cargo build. The runtime gets pre-styled markup with no parser bytes." }
+                            p { class: "receipt-aside-text", "Tokenizes during cargo build and embeds highlighted spans for rendering." }
                         }
                     }
                     div { class: "receipt-aside-row",
                         span { class: "receipt-aside-num", "02" }
                         div {
                             h3 { class: "receipt-aside-title", "SourceCode" }
-                            p { class: "receipt-aside-text", "Pull it in when input is dynamic. Pass the language you want to highlight." }
+                            p { class: "receipt-aside-text", "Pull it in when input is dynamic and pass the language your source uses." }
                         }
                     }
                     div { class: "receipt-aside-row",
@@ -690,9 +690,6 @@ fn Playground(
     let theme_pair = theme_pairs[active_idx()];
     let theme = theme_pair.code_theme(scheme);
     let value = use_memo(move || Some(active_idx()));
-    let language = Language::detect(&source()).unwrap_or(Language::Rust);
-    let language_label = language.slug();
-    let source_len = source().chars().count();
 
     rsx! {
         section { id: "playground", class: "section",
@@ -704,9 +701,9 @@ fn Playground(
             div { class: "playground-grid",
                 Card { class: "card-editor",
                     div { class: "card-bar",
-                        span { "source" }
+                        span { "source.rs" }
                         span { class: "editor-meta",
-                            span { "{language_label} · {source_len} chars" }
+                            span { "rust · " {format!("{} chars", source().chars().count())} }
                             span { class: "editor-meta-divider" }
                             Select::<usize> {
                                 value: Some(value.into()),
@@ -735,10 +732,9 @@ fn Playground(
                     ClientOnly {
                         CodeEditor {
                             value: source(),
-                            language,
+                            language: Language::Rust,
                             theme,
-                            aria_label: "Source editor",
-                            placeholder: "Type code...",
+                            aria_label: "Rust source editor",
                             class: "playground-code-editor",
                             oninput: move |value| source.set(value),
                         }
@@ -785,7 +781,7 @@ fn Docs(scheme: Scheme) -> Element {
                                 }
                                 div { class: "card-code-body",
                                     Code {
-                                        src: SourceCode::builder(step.code).with_language(step.language),
+                                        src: SourceCode::new(step.language, step.code),
                                         theme,
                                     }
                                 }

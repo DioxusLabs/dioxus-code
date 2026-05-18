@@ -20,13 +20,13 @@ jobs:
     with:
       all-features: false
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web
 
   test:
     uses: dioxuslabs/dioxus-ci/.github/workflows/test.yml@v0.1.0
     with:
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web
 
   fmt:
     uses: dioxuslabs/dioxus-ci/.github/workflows/fmt.yml@v0.1.0
@@ -36,11 +36,11 @@ jobs:
     with:
       all-features: false
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web
 
   clippy:
     uses: dioxuslabs/dioxus-ci/.github/workflows/clippy.yml@v0.1.0
     with:
       all-features: false
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web

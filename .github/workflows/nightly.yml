@@ -19,14 +19,14 @@ jobs:
       toolchain: nightly
       all-features: false
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web
 
   test:
     uses: dioxuslabs/dioxus-ci/.github/workflows/test.yml@v0.1.0
     with:
       toolchain: nightly
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web
 
   clippy:
     uses: dioxuslabs/dioxus-ci/.github/workflows/clippy.yml@v0.1.0
@@ -34,7 +34,7 @@ jobs:
       toolchain: nightly
       all-features: false
       no-default-features: true
-      features: dioxus-code/all-languages dioxus-code-editor/web dioxus-code-docsite/web dioxus-code-live-input/web
+      features: dioxus-code/all-languages dioxus-code-docsite/web dioxus-code-live-input/web
 
   web-demo:
     uses: dioxuslabs/dioxus-ci/.github/workflows/web-build.yml@v0.1.0

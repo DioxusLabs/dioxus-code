@@ -33,8 +33,6 @@ fn App() -> Element {
     let mut read_only = use_signal(|| false);
 
     let (theme_label, theme) = THEMES[theme_index()];
-    let language = Language::detect(&source()).unwrap_or(Language::Rust);
-    let language_label = language.slug();
 
     rsx! {
         style { {APP_CSS} }
@@ -84,17 +82,17 @@ fn App() -> Element {
             }
             section { class: "editor-frame",
                 div { class: "frame-bar",
-                    span { "{language_label}" }
+                    span { "fizzbuzz.rs" }
                     span { "{theme_label}" }
                 }
                 CodeEditor {
                     value: source(),
-                    language,
+                    language: Language::Rust,
                     theme: CodeTheme::fixed(theme),
                     line_numbers: line_numbers(),
                     read_only: read_only(),
-                    aria_label: "Source editor",
-                    placeholder: "Type code...",
+                    aria_label: "Rust source editor",
+                    placeholder: "Type Rust code...",
                     class: "example-editor",
                     oninput: move |value| source.set(value),
                 }

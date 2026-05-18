@@ -22,9 +22,6 @@ use std::{borrow::Cow, fmt, ops::Range};
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum HighlightError {
-    /// [`Language::Auto`] could not detect a supported language.
-    #[cfg(feature = "detection")]
-    LanguageDetectionFailed,
     /// The tree-sitter parser rejected the selected grammar.
     GrammarLoad {
         /// The language whose grammar failed to load.
@@ -95,8 +92,6 @@ impl HighlightError {
 impl fmt::Display for HighlightError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            #[cfg(feature = "detection")]
-            Self::LanguageDetectionFailed => write!(f, "could not detect language"),
             Self::GrammarLoad { language, message } => {
                 write!(
                     f,
@@ -629,7 +624,6 @@ impl Buffer {
     /// ```
     pub fn new(language: Language, source: impl ToString) -> Result<Self, HighlightError> {
         let source = source.to_string();
-        let language = resolve_language(language, &source)?;
         let (mut parser, incremental) = Self::parser_for(language)?;
         let mut cursor = arborium_tree_sitter::QueryCursor::new();
         let (tree, spans) = Self::parse_source(
@@ -739,7 +733,6 @@ impl Buffer {
     /// assert_eq!(buffer.language(), Language::Rust);
     /// ```
     pub fn set_language(&mut self, language: Language) -> Result<(), HighlightError> {
-        let language = resolve_language(language, &self.source)?;
         if self.language == language {
             return Ok(());
         }
@@ -861,22 +854,10 @@ fn collect_spans(
 }
 
 #[cfg(feature = "runtime")]
-fn resolve_language(language: Language, _source: &str) -> Result<Language, HighlightError> {
-    #[cfg(feature = "detection")]
-    if language == Language::Auto {
-        return Language::detect(_source).ok_or(HighlightError::LanguageDetectionFailed);
-    }
-
-    Ok(language)
-}
-
-#[cfg(feature = "runtime")]
 fn grammar_for(language: Language) -> (arborium_tree_sitter::LanguageFn, &'static str) {
     // Rust is bundled with the `runtime` feature; everything else is opt-in via
     // its `lang-*` cargo feature (or the `all-languages` umbrella).
     match language {
-        #[cfg(feature = "detection")]
-        Language::Auto => unreachable!("auto language must be resolved before loading a grammar"),
         Language::Rust => (
             arborium::lang_rust::language(),
             arborium::lang_rust::HIGHLIGHTS_QUERY,
