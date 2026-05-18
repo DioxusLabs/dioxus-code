@@ -26,6 +26,9 @@ macro_rules! define_languages {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         #[non_exhaustive]
         pub enum Language {
+            /// Automatically detect the language from the source text.
+            #[cfg(feature = "detection")]
+            Auto,
             $(
                 $(#[$attr])*
                 #[doc = concat!("Arborium slug `\"", $slug, "\"`.")]
@@ -44,6 +47,8 @@ macro_rules! define_languages {
             /// assert!(Language::ALL.contains(&Language::Rust));
             /// ```
             pub const ALL: &'static [Language] = &[
+                #[cfg(feature = "detection")]
+                Self::Auto,
                 $(
                     $(#[$attr])*
                     Self::$variant,
@@ -53,6 +58,8 @@ macro_rules! define_languages {
             /// Arborium slug for this language.
             pub const fn slug(self) -> &'static str {
                 match self {
+                    #[cfg(feature = "detection")]
+                    Self::Auto => "auto",
                     $(
                         $(#[$attr])*
                         Self::$variant => $slug,

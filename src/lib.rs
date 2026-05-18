@@ -229,6 +229,14 @@ pub struct SourceCode {
     language: Language,
 }
 
+/// Source-first builder for [`SourceCode`].
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceCodeBuilder {
+    source: String,
+}
+
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 impl SourceCode {
@@ -242,6 +250,13 @@ impl SourceCode {
         Self {
             source: source.to_string(),
             language,
+        }
+    }
+
+    /// Start a source-first builder.
+    pub fn builder(source: impl ToString) -> SourceCodeBuilder {
+        SourceCodeBuilder {
+            source: source.to_string(),
         }
     }
 
@@ -274,6 +289,15 @@ impl SourceCode {
             Ok(source) => source,
             Err(_) => advanced::HighlightedSource::plaintext(source, language),
         }
+    }
+}
+
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+impl SourceCodeBuilder {
+    /// Finish the builder with an explicit language.
+    pub fn with_language(self, language: Language) -> SourceCode {
+        SourceCode::new(language, self.source)
     }
 }
 
