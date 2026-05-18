@@ -275,20 +275,14 @@ fn language_spec_for_variant(variant: &str) -> Option<LanguageSpec> {
     LANGUAGE_VARIANTS
         .iter()
         .find(|(name, _)| *name == variant)
-        .map(|(variant, slug)| LanguageSpec {
-            variant: *variant,
-            slug: *slug,
-        })
+        .map(|(variant, slug)| LanguageSpec { variant, slug })
 }
 
 fn language_spec_for_slug(slug: &str) -> Option<LanguageSpec> {
     LANGUAGE_VARIANTS
         .iter()
         .find(|(_, s)| *s == slug)
-        .map(|(variant, slug)| LanguageSpec {
-            variant: *variant,
-            slug: *slug,
-        })
+        .map(|(variant, slug)| LanguageSpec { variant, slug })
 }
 
 #[cfg(feature = "detection")]
