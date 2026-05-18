@@ -544,7 +544,7 @@ fn Hero(theme: CodeTheme, theme_label: String) -> Element {
                         "."
                     }
                     p { class: "hero-lede",
-                        "A drop-in component with two source modes: compile-time macro and runtime highlighting with explicit language selection."
+                        "A drop-in component with compile-time macros, runtime highlighting, and optional source-language detection."
                     }
                     div { class: "hero-terminal-block",
                         div { class: "hero-terminal-bar",
@@ -663,7 +663,7 @@ fn FeatureRowReceipt() -> Element {
                         span { class: "receipt-aside-num", "02" }
                         div {
                             h3 { class: "receipt-aside-title", "SourceCode" }
-                            p { class: "receipt-aside-text", "Pull it in when input is dynamic and pass the language your source uses." }
+                            p { class: "receipt-aside-text", "Pull it in when input is dynamic; pass a language or let detection pick one from source." }
                         }
                     }
                     div { class: "receipt-aside-row",
@@ -690,6 +690,8 @@ fn Playground(
     let theme_pair = theme_pairs[active_idx()];
     let theme = theme_pair.code_theme(scheme);
     let value = use_memo(move || Some(active_idx()));
+    let detected_language = use_memo(move || detected_language(&source()));
+    let language_label = use_memo(move || language_label(detected_language()));
 
     rsx! {
         section { id: "playground", class: "section",
@@ -703,7 +705,7 @@ fn Playground(
                     div { class: "card-bar",
                         span { "source" }
                         span { class: "editor-meta",
-                            span { "auto · " {format!("{} chars", source().chars().count())} }
+                            span { "{language_label()} · " {format!("{} chars", source().chars().count())} }
                             span { class: "editor-meta-divider" }
                             Select::<usize> {
                                 value: Some(value.into()),
@@ -732,7 +734,7 @@ fn Playground(
                     ClientOnly {
                         CodeEditor {
                             value: source(),
-                            language: Language::Auto,
+                            language: detected_language().unwrap_or(Language::Rust),
                             theme,
                             aria_label: "Auto-detected source editor",
                             class: "playground-code-editor",
@@ -743,6 +745,14 @@ fn Playground(
             }
         }
     }
+}
+
+fn detected_language(source: &str) -> Option<Language> {
+    Language::detect_source(source)
+}
+
+fn language_label(language: Option<Language>) -> &'static str {
+    language.map(Language::slug).unwrap_or("unknown")
 }
 
 #[component]
@@ -820,7 +830,7 @@ fn doc_step_data() -> [DocStepData; 3] {
             num: "02",
             eyebrow: "Runtime source",
             title: "SourceCode for live input",
-            copy: "Pass any string through SourceCode. Provide a language hint when you already know it — Arborium handles tokenizing.",
+            copy: "Pass any string through SourceCode. Provide a language hint when you know it, or enable detection for source-first workflows.",
             code: DOCS_RUNTIME,
             language: Language::Rust,
             file_name: "runtime.rs",
@@ -900,3 +910,21 @@ fn demo_theme_pairs() -> &'static [ThemePair] {
 }
 
 const APP_CSS: Asset = asset!("/assets/app.css");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn playground_language_label_shows_detected_language() {
+        let detected = detected_language("use std::fmt;\nfn main() { println!(\"hi\"); }");
+
+        assert_eq!(detected, Some(Language::Rust));
+        assert_eq!(language_label(detected), "rust");
+    }
+
+    #[test]
+    fn playground_language_label_handles_unknown_language() {
+        assert_eq!(language_label(detected_language("")), "unknown",);
+    }
+}

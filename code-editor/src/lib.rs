@@ -40,7 +40,9 @@ pub struct CodeEditorProps {
     /// Tree-sitter grammar used for syntax highlighting.
     ///
     /// Pass a [`Language`] variant directly. Use [`Language::from_slug`] to
-    /// turn a runtime slug into a variant. Defaults to [`Language::Rust`].
+    /// turn a runtime slug into a variant. With the `detection` feature, pass
+    /// `Language::Auto` to detect from source contents. Defaults to
+    /// [`Language::Rust`].
     #[props(default = Language::Rust)]
     pub language: Language,
     /// Syntax theme selection shared with [`dioxus-code`].
@@ -120,7 +122,9 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     let edit = edit_tracker.borrow_mut().take_for_render(&props.value);
     let snapshot = {
         let mut slot = state.borrow_mut();
-        if slot.language != props.language {
+        if slot.language != props.language
+            || should_rebuild_buffer(props.language, &slot, &props.value)
+        {
             slot.buffer = Buffer::new(props.language, props.value.clone()).ok();
             slot.language = props.language;
         }
@@ -202,6 +206,23 @@ pub fn CodeEditor(props: CodeEditorProps) -> Element {
     }
 }
 
+#[cfg(feature = "detection")]
+fn should_rebuild_buffer(language: Language, slot: &EditorBuffer, value: &str) -> bool {
+    if language != Language::Auto {
+        return false;
+    }
+
+    match slot.buffer.as_ref() {
+        Some(buffer) => buffer.source() != value,
+        None => true,
+    }
+}
+
+#[cfg(not(feature = "detection"))]
+fn should_rebuild_buffer(_language: Language, _slot: &EditorBuffer, _value: &str) -> bool {
+    false
+}
+
 fn editor_class(theme: impl Into<CodeTheme>, line_numbers: bool, extra_class: &str) -> String {
     let mut class = format!("dxc-editor {}", theme.into().classes());
     if !line_numbers {
@@ -253,5 +274,25 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], vec![HighlightSegment::new("let x = 1;", None)]);
         assert!(lines[1].is_empty());
+    }
+
+    #[cfg(feature = "detection")]
+    #[test]
+    fn auto_language_rebuilds_when_source_changes() {
+        let source = "use std::fmt;\nfn main() { println!(\"hi\"); }";
+        let slot = EditorBuffer {
+            buffer: Buffer::new(Language::Auto, source).ok(),
+            language: Language::Auto,
+        };
+
+        assert!(!should_rebuild_buffer(Language::Rust, &slot, "print('hi')"));
+        assert!(!should_rebuild_buffer(Language::Auto, &slot, source));
+        assert!(should_rebuild_buffer(Language::Auto, &slot, "print('hi')"));
+
+        let empty_slot = EditorBuffer {
+            buffer: None,
+            language: Language::Auto,
+        };
+        assert!(should_rebuild_buffer(Language::Auto, &empty_slot, source));
     }
 }
