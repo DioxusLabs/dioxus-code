@@ -701,9 +701,9 @@ fn Playground(
             div { class: "playground-grid",
                 Card { class: "card-editor",
                     div { class: "card-bar",
-                        span { "source.rs" }
+                        span { "source" }
                         span { class: "editor-meta",
-                            span { "rust · " {format!("{} chars", source().chars().count())} }
+                            span { "auto · " {format!("{} chars", source().chars().count())} }
                             span { class: "editor-meta-divider" }
                             Select::<usize> {
                                 value: Some(value.into()),
@@ -732,9 +732,9 @@ fn Playground(
                     ClientOnly {
                         CodeEditor {
                             value: source(),
-                            language: Language::Rust,
+                            language: Language::Auto,
                             theme,
-                            aria_label: "Rust source editor",
+                            aria_label: "Auto-detected source editor",
                             class: "playground-code-editor",
                             oninput: move |value| source.set(value),
                         }
