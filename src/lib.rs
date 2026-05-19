@@ -215,7 +215,7 @@ pub use advanced::{HighlightError, HighlightQueryErrorKind};
 /// Source text to highlight at runtime.
 ///
 /// Available with the `runtime` feature. Build one with [`SourceCode::new`],
-/// then pass it to [`Code()`].
+/// or with [`SourceCode::builder`], then pass it to [`Code()`].
 ///
 /// ```rust
 /// use dioxus_code::{Language, SourceCode};
@@ -230,11 +230,39 @@ pub struct SourceCode {
 }
 
 /// Source-first builder for [`SourceCode`].
+///
+/// Call [`SourceCodeBuilder::with_language`] to set the language, then
+/// `build()` to produce [`SourceCode`]. With the `detection` feature enabled,
+/// `build()` may also be called without an explicit language to detect from
+/// the source text.
+///
+/// ```rust
+/// use dioxus_code::{Language, SourceCode};
+///
+/// let _src = SourceCode::builder("fn main() {}")
+///     .with_language(Language::Rust)
+///     .build();
+/// ```
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SourceCodeBuilder {
+pub struct SourceCodeBuilder<State = SourceCodeBuilderMissingLanguage> {
     source: String,
+    state: State,
+}
+
+/// Builder state before a [`SourceCodeBuilder`] has a language.
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SourceCodeBuilderMissingLanguage;
+
+/// Builder state after a [`SourceCodeBuilder`] has a language.
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SourceCodeBuilderWithLanguage {
+    language: Language,
 }
 
 #[cfg(feature = "runtime")]
@@ -257,6 +285,7 @@ impl SourceCode {
     pub fn builder(source: impl ToString) -> SourceCodeBuilder {
         SourceCodeBuilder {
             source: source.to_string(),
+            state: SourceCodeBuilderMissingLanguage,
         }
     }
 
@@ -294,10 +323,38 @@ impl SourceCode {
 
 #[cfg(feature = "runtime")]
 #[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
-impl SourceCodeBuilder {
-    /// Finish the builder with an explicit language.
-    pub fn with_language(self, language: Language) -> SourceCode {
-        SourceCode::new(language, self.source)
+impl SourceCodeBuilder<SourceCodeBuilderMissingLanguage> {
+    /// Set the language that will be used to highlight this source.
+    pub fn with_language(
+        self,
+        language: Language,
+    ) -> SourceCodeBuilder<SourceCodeBuilderWithLanguage> {
+        SourceCodeBuilder {
+            source: self.source,
+            state: SourceCodeBuilderWithLanguage { language },
+        }
+    }
+
+    /// Finish the builder, detecting the language from the source text.
+    #[cfg(feature = "detection")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "detection")))]
+    pub fn build(self) -> SourceCode {
+        SourceCode::new(Language::Auto, self.source)
+    }
+}
+
+#[cfg(feature = "runtime")]
+#[cfg_attr(docsrs, doc(cfg(feature = "runtime")))]
+impl SourceCodeBuilder<SourceCodeBuilderWithLanguage> {
+    /// Replace the language that will be used to highlight this source.
+    pub fn with_language(mut self, language: Language) -> Self {
+        self.state.language = language;
+        self
+    }
+
+    /// Finish the builder.
+    pub fn build(self) -> SourceCode {
+        SourceCode::new(self.state.language, self.source)
     }
 }
 
@@ -499,6 +556,25 @@ mod tests {
         assert!(tree.spans().iter().any(|span| {
             span.tag() == "k" && &tree.source()[span.start() as usize..span.end() as usize] == "fn"
         }));
+    }
+
+    #[cfg(feature = "runtime")]
+    #[test]
+    fn source_code_builder_builds_after_language_is_set() {
+        let tree: advanced::HighlightedSource = SourceCode::builder("fn main() {}")
+            .with_language(Language::Rust)
+            .build()
+            .into();
+        assert_eq!(tree.language(), Language::Rust);
+        assert_eq!(tree.source(), "fn main() {}");
+    }
+
+    #[cfg(feature = "detection")]
+    #[test]
+    fn source_code_builder_can_detect_language_when_enabled() {
+        let tree: advanced::HighlightedSource = SourceCode::builder("fn main() {}").build().into();
+        assert_eq!(tree.language(), Language::Rust);
+        assert_eq!(tree.source(), "fn main() {}");
     }
 
     #[cfg(feature = "macro")]
