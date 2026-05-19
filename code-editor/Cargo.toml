@@ -31,4 +31,5 @@ web-sys = { version = "0.3", features = [
 
 [features]
 all-languages = ["dioxus-code/all-languages"]
+detectable-languages = ["dioxus-code/detectable-languages"]
 detection = ["dioxus-code/detection"]
