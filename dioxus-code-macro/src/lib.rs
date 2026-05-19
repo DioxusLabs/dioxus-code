@@ -40,9 +40,10 @@ pub fn code(input: TokenStream) -> TokenStream {
 ///
 /// Parses a string literal containing source code with [`arborium`] and
 /// expands to the resulting span tree. Pass the source as a string literal,
-/// `concat!(...)`, `include_str!(...)`, or `env!(...)`. The language must be
-/// supplied via [`CodeOptions::builder`] with [`CodeOptions::with_language`]
-/// since there is no file extension to infer from.
+/// `concat!(...)`, `include_str!(...)`, or `env!(...)`. Pass
+/// [`CodeOptions::builder`] with [`CodeOptions::with_language`] to name the
+/// language explicitly; otherwise, with the macro crate's `detection` feature
+/// enabled, the language is inferred from the source contents.
 ///
 /// To highlight a file on disk instead, use [`code!`].
 ///
@@ -106,7 +107,7 @@ fn parse_string_and_options(
     Ok((value, options))
 }
 
-fn try_extract_language(expr: &Expr) -> Option<String> {
+fn try_extract_language(expr: &Expr) -> Option<LanguageSpec> {
     match expr {
         Expr::Group(group) => try_extract_language(&group.expr),
         Expr::Paren(paren) => try_extract_language(&paren.expr),
@@ -123,7 +124,7 @@ fn try_extract_language(expr: &Expr) -> Option<String> {
     }
 }
 
-fn try_parse_language_arg(expr: &Expr) -> Option<String> {
+fn try_parse_language_arg(expr: &Expr) -> Option<LanguageSpec> {
     match expr {
         Expr::Group(group) => try_parse_language_arg(&group.expr),
         Expr::Paren(paren) => try_parse_language_arg(&paren.expr),
@@ -131,7 +132,7 @@ fn try_parse_language_arg(expr: &Expr) -> Option<String> {
             try_parse_language_arg(call.args.first().unwrap())
         }
         Expr::Path(path) if is_none_path(path) => None,
-        Expr::Path(path) => language_slug_from_path(path).map(str::to_string),
+        Expr::Path(path) => language_spec_from_path(path),
         _ => None,
     }
 }
@@ -151,6 +152,12 @@ fn is_none_path(path: &syn::ExprPath) -> bool {
         .segments
         .last()
         .is_some_and(|segment| segment.ident == "None")
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct LanguageSpec {
+    variant: &'static str,
+    slug: &'static str,
 }
 
 const LANGUAGE_VARIANTS: &[(&str, &str)] = &[
@@ -259,19 +266,88 @@ const LANGUAGE_VARIANTS: &[(&str, &str)] = &[
     ("Zsh", "zsh"),
 ];
 
-fn language_slug_from_path(path: &syn::ExprPath) -> Option<&'static str> {
+fn language_spec_from_path(path: &syn::ExprPath) -> Option<LanguageSpec> {
     let variant = path.path.segments.last()?.ident.to_string();
+    language_spec_for_variant(&variant)
+}
+
+fn language_spec_for_variant(variant: &str) -> Option<LanguageSpec> {
     LANGUAGE_VARIANTS
         .iter()
         .find(|(name, _)| *name == variant)
-        .map(|(_, slug)| *slug)
+        .map(|(variant, slug)| LanguageSpec { variant, slug })
 }
 
-fn language_variant_for_slug(slug: &str) -> Option<&'static str> {
+fn language_spec_for_slug(slug: &str) -> Option<LanguageSpec> {
     LANGUAGE_VARIANTS
         .iter()
         .find(|(_, s)| *s == slug)
-        .map(|(name, _)| *name)
+        .map(|(variant, slug)| LanguageSpec { variant, slug })
+}
+
+#[cfg(feature = "detection")]
+fn detect_source_language(source: &str) -> Option<LanguageSpec> {
+    betlang::detect(source)
+        .language()
+        .and_then(language_spec_for_betlang)
+}
+
+#[cfg(not(feature = "detection"))]
+fn detect_source_language(_source: &str) -> Option<LanguageSpec> {
+    None
+}
+
+#[cfg(feature = "detection")]
+fn language_spec_for_betlang(language: betlang::Language) -> Option<LanguageSpec> {
+    let language = match language {
+        betlang::Language::Asm => "Asm",
+        betlang::Language::Batch => "Batch",
+        betlang::Language::C => "C",
+        betlang::Language::Clojure => "Clojure",
+        betlang::Language::CMake => "CMake",
+        betlang::Language::Cobol => "Cobol",
+        betlang::Language::Cpp => "Cpp",
+        betlang::Language::Cs => "CSharp",
+        betlang::Language::Css => "Css",
+        betlang::Language::Dart => "Dart",
+        betlang::Language::Dockerfile => "Dockerfile",
+        betlang::Language::Elixir => "Elixir",
+        betlang::Language::Erlang => "Erlang",
+        betlang::Language::Gemfile | betlang::Language::Gemspec | betlang::Language::Ruby => "Ruby",
+        betlang::Language::Go => "Go",
+        betlang::Language::Gradle | betlang::Language::Groovy => "Groovy",
+        betlang::Language::Haskell => "Haskell",
+        betlang::Language::Html => "Html",
+        betlang::Language::Ini => "Ini",
+        betlang::Language::Java => "Java",
+        betlang::Language::JavaScript => "JavaScript",
+        betlang::Language::Json => "Json",
+        betlang::Language::Julia => "Julia",
+        betlang::Language::Kotlin => "Kotlin",
+        betlang::Language::Lisp => "CommonLisp",
+        betlang::Language::Lua => "Lua",
+        betlang::Language::Markdown => "Markdown",
+        betlang::Language::ObjectiveC => "ObjectiveC",
+        betlang::Language::Ocaml => "OCaml",
+        betlang::Language::Perl => "Perl",
+        betlang::Language::Php => "Php",
+        betlang::Language::Powershell => "PowerShell",
+        betlang::Language::Python => "Python",
+        betlang::Language::R => "R",
+        betlang::Language::Rust => "Rust",
+        betlang::Language::Scala => "Scala",
+        betlang::Language::Shell => "Bash",
+        betlang::Language::Sql => "Sql",
+        betlang::Language::Swift => "Swift",
+        betlang::Language::Toml => "Toml",
+        betlang::Language::TypeScript => "TypeScript",
+        betlang::Language::Vba => "VisualBasic",
+        betlang::Language::Verilog => "Verilog",
+        betlang::Language::Xml => "Xml",
+        betlang::Language::Yaml => "Yaml",
+        _ => return None,
+    };
+    language_spec_for_variant(language)
 }
 
 fn expand_code(input: CodeInput) -> syn::Result<TokenStream2> {
@@ -300,18 +376,23 @@ fn expand_shared(
     let crate_path = dioxus_code_crate_path()?;
     let options_check = options_check_tokens(&crate_path, options.as_ref());
 
-    let Some(language) = options.as_ref().and_then(try_extract_language).or_else(|| {
-        origin_path
-            .as_ref()
-            .and_then(|path| arborium::detect_language(&path.to_string_lossy()).map(str::to_string))
-    }) else {
+    let Some(language) = options
+        .as_ref()
+        .and_then(try_extract_language)
+        .or_else(|| {
+            origin_path.as_ref().and_then(|path| {
+                arborium::detect_language(&path.to_string_lossy()).and_then(language_spec_for_slug)
+            })
+        })
+        .or_else(|| detect_source_language(&source))
+    else {
         let message = match origin_path.as_ref() {
             Some(path) => format!(
-                "could not detect language for `{}`; pass `CodeOptions::builder().with_language(Language::Rust)`",
+                "could not detect language for `{}`; pass `CodeOptions::builder().with_language(Language::Rust)` or enable `detection` with the matching `lang-*` feature or `all-languages`",
                 path.display()
             ),
             None => String::from(
-                "could not determine language for `code_str!`; pass `CodeOptions::builder().with_language(Language::Rust)`",
+                "could not determine language for `code_str!`; pass `CodeOptions::builder().with_language(Language::Rust)` or enable `detection` with the matching `lang-*` feature or `all-languages`",
             ),
         };
         return Ok(quote! {{
@@ -322,17 +403,10 @@ fn expand_shared(
 
     let mut highlighter = arborium::Highlighter::new();
     let spans = highlighter
-        .highlight_spans(&language, &source)
+        .highlight_spans(language.slug, &source)
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
 
-    let Some(variant) = language_variant_for_slug(&language) else {
-        let message = format!("language `{language}` has no `Language` variant");
-        return Ok(quote! {{
-            #options_check
-            compile_error!(#message);
-        }});
-    };
-    let variant_ident = Ident::new(variant, Span::call_site());
+    let variant_ident = Ident::new(language.variant, Span::call_site());
 
     let source_expr = match origin_path {
         Some(path) => {
@@ -472,37 +546,59 @@ fn resolve_manifest_path(manifest_dir: &Path, path: &str) -> PathBuf {
 mod tests {
     use super::*;
 
-    fn language(expr: &str) -> Option<String> {
+    fn language(expr: &str) -> Option<LanguageSpec> {
         let expr = syn::parse_str::<Expr>(expr).unwrap();
         try_extract_language(&expr)
+    }
+
+    fn slug(expr: &str) -> Option<&'static str> {
+        language(expr).map(|language| language.slug)
     }
 
     #[test]
     fn extracts_language_variant_options() {
         assert_eq!(
-            language("CodeOptions::builder().with_language(Language::Rust)").as_deref(),
+            slug("CodeOptions::builder().with_language(Language::Rust)"),
             Some("rust"),
         );
         assert_eq!(
-            language("CodeOptions::builder().with_language(Some(Language::Rust))").as_deref(),
+            slug("CodeOptions::builder().with_language(Some(Language::Rust))"),
             Some("rust"),
         );
     }
 
     #[test]
     fn extracts_none_language_option() {
-        assert_eq!(
-            language("CodeOptions::builder().with_language(None)").as_deref(),
-            None,
-        );
+        assert_eq!(slug("CodeOptions::builder().with_language(None)"), None,);
     }
 
     #[test]
     fn unknown_method_chains_fall_back_silently() {
-        assert_eq!(language("CodeOptions::builder()").as_deref(), None);
+        assert_eq!(slug("CodeOptions::builder()"), None);
         assert_eq!(
-            language("CodeOptions::builder().with_themes(Language::Rust)").as_deref(),
+            slug("CodeOptions::builder().with_themes(Language::Rust)"),
             None,
         );
+    }
+
+    #[cfg(feature = "detection")]
+    #[test]
+    fn maps_betlang_languages_directly() {
+        macro_rules! assert_betlang_mapping {
+            ($betlang:expr, $variant:literal, $slug:literal) => {
+                assert_eq!(
+                    language_spec_for_betlang($betlang),
+                    Some(LanguageSpec {
+                        variant: $variant,
+                        slug: $slug,
+                    })
+                );
+            };
+        }
+
+        assert_betlang_mapping!(betlang::Language::Cs, "CSharp", "c-sharp");
+        assert_betlang_mapping!(betlang::Language::Lisp, "CommonLisp", "commonlisp");
+        assert_betlang_mapping!(betlang::Language::Shell, "Bash", "bash");
+        assert_betlang_mapping!(betlang::Language::Vba, "VisualBasic", "vb");
     }
 }
