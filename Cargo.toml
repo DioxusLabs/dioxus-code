@@ -12,7 +12,7 @@ members = [
 resolver = "3"
 
 [workspace.package]
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/ealmloff/dioxus-code"
@@ -26,7 +26,7 @@ dioxus-code-editor = { version = "0.1.2", path = "code-editor", default-features
 
 [package]
 name = "dioxus-code"
-version = "0.1.2"
+version = "0.1.3"
 edition.workspace = true
 license.workspace = true
 description = "Syntax-highlighted code blocks for Dioxus."
