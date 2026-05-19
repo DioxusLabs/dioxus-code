@@ -16,7 +16,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
-dioxus = { version = "0.7.0", default-features = false, features = ["lib"] }
+dioxus = { version = "0.7.9", default-features = false, features = ["lib"] }
 dioxus-code = { workspace = true, features = ["runtime"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
