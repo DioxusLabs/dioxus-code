@@ -2439,15 +2439,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dioxus-code-editor-caret"
-version = "0.1.2"
-dependencies = [
- "dioxus",
- "dioxus-code",
- "dioxus-code-editor",
-]
-
-[[package]]
 name = "dioxus-code-editor-example"
 version = "0.1.2"
 dependencies = [

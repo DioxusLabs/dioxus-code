@@ -217,8 +217,6 @@ body {
 }
 
 .example-editor {
-  --dxc-editor-caret: #e8eef7;
-  --dxc-editor-focus-ring: 0 0 0 3px rgba(122, 162, 247, 0.22);
   min-height: 0;
 }
 "#;
