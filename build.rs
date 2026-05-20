@@ -282,7 +282,12 @@ fn shared_theme_css(rules: &SharedRules) -> String {
     css.push_str(".dxc,\n.dxc-editor {\n");
     for property in &rules.base {
         let variable = base_variable_suffix(property);
-        writeln!(css, "  {property}: {};", active_value(&variable)).unwrap();
+        if let Some(custom_property) = property.strip_prefix("--") {
+            let namespaced_property = format!("--dxc-{}", css_identifier(custom_property));
+            writeln!(css, "  {namespaced_property}: {};", active_value(&variable)).unwrap();
+        } else {
+            writeln!(css, "  {property}: {};", active_value(&variable)).unwrap();
+        }
     }
     css.push_str("}\n");
 

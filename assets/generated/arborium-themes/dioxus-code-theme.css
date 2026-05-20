@@ -13,12 +13,12 @@
 .dxc,
 .dxc-editor {
   background: var(--dxc-light-on, var(--dxc-light-background,)) var(--dxc-dark-on, var(--dxc-dark-background,));
-  --bg: var(--dxc-light-on, var(--dxc-light-var-bg,)) var(--dxc-dark-on, var(--dxc-dark-var-bg,));
-  --surface: var(--dxc-light-on, var(--dxc-light-var-surface,)) var(--dxc-dark-on, var(--dxc-dark-var-surface,));
+  --dxc-bg: var(--dxc-light-on, var(--dxc-light-var-bg,)) var(--dxc-dark-on, var(--dxc-dark-var-bg,));
+  --dxc-surface: var(--dxc-light-on, var(--dxc-light-var-surface,)) var(--dxc-dark-on, var(--dxc-dark-var-surface,));
   color: var(--dxc-light-on, var(--dxc-light-color,)) var(--dxc-dark-on, var(--dxc-dark-color,));
-  --fg: var(--dxc-light-on, var(--dxc-light-var-fg,)) var(--dxc-dark-on, var(--dxc-dark-var-fg,));
-  --accent: var(--dxc-light-on, var(--dxc-light-var-accent,)) var(--dxc-dark-on, var(--dxc-dark-var-accent,));
-  --muted: var(--dxc-light-on, var(--dxc-light-var-muted,)) var(--dxc-dark-on, var(--dxc-dark-var-muted,));
+  --dxc-fg: var(--dxc-light-on, var(--dxc-light-var-fg,)) var(--dxc-dark-on, var(--dxc-dark-var-fg,));
+  --dxc-accent: var(--dxc-light-on, var(--dxc-light-var-accent,)) var(--dxc-dark-on, var(--dxc-dark-var-accent,));
+  --dxc-muted: var(--dxc-light-on, var(--dxc-light-var-muted,)) var(--dxc-dark-on, var(--dxc-dark-var-muted,));
 }
 .dxc .a-at,
 .dxc-editor .a-at {

@@ -42,7 +42,7 @@
 
 .dxc-editor-gutter {
   background: inherit;
-  color: var(--muted, currentColor);
+  color: var(--dxc-muted, currentColor);
   left: 0;
   padding: var(--dxc-editor-gutter-padding, 14px 0);
   pointer-events: none;
@@ -64,7 +64,7 @@
 .dxc-editor-input {
   background: transparent;
   border: 0;
-  caret-color: var(--dxc-editor-caret, currentColor);
+  caret-color: var(--dxc-editor-caret, var(--dxc-fg, CanvasText));
   color: transparent;
   display: block;
   font: inherit;
@@ -83,23 +83,42 @@
 }
 
 .dxc-editor-input::selection {
-  background: var(--dxc-editor-selection, rgba(122, 162, 247, 0.34));
+  background: var(--dxc-editor-selection);
   color: transparent;
 }
 
 .dxc-editor-input:empty::before {
-  color: var(--muted, currentColor);
+  color: var(--dxc-muted, currentColor);
   content: attr(data-placeholder);
   opacity: 0.72;
 }
 
 .dxc-editor-input::placeholder {
-  color: var(--muted, currentColor);
+  color: var(--dxc-muted, currentColor);
   opacity: 0.72;
 }
 
 .dxc-editor:focus-within {
-  box-shadow: var(--dxc-editor-focus-ring, 0 0 0 3px rgba(122, 162, 247, 0.22));
+  box-shadow: var(--dxc-editor-focus-ring, none);
+}
+
+@supports (color: color-mix(in srgb, white 50%, transparent)) {
+  .dxc-editor-gutter {
+    color: var(--dxc-muted, color-mix(in srgb, var(--dxc-fg, currentColor) 62%, transparent));
+  }
+
+  .dxc-editor-input::selection {
+    background: var(--dxc-editor-selection, color-mix(in srgb, var(--dxc-accent, Highlight) 34%, transparent));
+  }
+
+  .dxc-editor-input:empty::before,
+  .dxc-editor-input::placeholder {
+    color: var(--dxc-muted, color-mix(in srgb, var(--dxc-fg, currentColor) 62%, transparent));
+  }
+
+  .dxc-editor:focus-within {
+    box-shadow: var(--dxc-editor-focus-ring, 0 0 0 3px color-mix(in srgb, var(--dxc-accent, Highlight) 22%, transparent));
+  }
 }
 
 .dxc-editor-line,

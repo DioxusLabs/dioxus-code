@@ -39,8 +39,3 @@ h1 {
   padding: 5px 8px;
   text-transform: uppercase;
 }
-
-.dxc-editor {
-  --dxc-editor-caret: #e8eef7;
-  --dxc-editor-focus-ring: 0 0 0 3px rgba(122, 162, 247, 0.22);
-}
