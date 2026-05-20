@@ -42,7 +42,7 @@
 
 .dxc-editor-gutter {
   background: inherit;
-  color: var(--muted, currentColor);
+  color: var(--dxc-muted, currentColor);
   left: 0;
   padding: var(--dxc-editor-gutter-padding, 14px 0);
   pointer-events: none;
@@ -64,7 +64,7 @@
 .dxc-editor-input {
   background: transparent;
   border: 0;
-  caret-color: var(--dxc-editor-caret, currentColor);
+  caret-color: var(--dxc-editor-caret, var(--dxc-fg, #e8eef7));
   color: transparent;
   display: block;
   font: inherit;
@@ -88,13 +88,13 @@
 }
 
 .dxc-editor-input:empty::before {
-  color: var(--muted, currentColor);
+  color: var(--dxc-muted, currentColor);
   content: attr(data-placeholder);
   opacity: 0.72;
 }
 
 .dxc-editor-input::placeholder {
-  color: var(--muted, currentColor);
+  color: var(--dxc-muted, currentColor);
   opacity: 0.72;
 }
 

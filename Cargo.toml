@@ -6,6 +6,7 @@ members = [
     "docsite",
     "examples/basic",
     "examples/editor",
+    "examples/editor-caret",
     "examples/live-input",
     "examples/macro-only",
 ]
