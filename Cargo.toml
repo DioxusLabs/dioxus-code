@@ -305,7 +305,7 @@ lang-zsh = ["runtime", "arborium/lang-zsh", "dioxus-code-macro?/lang-zsh"]
 arborium = { version = "2.16.0", default-features = false }
 arborium-theme = "2.16.0"
 arborium-tree-sitter = { version = "2.16.0", optional = true }
-dioxus = { version = "0.7.9", default-features = false, features = ["lib"] }
+dioxus = { version = "=0.8.0-alpha.0", default-features = false, features = ["lib"] }
 dioxus-code-macro = { version = "0.1.0", path = "dioxus-code-macro", default-features = false, optional = true }
 betlang = { version = "0.1.0", optional = true }
 
@@ -313,6 +313,6 @@ betlang = { version = "0.1.0", optional = true }
 arborium = { version = "2.16.0", default-features = false }
 
 [dev-dependencies]
-dioxus = { version = "0.7.9", features = ["ssr"] }
+dioxus = { version = "=0.8.0-alpha.0", features = ["ssr"] }
 dioxus-code = { path = ".", features = ["runtime"] }
 dioxus-code-editor = { workspace = true }
