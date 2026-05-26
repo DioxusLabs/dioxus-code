@@ -10,7 +10,7 @@ categories.workspace = true
 publish = false
 
 [dependencies]
-dioxus = { version = "0.7.9" }
+dioxus = { version = "=0.8.0-alpha.0" }
 dioxus-code = { workspace = true, features = ["runtime"] }
 dioxus-code-editor = { workspace = true }
 
