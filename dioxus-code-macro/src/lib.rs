@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
+use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -401,9 +402,7 @@ fn expand_shared(
         }});
     };
 
-    let mut highlighter = arborium::Highlighter::new();
-    let spans = highlighter
-        .highlight_spans(language.slug, &source)
+    let spans = highlight_spans(language.slug, &source)
         .map_err(|error| syn::Error::new(Span::call_site(), error.to_string()))?;
 
     let variant_ident = Ident::new(language.variant, Span::call_site());
@@ -438,6 +437,20 @@ fn expand_shared(
             SPANS,
         )
     }})
+}
+
+/// Highlights `source` with a highlighter that lives for the whole proc-macro process, so compiled
+/// grammars, highlight queries and the tree-sitter parse context are shared by every `code!` /
+/// `code_str!` invocation in a crate instead of being rebuilt per call.
+fn highlight_spans(
+    language: &str,
+    source: &str,
+) -> Result<Vec<arborium::advanced::Span>, arborium::Error> {
+    thread_local! {
+        static HIGHLIGHTER: RefCell<arborium::Highlighter> = RefCell::new(arborium::Highlighter::new());
+    }
+
+    HIGHLIGHTER.with(|highlighter| highlighter.borrow_mut().highlight_spans(language, source))
 }
 
 fn options_check_tokens(crate_path: &TokenStream2, options: Option<&Expr>) -> Option<TokenStream2> {
