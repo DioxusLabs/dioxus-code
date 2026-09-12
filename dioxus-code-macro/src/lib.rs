@@ -418,19 +418,26 @@ fn expand_shared(
         }
     };
 
-    let span_tokens = normalize_spans(spans).into_iter().map(|span| {
-        let start = span.start;
-        let end = span.end;
-        let tag = LitStr::new(span.tag, Span::call_site());
-        quote! {
-            #crate_path::advanced::HighlightSpan::new(#start..#end, #tag)
-        }
-    });
+    // Spans go out as three flat columns folded by one const call: hundreds of
+    // `HighlightSpan::new(a..b, tag)` calls per block are several times slower for rustc to
+    // type-check and const-evaluate than plain integer and string array literals.
+    let spans = normalize_spans(spans);
+    let span_count = spans.len();
+    let starts = spans.iter().map(|span| span.start);
+    let ends = spans.iter().map(|span| span.end);
+    let tags = spans
+        .iter()
+        .map(|span| LitStr::new(span.tag, Span::call_site()));
 
     Ok(quote! {{
         #options_check
         const SOURCE: &str = #source_expr;
-        const SPANS: &[#crate_path::advanced::HighlightSpan] = &[#(#span_tokens),*];
+        const SPANS: &[#crate_path::advanced::HighlightSpan] =
+            &#crate_path::advanced::HighlightSpan::from_columns::<#span_count>(
+                &[#(#starts),*],
+                &[#(#ends),*],
+                &[#(#tags),*],
+            );
         #crate_path::advanced::HighlightedSource::from_static_parts(
             SOURCE,
             #crate_path::Language::#variant_ident,
