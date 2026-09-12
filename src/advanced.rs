@@ -364,6 +364,38 @@ impl HighlightSpan {
         Self { start, end, tag }
     }
 
+    /// Build `N` spans from parallel columns of starts, ends and tags.
+    ///
+    /// This is the shape `code!` / `code_str!` emit: three flat array literals and one const
+    /// call type-check and evaluate several times faster than one `HighlightSpan::new` call per
+    /// span, which matters for crates with hundreds of highlighted blocks.
+    ///
+    /// # Panics
+    ///
+    /// Panics (at compile time when used in a `const`) if any column is shorter than `N`.
+    #[doc(hidden)]
+    pub const fn from_columns<const N: usize>(
+        starts: &[u32],
+        ends: &[u32],
+        tags: &[&'static str],
+    ) -> [Self; N] {
+        let mut spans = [Self {
+            start: 0,
+            end: 0,
+            tag: "",
+        }; N];
+        let mut i = 0;
+        while i < N {
+            spans[i] = Self {
+                start: starts[i],
+                end: ends[i],
+                tag: tags[i],
+            };
+            i += 1;
+        }
+        spans
+    }
+
     /// Byte offset, inclusive, of the span's start in the source.
     ///
     /// ```rust
