@@ -89,16 +89,15 @@ pub fn use_input_edit_attributes(
     mut on_value: impl FnMut(String) + 'static,
 ) -> Vec<Attribute> {
     let mount_tracker = tracker.clone();
-    vec![
-        onmounted(move |event: MountedEvent| {
+    Vec::<Attribute>::new()
+        .onmounted(move |event: MountedEvent| {
             mount_tracker.borrow_mut().mount(event);
-        }),
-        oninput(move |event: FormEvent| {
+        })
+        .oninput(move |event: FormEvent| {
             let value = event.value();
             tracker.borrow_mut().input(value.clone());
             on_value(value);
-        }),
-    ]
+        })
 }
 
 #[cfg(any(target_arch = "wasm32", test))]
