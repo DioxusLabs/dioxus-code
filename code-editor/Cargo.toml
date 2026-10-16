@@ -1,6 +1,6 @@
 [package]
 name = "dioxus-code-editor"
-version = "0.1.4"
+version = "0.2.0-alpha.3"
 edition.workspace = true
 license.workspace = true
 description = "Syntax-highlighted code editor component for Dioxus."
@@ -16,7 +16,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
-dioxus = { version = "=0.8.0-alpha.0", default-features = false, features = ["lib"] }
+dioxus.workspace = true
 dioxus-code = { workspace = true, features = ["runtime"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
