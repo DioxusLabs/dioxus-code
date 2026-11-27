@@ -1,34 +1,32 @@
 use dioxus::prelude::*;
-use dioxus_primitives::toggle_group::{self, ToggleGroupProps, ToggleItemProps};
 
 #[component]
-pub fn ToggleGroup(props: ToggleGroupProps) -> Element {
+pub fn ToggleGroup(
+    #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
+    children: Element,
+) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("./style.css") }
-        toggle_group::ToggleGroup {
-            class: "toggle-group",
-            default_pressed: props.default_pressed,
-            pressed: props.pressed,
-            on_pressed_change: props.on_pressed_change,
-            disabled: props.disabled,
-            allow_multiple_pressed: props.allow_multiple_pressed,
-            horizontal: props.horizontal,
-            roving_loop: props.roving_loop,
-            attributes: props.attributes,
-            {props.children}
-        }
+        div { class: "toggle-group", role: "group", ..attributes, {children} }
     }
 }
 
 #[component]
-pub fn ToggleItem(props: ToggleItemProps) -> Element {
+pub fn ToggleItem(
+    pressed: bool,
+    onclick: EventHandler<MouseEvent>,
+    #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
+    children: Element,
+) -> Element {
     rsx! {
-        toggle_group::ToggleItem {
+        button {
             class: "toggle-item",
-            index: props.index,
-            disabled: props.disabled,
-            attributes: props.attributes,
-            {props.children}
+            r#type: "button",
+            "aria-pressed": pressed,
+            "data-state": if pressed { "on" } else { "off" },
+            onclick: move |event| onclick.call(event),
+            ..attributes,
+            {children}
         }
     }
 }
