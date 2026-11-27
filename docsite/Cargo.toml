@@ -13,7 +13,7 @@ publish = false
 dioxus = { workspace = true, features = ["launch", "devtools", "logger", "router"] }
 dioxus-code = { workspace = true, features = ["detection", "detectable-languages"] }
 dioxus-code-editor = { workspace = true, features = ["detection", "detectable-languages"] }
-dioxus-primitives = { git = "https://github.com/DioxusLabs/components", rev = "b16e78dfaf439425307959adeacc16254c689c76", default-features = false, features = ["router"] }
+dioxus-primitives = { git = "https://github.com/DioxusLabs/components", rev = "efd524feea5ee8d39228dbfbfc51637a2125ea21", default-features = false, features = ["router"] }
 
 [features]
 default = ["desktop"]
