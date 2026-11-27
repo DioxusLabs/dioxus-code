@@ -2276,7 +2276,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "arborium",
  "arborium-theme",
@@ -2290,7 +2290,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-basic"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "dioxus",
  "dioxus-code",
@@ -2298,7 +2298,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-docsite"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "dioxus",
  "dioxus-code",
@@ -2308,7 +2308,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-editor"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "dioxus",
  "dioxus-code",
@@ -2318,7 +2318,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-editor-example"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "dioxus",
  "dioxus-code",
@@ -2327,7 +2327,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-live-input"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "dioxus",
  "dioxus-code",
@@ -2335,7 +2335,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-macro"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "arborium",
  "arborium-theme",
@@ -2350,7 +2350,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-code-macro-only"
-version = "0.2.0-alpha.3"
+version = "0.2.0-alpha.4"
 dependencies = [
  "dioxus",
  "dioxus-code",
