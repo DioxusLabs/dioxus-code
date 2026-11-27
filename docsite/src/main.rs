@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use dioxus::prelude::*;
 use dioxus_code::{Code, CodeTheme, SourceCode, Theme};
 use dioxus_code_editor::{CodeEditor, Language};
@@ -11,9 +9,7 @@ mod theme;
 use components::badge::{Badge, BadgeVariant};
 use components::card::Card;
 use components::navbar::{Navbar, NavbarContent, NavbarItem, NavbarNav, NavbarTrigger};
-use components::select::{
-    Select, SelectItemIndicator, SelectList, SelectOption, SelectTrigger, SelectValue,
-};
+use components::select::Select;
 use components::separator::Separator;
 use components::toggle_group::{ToggleGroup, ToggleItem};
 
@@ -92,24 +88,6 @@ enum Scheme {
     System,
     Light,
     Dark,
-}
-
-impl Scheme {
-    fn toggle_index(self) -> usize {
-        match self {
-            Scheme::System => 0,
-            Scheme::Light => 1,
-            Scheme::Dark => 2,
-        }
-    }
-
-    fn from_toggle_index(index: usize) -> Self {
-        match index {
-            1 => Scheme::Light,
-            2 => Scheme::Dark,
-            _ => Scheme::System,
-        }
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -276,45 +254,33 @@ fn Header(scheme: Signal<Scheme>) -> Element {
             }
             Navbar { "aria-label": "Main navigation",
                 NavbarItem {
-                    index: 0usize,
-                    value: "features".to_string(),
                     to: "#features",
                     "Features"
                 }
                 NavbarItem {
-                    index: 1usize,
-                    value: "playground".to_string(),
                     to: "#playground",
                     "Playground"
                 }
                 NavbarItem {
-                    index: 2usize,
-                    value: "docs".to_string(),
                     to: "#docs",
                     "Docs"
                 }
-                NavbarNav { index: 3usize,
+                NavbarNav {
                     NavbarTrigger { "Resources" }
                     NavbarContent {
                         NavbarItem {
-                            index: 0usize,
-                            value: "crates".to_string(),
                             to: "https://crates.io/crates/dioxus-code",
                             new_tab: true,
                             "crates.io"
                             IconExternal {}
                         }
                         NavbarItem {
-                            index: 1usize,
-                            value: "docs".to_string(),
                             to: "https://docs.rs/dioxus-code",
                             new_tab: true,
                             "docs.rs"
                             IconExternal {}
                         }
                         NavbarItem {
-                            index: 2usize,
-                            value: "github".to_string(),
                             to: "https://github.com/ealmloff/dioxus-code",
                             new_tab: true,
                             "GitHub"
@@ -331,42 +297,47 @@ fn Header(scheme: Signal<Scheme>) -> Element {
 }
 
 #[component]
-fn ThemeToggle(mut scheme: Signal<Scheme>) -> Element {
-    let pressed_set = use_memo(move || Some(HashSet::from([scheme().toggle_index()])));
+fn ThemeToggle(scheme: Signal<Scheme>) -> Element {
+    let options = [
+        (
+            Scheme::System,
+            "Use system color scheme",
+            "System",
+            rsx! { IconMonitor {} },
+        ),
+        (
+            Scheme::Light,
+            "Light color scheme",
+            "Light",
+            rsx! { IconSun {} },
+        ),
+        (
+            Scheme::Dark,
+            "Dark color scheme",
+            "Dark",
+            rsx! { IconMoon {} },
+        ),
+    ];
 
     rsx! {
-        ToggleGroup {
-            "aria-label": "Color scheme",
-            horizontal: true,
-            pressed: pressed_set,
-            on_pressed_change: move |set: HashSet<usize>| {
-                if let Some(&idx) = set.iter().next() {
-                    let new = Scheme::from_toggle_index(idx);
-                    scheme.set(new);
-                    #[cfg(not(feature = "server"))]
-                    theme::set_scheme(new);
+        ToggleGroup { "aria-label": "Color scheme",
+            for (option, label, title, icon) in options {
+                ToggleItem {
+                    pressed: scheme() == option,
+                    onclick: move |_| set_scheme(scheme, option),
+                    "aria-label": label,
+                    title,
+                    {icon}
                 }
-            },
-            ToggleItem {
-                index: 0usize,
-                "aria-label": "Use system color scheme",
-                title: "System",
-                IconMonitor {}
-            }
-            ToggleItem {
-                index: 1usize,
-                "aria-label": "Light color scheme",
-                title: "Light",
-                IconSun {}
-            }
-            ToggleItem {
-                index: 2usize,
-                "aria-label": "Dark color scheme",
-                title: "Dark",
-                IconMoon {}
             }
         }
     }
+}
+
+fn set_scheme(mut scheme: Signal<Scheme>, new: Scheme) {
+    scheme.set(new);
+    #[cfg(not(feature = "server"))]
+    theme::set_scheme(new);
 }
 
 #[component]
@@ -689,7 +660,6 @@ fn Playground(
     let active_idx = use_memo(move || active_theme().min(theme_pairs.len() - 1));
     let theme_pair = theme_pairs[active_idx()];
     let theme = theme_pair.code_theme(scheme);
-    let value = use_memo(move || Some(active_idx()));
     let detected_language = use_memo(move || detected_language(&source()));
     let language_label = use_memo(move || language_label(detected_language()));
 
@@ -707,26 +677,15 @@ fn Playground(
                         span { class: "editor-meta",
                             span { "{language_label()} · " {format!("{} chars", source().chars().count())} }
                             span { class: "editor-meta-divider" }
-                            Select::<usize> {
-                                value: Some(value.into()),
-                                on_value_change: move |v: Option<usize>| {
-                                    if let Some(idx) = v {
+                            Select {
+                                "aria-label": "Theme",
+                                onchange: move |event: FormEvent| {
+                                    if let Ok(idx) = event.value().parse::<usize>() {
                                         active_theme.set(idx);
                                     }
                                 },
-                                SelectTrigger {
-                                    SelectValue { placeholder: "Choose a theme" }
-                                }
-                                SelectList {
-                                    for (i, pair) in theme_pairs.iter().copied().enumerate() {
-                                        SelectOption::<usize> {
-                                            value: i,
-                                            text_value: pair.option_name(),
-                                            index: i,
-                                            span { "{pair.option_name()}" }
-                                            SelectItemIndicator {}
-                                        }
-                                    }
+                                for (i, pair) in theme_pairs.iter().copied().enumerate() {
+                                    option { value: "{i}", selected: i == active_idx(), "{pair.option_name()}" }
                                 }
                             }
                         }
@@ -898,7 +857,7 @@ fn SiteFooter() -> Element {
                         span { class: "footer-meta", "MIT licensed" }
                     }
                 }
-                Separator { class: "footer-separator", horizontal: true }
+                Separator { class: "footer-separator" }
                 p { class: "footer-fineprint", "© 2026 dioxus-code" }
             }
         }

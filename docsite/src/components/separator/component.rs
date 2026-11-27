@@ -1,16 +1,14 @@
 use dioxus::prelude::*;
-use dioxus_primitives::separator::{self, SeparatorProps};
 
 #[component]
-pub fn Separator(props: SeparatorProps) -> Element {
+pub fn Separator(#[props(extends = GlobalAttributes)] attributes: Vec<Attribute>) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("./style.css") }
-        separator::Separator {
+        div {
             class: "separator",
-            horizontal: props.horizontal,
-            decorative: props.decorative,
-            attributes: props.attributes,
-            {props.children}
+            role: "separator",
+            "data-orientation": "horizontal",
+            ..attributes,
         }
     }
 }

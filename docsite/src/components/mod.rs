@@ -5,4 +5,3 @@ pub mod navbar;
 pub mod select;
 pub mod separator;
 pub mod toggle_group;
-pub mod tooltip;

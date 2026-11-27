@@ -3368,13 +3368,6 @@ a {
   gap: 0;
 }
 
-.card-editor .select-list {
-  max-height: 280px;
-  overflow-y: auto;
-  right: 0;
-  left: auto;
-}
-
 .playground-code-editor {
   --dxc-editor-caret: var(--editor-fg);
   --dxc-editor-focus-ring: inset 0 0 0 1px var(--accent);

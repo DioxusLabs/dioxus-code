@@ -1,40 +1,29 @@
 use dioxus::prelude::*;
-use dioxus_primitives::navbar::{
-    self, NavbarContentProps, NavbarItemProps, NavbarNavProps, NavbarProps, NavbarTriggerProps,
-};
 
 #[component]
-pub fn Navbar(props: NavbarProps) -> Element {
+pub fn Navbar(
+    #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
+    children: Element,
+) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("./style.css") }
-        navbar::Navbar {
-            class: "navbar",
-            disabled: props.disabled,
-            roving_loop: props.roving_loop,
-            attributes: props.attributes,
-            {props.children}
-        }
+        nav { class: "navbar", ..attributes, {children} }
+    }
+}
+
+/// A dropdown group, opened on hover or when focus is inside it.
+#[component]
+pub fn NavbarNav(children: Element) -> Element {
+    rsx! {
+        div { class: "navbar-nav", {children} }
     }
 }
 
 #[component]
-pub fn NavbarNav(props: NavbarNavProps) -> Element {
+pub fn NavbarTrigger(children: Element) -> Element {
     rsx! {
-        navbar::NavbarNav {
-            class: "navbar-nav",
-            index: props.index,
-            disabled: props.disabled,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
-}
-
-#[component]
-pub fn NavbarTrigger(props: NavbarTriggerProps) -> Element {
-    rsx! {
-        navbar::NavbarTrigger { class: "navbar-trigger", attributes: props.attributes,
-            {props.children}
+        button { class: "navbar-trigger", r#type: "button", "aria-haspopup": "true",
+            {children}
             svg {
                 class: "navbar-expand-icon",
                 view_box: "0 0 24 24",
@@ -46,33 +35,25 @@ pub fn NavbarTrigger(props: NavbarTriggerProps) -> Element {
 }
 
 #[component]
-pub fn NavbarContent(props: NavbarContentProps) -> Element {
+pub fn NavbarContent(children: Element) -> Element {
     rsx! {
-        navbar::NavbarContent {
-            class: "navbar-content",
-            id: props.id,
-            attributes: props.attributes,
-            {props.children}
-        }
+        div { class: "navbar-content", {children} }
     }
 }
 
 #[component]
-pub fn NavbarItem(props: NavbarItemProps) -> Element {
+pub fn NavbarItem(
+    #[props(into)] to: String,
+    #[props(default)] new_tab: bool,
+    children: Element,
+) -> Element {
     rsx! {
-        navbar::NavbarItem {
+        a {
             class: "navbar-item",
-            index: props.index,
-            value: props.value,
-            disabled: props.disabled,
-            new_tab: props.new_tab,
-            to: props.to,
-            active_class: props.active_class,
-            attributes: props.attributes,
-            on_select: props.on_select,
-            onclick: props.onclick,
-            onmounted: props.onmounted,
-            {props.children}
+            href: to,
+            target: if new_tab { "_blank" },
+            rel: if new_tab { "noopener noreferrer" },
+            {children}
         }
     }
 }
