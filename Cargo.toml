@@ -316,4 +316,4 @@ arborium = { version = "2.16.0", default-features = false }
 [dev-dependencies]
 dioxus = { workspace = true, features = ["launch", "devtools", "logger", "ssr"] }
 dioxus-code = { path = ".", features = ["runtime"] }
-dioxus-code-editor = { workspace = true }
+dioxus-code-editor = { path = "./code-editor" }
