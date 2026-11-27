@@ -379,21 +379,24 @@ impl HighlightSpan {
         ends: &[u32],
         tags: &[&'static str],
     ) -> [Self; N] {
-        let mut spans = [Self {
-            start: 0,
-            end: 0,
-            tag: "",
-        }; N];
+        // Written in index order into uninitialized memory: overwriting a placeholder array is
+        // quadratic in the const evaluator, since each element holds a pointer (`tag`).
+        let mut spans = std::mem::MaybeUninit::<[Self; N]>::uninit();
+        let out = spans.as_mut_ptr() as *mut Self;
         let mut i = 0;
         while i < N {
-            spans[i] = Self {
-                start: starts[i],
-                end: ends[i],
-                tag: tags[i],
+            // SAFETY: `i < N`, so `out.add(i)` is in bounds of the `[Self; N]` allocation.
+            unsafe {
+                out.add(i).write(Self {
+                    start: starts[i],
+                    end: ends[i],
+                    tag: tags[i],
+                })
             };
             i += 1;
         }
-        spans
+        // SAFETY: the loop above initialized all `N` elements.
+        unsafe { spans.assume_init() }
     }
 
     /// Byte offset, inclusive, of the span's start in the source.
