@@ -21,7 +21,7 @@ keywords = ["dioxus", "code", "highlighting", "editor"]
 categories = ["gui", "web-programming"]
 
 [workspace.dependencies]
-dioxus = { version = "=0.8.0-alpha.3", default-features = false, features = ["lib"] }
+dioxus = { version = "=0.8.0-alpha.4", default-features = false, features = ["lib"] }
 dioxus-code = { version = "0.2.0-alpha.3", path = "." }
 dioxus-code-editor = { version = "0.2.0-alpha.3", path = "code-editor", default-features = false }
 
