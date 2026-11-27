@@ -132,4 +132,4 @@ quote = "1.0.42"
 syn = { version = "2.0.111", features = ["full"] }
 
 [dev-dependencies]
-dioxus-code = { workspace = true }
+dioxus-code = { path = ".." }
