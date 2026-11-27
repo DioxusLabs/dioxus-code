@@ -317,7 +317,3 @@ arborium = { version = "2.16.0", default-features = false }
 dioxus = { workspace = true, features = ["launch", "devtools", "logger", "ssr"] }
 dioxus-code = { path = ".", features = ["runtime"] }
 dioxus-code-editor = { workspace = true }
-
-# dioxus-primitives needs an alpha.4 dioxus-sdk-time, which is not published yet; drop once it is.
-[patch.crates-io]
-dioxus-sdk-time = { git = "https://github.com/DioxusLabs/sdk", rev = "fbb2049f1934541f0077c5c30a974dc5fe2c35d0" }

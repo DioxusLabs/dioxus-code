@@ -2257,7 +2257,7 @@ dependencies = [
 [[package]]
 name = "dioxus-attributes"
 version = "0.1.0"
-source = "git+https://github.com/DioxusLabs/components?rev=efd524feea5ee8d39228dbfbfc51637a2125ea21#efd524feea5ee8d39228dbfbfc51637a2125ea21"
+source = "git+https://github.com/DioxusLabs/components?rev=c18f160d8a1bb8951cfa272914b8a9d4a464617f#c18f160d8a1bb8951cfa272914b8a9d4a464617f"
 dependencies = [
  "dioxus-rsx",
  "proc-macro2",
@@ -2726,11 +2726,11 @@ dependencies = [
 [[package]]
 name = "dioxus-primitives"
 version = "0.0.1"
-source = "git+https://github.com/DioxusLabs/components?rev=efd524feea5ee8d39228dbfbfc51637a2125ea21#efd524feea5ee8d39228dbfbfc51637a2125ea21"
+source = "git+https://github.com/DioxusLabs/components?rev=c18f160d8a1bb8951cfa272914b8a9d4a464617f#c18f160d8a1bb8951cfa272914b8a9d4a464617f"
 dependencies = [
  "dioxus",
  "dioxus-attributes",
- "dioxus-sdk-time",
+ "dioxus-timers",
  "dioxus-vdom",
  "lazy-js-bundle",
  "num-integer",
@@ -2788,17 +2788,6 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "dioxus-sdk-time"
-version = "0.8.0-alpha.3"
-source = "git+https://github.com/DioxusLabs/sdk?rev=fbb2049f1934541f0077c5c30a974dc5fe2c35d0#fbb2049f1934541f0077c5c30a974dc5fe2c35d0"
-dependencies = [
- "dioxus",
- "futures",
- "gloo-timers 0.3.0",
- "tokio",
 ]
 
 [[package]]
@@ -2910,6 +2899,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dioxus-timers"
+version = "0.8.0-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9de3f3c6b3d591ce152d44b2eb531488edceaf4a437b604e8d2defcd4651bd5"
+dependencies = [
+ "dioxus-hooks",
+ "dioxus-signals",
+ "dioxus-vdom",
+ "futures",
+ "gloo-timers",
+ "tokio",
+]
+
+[[package]]
 name = "dioxus-vdom"
 version = "0.8.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2977,7 +2980,7 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "generational-box",
- "gloo-timers 0.4.0",
+ "gloo-timers",
  "js-sys",
  "lazy-js-bundle",
  "rustc-hash 2.1.2",
@@ -3662,18 +3665,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "gloo-timers"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbb143cf96099802033e0d4f4963b19fd2e0b728bcf076cd9cf7f6634f092994"
-dependencies = [
- "futures-channel",
- "futures-core",
- "js-sys",
- "wasm-bindgen",
 ]
 
 [[package]]
