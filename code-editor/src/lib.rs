@@ -22,16 +22,6 @@ mod edit_capture;
 pub const CODE_EDITOR_CSS: Asset = asset!("/assets/dioxus-code-editor.css");
 
 /// Props for [`CodeEditor`].
-///
-/// ```rust,no_run
-/// use dioxus_code::{CodeTheme, Theme};
-/// use dioxus_code_editor::{CodeEditorProps, Language};
-/// let _props = CodeEditorProps::builder()
-///     .value("fn main() {}")
-///     .language(Language::Rust)
-///     .theme(CodeTheme::fixed(Theme::TOKYO_NIGHT))
-///     .build();
-/// ```
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeEditorProps {
     /// The current editor contents.

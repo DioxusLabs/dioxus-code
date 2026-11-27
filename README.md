@@ -28,7 +28,7 @@ Two ways to highlight:
 
 ```toml
 [dependencies]
-dioxus-code = "0.1"
+dioxus-code = "0.2.0-alpha.3"
 ```
 
 ```rust
